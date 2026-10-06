@@ -1,0 +1,1011 @@
+import { DocumentModel, ComponentNode } from '../types/document';
+import { Project, Template, Asset, IntegrationConfig } from '../types/modules';
+import { Organization, UserProfile, OrganizationMember } from '../types/auth';
+
+export const SEED_USER: UserProfile = {
+  id: 'usr_flowpilot_admin',
+  email: 'alex@flowpilot.dev',
+  fullName: 'Alex Vance (Lead Architect)',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+  createdAt: new Date().toISOString(),
+};
+
+export const SEED_ORGANIZATION: Organization = {
+  id: 'org_flowpilot_demo',
+  name: 'Acme SaaS Cloud',
+  slug: 'acme-saas',
+  plan: 'pro',
+  branding: {
+    primaryColor: '#6366f1',
+    companyName: 'Acme SaaS',
+  },
+  createdAt: new Date().toISOString(),
+};
+
+export const SEED_MEMBERS: OrganizationMember[] = [
+  {
+    id: 'mem_1',
+    organizationId: SEED_ORGANIZATION.id,
+    userId: SEED_USER.id,
+    user: SEED_USER,
+    role: 'owner',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mem_2',
+    organizationId: SEED_ORGANIZATION.id,
+    userId: 'usr_sarah_chen',
+    user: {
+      id: 'usr_sarah_chen',
+      email: 'sarah.chen@acme.io',
+      fullName: 'Sarah Chen (Growth Lead)',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+      createdAt: new Date().toISOString(),
+    },
+    role: 'admin',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mem_3',
+    organizationId: SEED_ORGANIZATION.id,
+    userId: 'usr_marcus_dev',
+    user: {
+      id: 'usr_marcus_dev',
+      email: 'marcus@acme.io',
+      fullName: 'Marcus Brody (UI Engineer)',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+      createdAt: new Date().toISOString(),
+    },
+    role: 'editor',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+// Helper to construct a standard Tour Document
+export function createTourDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'tour',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '8px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      showBackdrop: true,
+      backdropColor: '#0f172a',
+      backdropOpacity: 0.65,
+      closeOnBackdropClick: false,
+      closeOnEscape: true,
+      showProgress: true,
+      allowSkip: true,
+      brandingEnabled: false,
+      accentColor: '#6366f1',
+    },
+    triggerConditions: {
+      urlRules: [{ type: 'contains', value: '/dashboard' }],
+      delaySeconds: 1,
+      frequency: 'once_per_visitor',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_tour_v1',
+    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'tour_root',
+      type: 'TourContainer',
+      name: 'Product Tour Root',
+      props: { currentStepIndex: 0 },
+      styles: { width: '100%' },
+      children: [
+        {
+          id: 'step_1',
+          type: 'TourStep',
+          name: 'Welcome Step',
+          target: {
+            selector: '#nav-dashboard',
+            placement: 'bottom',
+            offset: 14,
+            highlight: true,
+            spotlightPadding: 8,
+            fallbackBehavior: 'center',
+          },
+          props: {
+            stepNumber: 1,
+            title: 'Welcome to your Workspace 👋',
+            description: 'This is your mission control. Easily access your projects, live analytics, and active onboarding flows.',
+            nextButtonText: 'Next: Analytics Tour →',
+            skipButtonText: 'Skip Tour',
+          },
+          styles: { width: '380px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '24px', paddingRight: '24px', paddingTop: '20px', paddingBottom: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)' },
+          children: [],
+        },
+        {
+          id: 'step_2',
+          type: 'TourStep',
+          name: 'Analytics Step',
+          target: {
+            selector: '#metrics-overview',
+            placement: 'right',
+            offset: 16,
+            highlight: true,
+            spotlightPadding: 10,
+            fallbackBehavior: 'center',
+          },
+          props: {
+            stepNumber: 2,
+            title: 'Real-Time Insights 📊',
+            description: 'Track impressions, conversion funnels, and completion drop-off rates across all published experiences.',
+            prevButtonText: '← Back',
+            nextButtonText: 'Next: Creating Flows →',
+            skipButtonText: 'Skip Tour',
+          },
+          styles: { width: '380px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '24px', paddingRight: '24px', paddingTop: '20px', paddingBottom: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)' },
+          children: [],
+        },
+        {
+          id: 'step_3',
+          type: 'TourStep',
+          name: 'Action Step',
+          target: {
+            selector: '#btn-create-experience',
+            placement: 'bottom',
+            offset: 14,
+            highlight: true,
+            spotlightPadding: 6,
+            fallbackBehavior: 'center',
+          },
+          props: {
+            stepNumber: 3,
+            title: 'Create Your First Flow 🚀',
+            description: 'Click here anytime to start building tours, interactive demos, announcements, popups, or surveys!',
+            prevButtonText: '← Back',
+            nextButtonText: 'Got It! Complete Tour 🎉',
+            skipButtonText: 'Dismiss',
+          },
+          styles: { width: '380px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '24px', paddingRight: '24px', paddingTop: '20px', paddingBottom: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)' },
+          children: [],
+        },
+      ],
+    },
+  };
+}
+
+// Helper to construct interactive demo document
+export function createDemoDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'demo',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#8b5cf6',
+      secondaryColor: '#6d28d9',
+      backgroundColor: '#f8fafc',
+      textColor: '#0f172a',
+      borderRadius: '8px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      showProgress: true,
+      accentColor: '#8b5cf6',
+    },
+    triggerConditions: {
+      urlRules: [],
+      delaySeconds: 0,
+      frequency: 'always',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_demo_v1',
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'demo_root',
+      type: 'DemoContainer',
+      name: 'Interactive Demo Flow',
+      props: { currentScreenIndex: 0 },
+      styles: { width: '100%', minHeight: '600px' },
+      children: [
+        {
+          id: 'screen_1',
+          type: 'DemoScreen',
+          name: 'Dashboard Overview Screen',
+          props: {
+            title: 'Simulated Dashboard',
+            imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&auto=format&fit=crop&q=80',
+            screenNumber: 1,
+          },
+          styles: { width: '100%', height: '540px', position: 'relative' },
+          children: [
+            {
+              id: 'hotspot_1',
+              type: 'DemoHotspot',
+              name: 'Clickable Filter Hotspot',
+              props: {
+                tooltipTitle: 'Explore Filter',
+                tooltipText: 'Click here to switch to customer segmentation view',
+                targetScreenId: 'screen_2',
+                pulseAnimation: true,
+              },
+              styles: { position: 'absolute', top: '130px', left: '260px', width: '36px', height: '36px' },
+              children: [],
+            },
+          ],
+        },
+        {
+          id: 'screen_2',
+          type: 'DemoScreen',
+          name: 'Customer Details Screen',
+          props: {
+            title: 'Filtered Customers Screen',
+            imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80',
+            screenNumber: 2,
+          },
+          styles: { width: '100%', height: '540px', position: 'relative' },
+          children: [
+            {
+              id: 'hotspot_2',
+              type: 'DemoHotspot',
+              name: 'Export Report Hotspot',
+              props: {
+                tooltipTitle: 'Instant Export',
+                tooltipText: 'Click to trigger automated PDF / CSV generation',
+                targetScreenId: 'screen_1',
+                pulseAnimation: true,
+              },
+              styles: { position: 'absolute', top: '210px', left: '720px', width: '36px', height: '36px' },
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+// Helper to construct structured Page document
+export function createPageDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'page',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '8px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      accentColor: '#6366f1',
+    },
+    triggerConditions: {
+      urlRules: [],
+      delaySeconds: 0,
+      frequency: 'always',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_page_v1',
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'page_root',
+      type: 'Container',
+      name: 'Landing Page Root',
+      props: {},
+      styles: { width: '100%', minHeight: '100vh', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' },
+      children: [
+        {
+          id: 'sec_hero',
+          type: 'HeroSection',
+          name: 'Hero Section',
+          props: {
+            badge: '⚡ Powered by Autonomous Visual Tech',
+            headline: 'Convert Every Visitor with Guided Experiences',
+            subheadline: 'Build interactive product tours, in-app announcements, checklists, and responsive landing pages in minutes without engineers.',
+            primaryCtaText: 'Start Free Trial',
+            secondaryCtaText: 'Book Interactive Demo',
+          },
+          styles: { width: '100%', paddingTop: '64px', paddingBottom: '64px', backgroundColor: '#faf5ff', textAlign: 'center' },
+          children: [],
+        },
+        {
+          id: 'sec_features',
+          type: 'FeaturesSection',
+          name: 'Features Grid',
+          props: {
+            title: 'Built for High-Growth Product Teams',
+            subtitle: 'Everything you need to onboard, activate, and retain users effortlessly.',
+          },
+          styles: { width: '100%', paddingTop: '56px', paddingBottom: '56px', backgroundColor: '#ffffff' },
+          children: [],
+        },
+        {
+          id: 'sec_cta',
+          type: 'CtaSection',
+          name: 'Bottom CTA Section',
+          props: {
+            headline: 'Ready to 10x your activation rates?',
+            subheadline: 'Join over 4,500 product leaders building with FlowPilot today.',
+            buttonText: 'Get Started for Free',
+          },
+          styles: { width: '100%', paddingTop: '60px', paddingBottom: '60px', backgroundColor: '#1e1b4b', color: '#ffffff', textAlign: 'center' },
+          children: [],
+        },
+      ],
+    },
+  };
+}
+
+// Helper to construct Banner document
+export function createBannerDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'banner',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#1e1b4b',
+      textColor: '#ffffff',
+      borderRadius: '6px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      accentColor: '#6366f1',
+    },
+    triggerConditions: {
+      urlRules: [{ type: 'exact', value: '/' }],
+      delaySeconds: 0,
+      frequency: 'always',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_banner_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'banner_root',
+      type: 'BannerWidget',
+      name: 'Sticky Top Banner',
+      props: {
+        badgeText: 'NEW RELEASE',
+        message: 'FlowPilot 2.0 is live! Explore our new AI-assisted visual builder & instant publishing engine.',
+        ctaText: 'See What’s New →',
+        ctaUrl: 'https://flowpilot.dev/updates',
+        isDismissible: true,
+        placement: 'top',
+      },
+      styles: { width: '100%', backgroundColor: '#4338ca', color: '#ffffff', paddingTop: '10px', paddingBottom: '10px', paddingLeft: '16px', paddingRight: '16px' },
+      children: [],
+    },
+  };
+}
+
+// Helper to construct Menu document
+export function createMenuDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'menu',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '6px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      accentColor: '#6366f1',
+    },
+    triggerConditions: {
+      urlRules: [],
+      delaySeconds: 0,
+      frequency: 'always',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_menu_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'menu_root',
+      type: 'MenuWidget',
+      name: 'Global Header Navigation',
+      props: {
+        logoText: 'Acme Cloud',
+        ctaText: 'Sign In',
+        items: [
+          { label: 'Platform', href: '#platform', children: ['Tours & Demos', 'In-App Banners', 'Analytics'] },
+          { label: 'Solutions', href: '#solutions', children: ['For SaaS', 'For E-Commerce', 'For Agencies'] },
+          { label: 'Templates', href: '#templates' },
+          { label: 'Pricing', href: '#pricing' },
+          { label: 'Changelog', href: '#changelog' },
+        ],
+      },
+      styles: { width: '100%', backgroundColor: '#ffffff', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)', paddingTop: '12px', paddingBottom: '12px', paddingLeft: '24px', paddingRight: '24px' },
+      children: [],
+    },
+  };
+}
+
+// Helper to construct FAQ document
+export function createFaqDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'faq',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '8px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      accentColor: '#6366f1',
+    },
+    triggerConditions: {
+      urlRules: [],
+      delaySeconds: 0,
+      frequency: 'always',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_faq_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'faq_root',
+      type: 'FaqWidget',
+      name: 'Customer Support FAQ',
+      props: {
+        title: 'Frequently Asked Questions',
+        subtitle: 'Everything you need to know about our visual adoption engine and integrations.',
+        showSearch: true,
+        items: [
+          {
+            q: 'How does the FlowPilot embed script work without slowing down my site?',
+            a: 'The FlowPilot client snippet is ultra-lightweight (<18kb gzip) and loads asynchronously (defer). It initializes only when DOM content is ready and executes with zero external dependencies.',
+          },
+          {
+            q: 'Can I target specific customer cohorts or paid user plans?',
+            a: 'Yes. You can configure audience trigger rules by URL paths, user roles, device types, or custom metadata passed through your frontend application.',
+          },
+          {
+            q: 'Do I need developer support to create or edit tours?',
+            a: 'None! Our point-and-click target picker and visual editor allow any product manager or marketer to build and deploy experiences safely without code.',
+          },
+          {
+            q: 'Are my analytics captured with privacy compliance?',
+            a: 'Yes. FlowPilot utilizes privacy-conscious, pseudonymous visitor identifiers and never captures sensitive PII unless explicitly mapped in your survey responses.',
+          },
+        ],
+      },
+      styles: { width: '100%', maxWidth: '800px', margin: '0 auto', paddingTop: '40px', paddingBottom: '40px' },
+      children: [],
+    },
+  };
+}
+
+// Helper to construct Popup document
+export function createPopupDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'popup',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '16px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      showBackdrop: true,
+      backdropColor: '#000000',
+      backdropOpacity: 0.5,
+      closeOnBackdropClick: true,
+      closeOnEscape: true,
+      accentColor: '#6366f1',
+    },
+    triggerConditions: {
+      urlRules: [{ type: 'exact', value: '/pricing' }],
+      delaySeconds: 5,
+      scrollPercentage: 50,
+      frequency: 'once_per_visitor',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_popup_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'popup_root',
+      type: 'PopupWidget',
+      name: 'Special Offer Modal',
+      props: {
+        headline: 'Unlock 25% Off Annual Pro 🎁',
+        bodyText: 'Upgrade your workspace today and get full access to our AI generation suite, unlimited tours, and custom domain hosting.',
+        ctaText: 'Claim Your Discount Now',
+        cancelText: 'Maybe later',
+        icon: 'Sparkles',
+      },
+      styles: { width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', paddingLeft: '32px', paddingRight: '32px', paddingTop: '28px', paddingBottom: '28px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
+      children: [],
+    },
+  };
+}
+
+// Helper to construct Checklist document
+export function createChecklistDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'checklist',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#10b981',
+      secondaryColor: '#059669',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '12px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      accentColor: '#10b981',
+    },
+    triggerConditions: {
+      urlRules: [],
+      delaySeconds: 2,
+      frequency: 'always',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_checklist_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'checklist_root',
+      type: 'ChecklistWidget',
+      name: 'Get Started Checklist',
+      props: {
+        title: 'Complete Your Setup (2 of 4 done)',
+        subtitle: 'Follow these essential steps to maximize your platform activation.',
+        rewardMessage: 'Congratulations! You unlocked the Early Adopter Badge! 🎉',
+        tasks: [
+          { id: 't1', title: 'Connect your corporate workspace', completed: true, url: '/settings' },
+          { id: 't2', title: 'Create your first interactive tour', completed: true, url: '/tours' },
+          { id: 't3', title: 'Invite team members to collaborate', completed: false, url: '/team' },
+          { id: 't4', title: 'Publish client embed script to staging', completed: false, url: '/domains' },
+        ],
+      },
+      styles: { width: '360px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '20px', paddingRight: '20px', paddingTop: '18px', paddingBottom: '18px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' },
+      children: [],
+    },
+  };
+}
+
+// Helper to construct Survey document
+export function createSurveyDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'survey',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '12px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      accentColor: '#6366f1',
+    },
+    triggerConditions: {
+      urlRules: [],
+      delaySeconds: 15,
+      frequency: 'once_per_visitor',
+    },
+    isPublished: true,
+    publishedVersionId: 'ver_survey_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'survey_root',
+      type: 'SurveyWidget',
+      name: 'Product NPS Survey',
+      props: {
+        question: 'How likely are you to recommend FlowPilot to a colleague?',
+        type: 'nps', // 0 - 10
+        followUpQuestion: 'What is the primary reason for your score?',
+        submitButtonText: 'Submit Feedback',
+        thankYouTitle: 'Thank you for your feedback! ❤️',
+        thankYouSubtitle: 'Your response helps us continuously improve the experience builder.',
+      },
+      styles: { width: '420px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '24px', paddingRight: '24px', paddingTop: '20px', paddingBottom: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)' },
+      children: [],
+    },
+  };
+}
+
+// All Seed Projects
+export const SEED_PROJECTS: Project[] = [
+  {
+    id: 'proj_tour_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Customer Onboarding Walkthrough',
+    description: '3-step interactive spotlight tour guiding new users through their core workspace metrics.',
+    type: 'tour',
+    status: 'published',
+    tags: ['onboarding', 'core', 'activation'],
+    documentId: 'doc_tour_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 3420,
+    completionRate: 78.4,
+  },
+  {
+    id: 'proj_demo_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Interactive CRM Demo Experience',
+    description: 'Guided simulated product screens with clickable hotspots showcasing customer search & exports.',
+    type: 'demo',
+    status: 'published',
+    tags: ['sales', 'demo', 'marketing'],
+    documentId: 'doc_demo_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 1840,
+    completionRate: 64.2,
+  },
+  {
+    id: 'proj_page_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'High-Converting SaaS Landing Page',
+    description: 'Structured responsive page with Hero, Feature grid, and high-impact CTA sections.',
+    type: 'page',
+    status: 'published',
+    tags: ['landing-page', 'marketing'],
+    documentId: 'doc_page_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 12900,
+    completionRate: 22.8,
+  },
+  {
+    id: 'proj_banner_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Product 2.0 Launch Announcement',
+    description: 'Top-anchored announcement banner with call-to-action button and dismiss behavior.',
+    type: 'banner',
+    status: 'published',
+    tags: ['announcement', 'growth'],
+    documentId: 'doc_banner_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 8400,
+    completionRate: 14.1,
+  },
+  {
+    id: 'proj_menu_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Universal Header Navigation Menu',
+    description: 'Accessible header navigation bar with dropdown menus and mobile drawer support.',
+    type: 'menu',
+    status: 'published',
+    tags: ['navigation', 'header'],
+    documentId: 'doc_menu_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 22000,
+    completionRate: 91.5,
+  },
+  {
+    id: 'proj_faq_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Support & Knowledge Base FAQ',
+    description: 'Searchable accordion-style FAQ widget with expandable answers and category filtering.',
+    type: 'faq',
+    status: 'published',
+    tags: ['support', 'help-center'],
+    documentId: 'doc_faq_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 4210,
+    completionRate: 52.0,
+  },
+  {
+    id: 'proj_popup_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Quarterly Upgrade Modal Popup',
+    description: 'Centrally anchored conversion modal with exit-intent trigger and discount incentives.',
+    type: 'popup',
+    status: 'published',
+    tags: ['conversion', 'monetization'],
+    documentId: 'doc_popup_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 6150,
+    completionRate: 18.7,
+  },
+  {
+    id: 'proj_checklist_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'New Account Activation Checklist',
+    description: 'Collapsible floating onboarding checklist with step completion tracking and rewards.',
+    type: 'checklist',
+    status: 'published',
+    tags: ['activation', 'retention'],
+    documentId: 'doc_checklist_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 2890,
+    completionRate: 68.3,
+  },
+  {
+    id: 'proj_survey_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Quarterly Customer NPS Survey',
+    description: 'NPS rating score widget (0-10) with follow-up feedback capture and response recording.',
+    type: 'survey',
+    status: 'published',
+    tags: ['feedback', 'csat', 'nps'],
+    documentId: 'doc_survey_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 1950,
+    completionRate: 41.2,
+  },
+];
+
+// All Seed Documents mapped to projects
+export const SEED_DOCUMENTS: Record<string, DocumentModel> = {
+  doc_tour_1: createTourDocument('doc_tour_1', 'proj_tour_1', 'Customer Onboarding Walkthrough'),
+  doc_demo_1: createDemoDocument('doc_demo_1', 'proj_demo_1', 'Interactive CRM Demo Experience'),
+  doc_page_1: createPageDocument('doc_page_1', 'proj_page_1', 'High-Converting SaaS Landing Page'),
+  doc_banner_1: createBannerDocument('doc_banner_1', 'proj_banner_1', 'Product 2.0 Launch Announcement'),
+  doc_menu_1: createMenuDocument('doc_menu_1', 'proj_menu_1', 'Universal Header Navigation Menu'),
+  doc_faq_1: createFaqDocument('doc_faq_1', 'proj_faq_1', 'Support & Knowledge Base FAQ'),
+  doc_popup_1: createPopupDocument('doc_popup_1', 'proj_popup_1', 'Quarterly Upgrade Modal Popup'),
+  doc_checklist_1: createChecklistDocument('doc_checklist_1', 'proj_checklist_1', 'New Account Activation Checklist'),
+  doc_survey_1: createSurveyDocument('doc_survey_1', 'proj_survey_1', 'Quarterly Customer NPS Survey'),
+};
+
+// Seed Templates across categories
+export const SEED_TEMPLATES: Template[] = [
+  {
+    id: 'tpl_tour_saas',
+    title: 'SaaS First-Time User Onboarding Tour',
+    description: '4-step tour highlighting main dashboard features, analytics cards, and quick actions.',
+    category: 'tour',
+    tags: ['saas', 'onboarding', 'walkthrough'],
+    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 4,
+    isPopular: true,
+    documentData: createTourDocument('tpl_doc_1', 'tpl_proj_1', 'SaaS Onboarding Tour'),
+  },
+  {
+    id: 'tpl_demo_crm',
+    title: 'Interactive CRM & Pipeline Demo',
+    description: 'Multi-screen interactive walkthrough with clickable hotspots for lead qualification.',
+    category: 'demo',
+    tags: ['crm', 'demo', 'sales'],
+    thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 3,
+    isPopular: true,
+    documentData: createDemoDocument('tpl_doc_2', 'tpl_proj_2', 'Interactive CRM Demo'),
+  },
+  {
+    id: 'tpl_page_b2b',
+    title: 'Modern B2B AI SaaS Landing Page',
+    description: 'Responsive layout with Hero, Features grid, Social proof, and High-conversion CTA.',
+    category: 'page',
+    tags: ['b2b', 'landing-page', 'saas'],
+    thumbnail: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 5,
+    isPopular: true,
+    documentData: createPageDocument('tpl_doc_3', 'tpl_proj_3', 'B2B SaaS Landing Page'),
+  },
+  {
+    id: 'tpl_banner_promo',
+    title: 'Urgent Flash Sale & Announcement Banner',
+    description: 'Vibrant sticky announcement bar with countdown timer and CTA button.',
+    category: 'banner',
+    tags: ['banner', 'promo', 'announcement'],
+    thumbnail: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 1,
+    isPopular: false,
+    documentData: createBannerDocument('tpl_doc_4', 'tpl_proj_4', 'Flash Sale Banner'),
+  },
+  {
+    id: 'tpl_faq_support',
+    title: 'Help Center & Searchable FAQ Accordion',
+    description: 'Categorized collapsible questions with instant search and rich answers.',
+    category: 'faq',
+    tags: ['support', 'help', 'faq'],
+    thumbnail: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 6,
+    isPopular: false,
+    documentData: createFaqDocument('tpl_doc_5', 'tpl_proj_5', 'Searchable FAQ'),
+  },
+  {
+    id: 'tpl_popup_lead',
+    title: 'Exit-Intent Lead Magnet Modal',
+    description: 'High-converting popup capturing email subscribers before they leave.',
+    category: 'popup',
+    tags: ['popup', 'modal', 'leads'],
+    thumbnail: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 1,
+    isPopular: true,
+    documentData: createPopupDocument('tpl_doc_6', 'tpl_proj_6', 'Lead Magnet Popup'),
+  },
+  {
+    id: 'tpl_checklist_gamified',
+    title: 'Gamified Product Adoption Checklist',
+    description: 'Task checklist with progress bar and celebratory confetti upon completion.',
+    category: 'checklist',
+    tags: ['checklist', 'adoption', 'gamification'],
+    thumbnail: 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 4,
+    isPopular: true,
+    documentData: createChecklistDocument('tpl_doc_7', 'tpl_proj_7', 'Gamified Checklist'),
+  },
+  {
+    id: 'tpl_survey_nps',
+    title: 'Quarterly Executive Net Promoter Score (NPS)',
+    description: 'Clean 0-10 score picker with conditional qualitative feedback.',
+    category: 'survey',
+    tags: ['survey', 'nps', 'feedback'],
+    thumbnail: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 2,
+    isPopular: false,
+    documentData: createSurveyDocument('tpl_doc_8', 'tpl_proj_8', 'Executive NPS Survey'),
+  },
+];
+
+// Seed Assets
+export const SEED_ASSETS: Asset[] = [
+  {
+    id: 'ast_1',
+    organizationId: SEED_ORGANIZATION.id,
+    name: 'analytics-dashboard-hero.png',
+    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&auto=format&fit=crop&q=80',
+    type: 'image',
+    sizeBytes: 420800,
+    altText: 'Overview analytics dashboard screenshot',
+    folder: 'screenshots',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'ast_2',
+    organizationId: SEED_ORGANIZATION.id,
+    name: 'team-collaboration.jpg',
+    url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&auto=format&fit=crop&q=80',
+    type: 'image',
+    sizeBytes: 680400,
+    altText: 'Engineers and designers collaborating',
+    folder: 'marketing',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'ast_3',
+    organizationId: SEED_ORGANIZATION.id,
+    name: 'growth-chart-metrics.png',
+    url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80',
+    type: 'image',
+    sizeBytes: 310500,
+    altText: 'Quarterly user growth bar charts',
+    folder: 'metrics',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+// Seed Integrations
+export const SEED_INTEGRATIONS: IntegrationConfig[] = [
+  {
+    id: 'int_web',
+    organizationId: SEED_ORGANIZATION.id,
+    provider: 'custom_domain',
+    name: 'Custom Domain & CDN',
+    description: 'Host experiences on your white-labeled domain (e.g. guide.yourcompany.com).',
+    status: 'connected',
+    config: { domain: 'experiences.acme.io', verified: true, sslActive: true },
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'int_ga',
+    organizationId: SEED_ORGANIZATION.id,
+    provider: 'google_analytics',
+    name: 'Google Analytics 4 (GA4)',
+    description: 'Stream impression, step completion, and drop-off events directly into GA4.',
+    status: 'connected',
+    config: { measurementId: 'G-FP9823412', sendEvents: true },
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'int_webhook',
+    organizationId: SEED_ORGANIZATION.id,
+    provider: 'webhook',
+    name: 'Custom Event Webhooks',
+    description: 'Receive real-time HTTP POST webhooks on survey submissions and tour finishes.',
+    status: 'connected',
+    config: { endpointUrl: 'https://api.acme.io/webhooks/flowpilot', secret: 'whsec_••••••••••••••••' },
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'int_slack',
+    organizationId: SEED_ORGANIZATION.id,
+    provider: 'slack',
+    name: 'Slack Alerts',
+    description: 'Instant notification in #customer-feedback when negative NPS or feedback arrives.',
+    status: 'disconnected',
+    config: {},
+    updatedAt: new Date().toISOString(),
+  },
+];
