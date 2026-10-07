@@ -32,11 +32,14 @@ import { TeamPage } from './pages/team/TeamPage';
 import { IntegrationsPage } from './pages/integrations/IntegrationsPage';
 import { BillingPage } from './pages/billing/BillingPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
+import { BrandPage } from './pages/brand/BrandPage';
+import { ThemeProvider } from './services/themeContext';
 
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public Auth Routes */}
           <Route path="/login" element={<Login />} />
@@ -76,6 +79,7 @@ export function App() {
             <Route path="team" element={<TeamPage />} />
             <Route path="integrations" element={<IntegrationsPage />} />
             <Route path="billing" element={<BillingPage />} />
+            <Route path="brand" element={<BrandPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
@@ -83,6 +87,7 @@ export function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

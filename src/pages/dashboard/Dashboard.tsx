@@ -18,7 +18,8 @@ import {
   Trash2,
   Copy,
   ExternalLink,
-  Filter
+  Filter,
+  Play
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -81,7 +82,7 @@ export const Dashboard: React.FC = () => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 font-sans select-none">
+    <div className="max-w-7xl mx-auto space-y-8 font-sans select-none pb-12 transition-colors">
       {/* Welcome Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-2xl p-7 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10">
@@ -114,43 +115,43 @@ export const Dashboard: React.FC = () => {
 
       {/* Metrics Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-subtle">
-          <span className="text-xs font-semibold text-slate-400 block mb-1">Total Experiences</span>
-          <div className="text-2xl font-black text-slate-800">{totalCount}</div>
-          <span className="text-[11px] text-indigo-600 font-medium mt-1 inline-block">Active workspace</span>
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-subtle">
+          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 block mb-1">Total Experiences</span>
+          <div className="text-2xl font-black text-slate-800 dark:text-white">{totalCount}</div>
+          <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium mt-1 inline-block">Active workspace</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-subtle">
-          <span className="text-xs font-semibold text-slate-400 block mb-1">Live Published</span>
-          <div className="text-2xl font-black text-emerald-600">{publishedCount}</div>
-          <span className="text-[11px] text-emerald-600 font-medium mt-1 inline-block">Serving visitors</span>
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-subtle">
+          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 block mb-1">Live Published</span>
+          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{publishedCount}</div>
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 inline-block">Serving visitors</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-subtle">
-          <span className="text-xs font-semibold text-slate-400 block mb-1">Draft Experiences</span>
-          <div className="text-2xl font-black text-amber-500">{draftCount}</div>
-          <span className="text-[11px] text-slate-400 font-medium mt-1 inline-block">In progress</span>
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-subtle">
+          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 block mb-1">Draft Experiences</span>
+          <div className="text-2xl font-black text-amber-500 dark:text-amber-400">{draftCount}</div>
+          <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-1 inline-block">In progress</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-subtle">
-          <span className="text-xs font-semibold text-slate-400 block mb-1">Monthly Views</span>
-          <div className="text-2xl font-black text-slate-800">{totalViews.toLocaleString()}</div>
-          <span className="text-[11px] text-emerald-600 font-medium mt-1 inline-block">+14.2% vs last mo</span>
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-subtle">
+          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 block mb-1">Monthly Views</span>
+          <div className="text-2xl font-black text-slate-800 dark:text-white">{totalViews.toLocaleString()}</div>
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 inline-block">+14.2% vs last mo</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-subtle col-span-2 md:col-span-1">
-          <span className="text-xs font-semibold text-slate-400 block mb-1">Avg Completion Rate</span>
-          <div className="text-2xl font-black text-indigo-600">{avgCompletion}%</div>
-          <span className="text-[11px] text-indigo-600 font-medium mt-1 inline-block">Target: 45%+</span>
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-subtle col-span-2 md:col-span-1">
+          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 block mb-1">Avg Completion Rate</span>
+          <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{avgCompletion}%</div>
+          <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium mt-1 inline-block">Target: 45%+</span>
         </div>
       </div>
 
       {/* Projects List Header & Search Filter */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-subtle overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-subtle overflow-hidden">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h3 className="text-base font-bold text-slate-800">Your Experiences</h3>
-            <p className="text-xs text-slate-500">Search, edit, preview, and track your interactive flows</p>
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">Your Experiences</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Search, edit, preview, and track your interactive flows</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -161,14 +162,14 @@ export const Dashboard: React.FC = () => {
                 placeholder="Search experiences..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 w-56"
+                className="pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 w-56"
               />
             </div>
 
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 font-medium"
+              className="px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 font-medium"
             >
               <option value="all">All Formats</option>
               <option value="tour">Tours</option>
@@ -183,10 +184,10 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Projects Table */}
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {filteredProjects.length === 0 ? (
-            <div className="p-12 text-center text-slate-400">
-              <Compass className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+            <div className="p-12 text-center text-slate-400 dark:text-slate-500">
+              <Compass className="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-700" />
               <p className="text-xs font-semibold">No experiences match your criteria.</p>
             </div>
           ) : (
@@ -194,29 +195,29 @@ export const Dashboard: React.FC = () => {
               <div
                 key={proj.id}
                 onClick={() => navigate(`/editor/${proj.documentId}`)}
-                className="p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between cursor-pointer group"
+                className="p-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors flex items-center justify-between cursor-pointer group"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0">
                     {proj.type.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {proj.title}
                       </h4>
-                      <span className="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/70 px-2 py-0.5 rounded-full">
                         {proj.type}
                       </span>
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                         proj.status === 'published' 
-                          ? 'bg-emerald-50 text-emerald-700' 
-                          : 'bg-amber-50 text-amber-700'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
+                          : 'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
                       }`}>
                         {proj.status}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
                       {proj.description}
                     </p>
                   </div>
@@ -225,10 +226,10 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-6">
                   {/* Stats */}
                   <div className="text-right hidden sm:block">
-                    <span className="text-xs font-bold text-slate-700 block">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
                       {(proj.viewsCount || 0).toLocaleString()} views
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
                       {proj.completionRate || 0}% completion
                     </span>
                   </div>
@@ -238,7 +239,7 @@ export const Dashboard: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => navigate(`/preview/${proj.documentId}`)}
-                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-lg transition-colors"
                       title="Live Preview"
                     >
                       <ExternalLink className="w-4 h-4" />
@@ -246,7 +247,7 @@ export const Dashboard: React.FC = () => {
                     <button
                       type="button"
                       onClick={(e) => handleDuplicate(proj, e)}
-                      className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                       title="Duplicate"
                     >
                       <Copy className="w-4 h-4" />
@@ -254,7 +255,7 @@ export const Dashboard: React.FC = () => {
                     <button
                       type="button"
                       onClick={(e) => handleDelete(proj.id, e)}
-                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />

@@ -22,7 +22,8 @@ import {
   Settings,
   ChevronDown,
   Sparkles,
-  Layers
+  Layers,
+  Palette
 } from 'lucide-react';
 import { useAuth } from '../../services/authContext';
 
@@ -75,6 +76,7 @@ export const Sidebar: React.FC = () => {
       title: 'Organization & Setup',
       items: [
         { to: '/domains', label: 'Domains & CDN', icon: Network },
+        { to: '/brand', label: 'Brand Kit & Style', icon: Palette },
         { to: '/team', label: 'Team Members', icon: Users },
         { to: '/integrations', label: 'Integrations & Webhooks', icon: Blocks },
         { to: '/billing', label: 'Billing & Plans', icon: CreditCard },

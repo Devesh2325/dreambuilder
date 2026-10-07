@@ -16,7 +16,7 @@ export const EditorCanvas: React.FC = () => {
 
   if (!document) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-100 text-slate-400">
+      <div className="flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-950 text-slate-400">
         No document loaded
       </div>
     );
@@ -31,7 +31,7 @@ export const EditorCanvas: React.FC = () => {
 
   return (
     <div 
-      className="flex-1 relative overflow-auto bg-slate-100 canvas-grid-dots flex flex-col items-center p-8 select-none"
+      className="flex-1 relative overflow-auto bg-slate-100 dark:bg-slate-950 canvas-grid-dots flex flex-col items-center p-8 select-none transition-colors"
       onClick={() => selectNode(null)}
     >
       {/* Target Selector Picker Notification */}
@@ -59,7 +59,7 @@ export const EditorCanvas: React.FC = () => {
           transformOrigin: 'top center',
           transition: 'transform 0.15s ease-out, width 0.2s ease',
         }}
-        className={`transition-all ${deviceWidthStyle[deviceMode]} min-h-[750px] bg-white rounded-xl shadow-card border border-slate-200/80 overflow-hidden relative`}
+        className={`transition-all ${deviceWidthStyle[deviceMode]} min-h-[750px] bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200/80 dark:border-slate-800 overflow-hidden relative`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Device frame header for tablet/mobile */}

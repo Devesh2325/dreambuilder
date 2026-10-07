@@ -18,6 +18,15 @@ export const SEED_ORGANIZATION: Organization = {
   branding: {
     primaryColor: '#6366f1',
     companyName: 'Acme SaaS',
+    brandType: 'SaaS & Web App',
+    fontFamily: 'Inter',
+    baseFontSize: 16,
+    secondaryColor: '#4f46e5',
+    accentColor: '#10b981',
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&auto=format&fit=crop&q=80',
+    darkThemeEnabled: false,
   },
   createdAt: new Date().toISOString(),
 };

@@ -14,6 +14,14 @@ export interface OrganizationBranding {
   primaryColor: string;
   logoUrl?: string;
   companyName: string;
+  brandType?: string;
+  fontFamily?: string;
+  baseFontSize?: number;
+  secondaryColor?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  borderRadius?: number;
+  darkThemeEnabled?: boolean;
 }
 
 export interface Organization {

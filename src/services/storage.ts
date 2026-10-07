@@ -137,6 +137,13 @@ class StorageService {
       branding: {
         primaryColor: '#6366f1',
         companyName: name,
+        brandType: 'SaaS & Web App',
+        fontFamily: 'Inter',
+        baseFontSize: 16,
+        secondaryColor: '#4f46e5',
+        accentColor: '#10b981',
+        backgroundColor: '#ffffff',
+        borderRadius: 8,
       },
       createdAt: new Date().toISOString(),
     };
@@ -144,6 +151,25 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.ORGS, JSON.stringify(orgs));
     this.setCurrentOrganization(newOrg.id);
     return newOrg;
+  }
+
+  updateOrganizationBranding(orgId: string, branding: Partial<Organization['branding']>): Organization {
+    const orgs = this.getOrganizations();
+    const index = orgs.findIndex(o => o.id === orgId);
+    if (index === -1) {
+      const current = this.getCurrentOrganization();
+      current.branding = { ...current.branding, ...branding };
+      return current;
+    }
+    orgs[index] = {
+      ...orgs[index],
+      branding: {
+        ...orgs[index].branding,
+        ...branding,
+      },
+    };
+    localStorage.setItem(STORAGE_KEYS.ORGS, JSON.stringify(orgs));
+    return orgs[index];
   }
 
   // Members & Team
@@ -254,6 +280,16 @@ class StorageService {
       return Object.values(SEED_DOCUMENTS)[0];
     } catch {
       return SEED_DOCUMENTS[id] || Object.values(SEED_DOCUMENTS)[0];
+    }
+  }
+
+  getAllDocuments(): DocumentModel[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
+      const docs: Record<string, DocumentModel> = data ? JSON.parse(data) : SEED_DOCUMENTS;
+      return Object.values(docs || {});
+    } catch {
+      return Object.values(SEED_DOCUMENTS);
     }
   }
 

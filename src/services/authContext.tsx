@@ -11,6 +11,7 @@ interface AuthContextType {
   switchOrganization: (orgId: string) => void;
   createOrganization: (name: string) => void;
   updateProfile: (fullName: string, email: string) => void;
+  updateBranding: (branding: Partial<Organization['branding']>) => void;
   inviteMember: (email: string, role: UserRole, fullName: string) => void;
   removeMember: (memberId: string) => void;
   can: (action: string) => boolean;
@@ -53,6 +54,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(updated);
   };
 
+  const updateBranding = (branding: Partial<Organization['branding']>) => {
+    const updatedOrg = storage.updateOrganizationBranding(organization.id, branding);
+    setOrganization(updatedOrg);
+    setOrganizations(storage.getOrganizations());
+  };
+
   const inviteMember = (email: string, memberRole: UserRole, fullName: string) => {
     storage.addMember(email, memberRole, fullName);
     setMembers(storage.getMembers(organization.id));
@@ -84,6 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switchOrganization,
         createOrganization,
         updateProfile,
+        updateBranding,
         inviteMember,
         removeMember,
         can,

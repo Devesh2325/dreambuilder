@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-slate-50 text-navy-900 font-sans antialiased min-h-screen selection:bg-brand-500 selection:text-white;
+    @apply bg-slate-50 dark:bg-slate-950 text-navy-900 dark:text-slate-100 font-sans antialiased min-h-screen selection:bg-brand-500 selection:text-white transition-colors;
   }
 }
 
@@ -18,11 +18,23 @@
   background-size: 20px 20px;
 }
 
+.dark .canvas-grid-dots {
+  background-image: radial-gradient(#334155 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
+}
+
 .canvas-grid-lines {
   background-size: 40px 40px;
   background-image: 
     linear-gradient(to right, rgba(226, 232, 240, 0.6) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(226, 232, 240, 0.6) 1px, transparent 1px);
+}
+
+.dark .canvas-grid-lines {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(51, 65, 85, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(51, 65, 85, 0.4) 1px, transparent 1px);
 }
 
 /* Custom scrollbars for clean SaaS UI */
@@ -36,5 +48,5 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full hover:bg-slate-400;
+  @apply bg-slate-300 dark:bg-slate-700 rounded-full hover:bg-slate-400 dark:hover:bg-slate-600;
 }
