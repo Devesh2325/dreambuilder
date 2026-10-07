@@ -243,14 +243,17 @@ class StorageService {
     return true;
   }
 
-  // Documents
   getDocument(id: string): DocumentModel | undefined {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
       const docs: Record<string, DocumentModel> = data ? JSON.parse(data) : SEED_DOCUMENTS;
-      return docs[id];
+      if (docs && docs[id]) return docs[id];
+      if (SEED_DOCUMENTS[id]) return SEED_DOCUMENTS[id];
+      const keys = Object.keys(docs || {});
+      if (keys.length > 0) return docs[keys[0]];
+      return Object.values(SEED_DOCUMENTS)[0];
     } catch {
-      return SEED_DOCUMENTS[id];
+      return SEED_DOCUMENTS[id] || Object.values(SEED_DOCUMENTS)[0];
     }
   }
 

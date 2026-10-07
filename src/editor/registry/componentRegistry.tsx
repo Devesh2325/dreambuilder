@@ -2,6 +2,7 @@ import React from 'react';
 import { ComponentDefinition } from '../../types/components';
 import { ComponentNode } from '../../types/document';
 import * as LucideIcons from 'lucide-react';
+import { useEditorStore } from '../store/useEditorStore';
 
 // Safe Lucide icon resolver
 export const DynamicIcon: React.FC<{ name: string; className?: string }> = ({ name, className = 'w-5 h-5' }) => {
@@ -77,6 +78,148 @@ const SpacerRenderer: React.FC<{ node: ComponentNode }> = ({ node }) => {
 // 8. Container / Section / Flex
 const ContainerRenderer: React.FC<{ node: ComponentNode; children?: React.ReactNode }> = ({ children }) => {
   return <div className="w-full min-h-[40px]">{children}</div>;
+};
+
+// 8a. TourContainer Renderer
+const TourContainerRenderer: React.FC<{ node: ComponentNode; children?: React.ReactNode }> = ({ node, children }) => {
+  return (
+    <div className="w-full flex flex-col items-center justify-center p-6 gap-6">
+      <div className="w-full max-w-xl bg-indigo-50/70 border border-indigo-100 rounded-xl p-3 flex items-center justify-between text-xs text-indigo-900 font-medium select-none">
+        <span className="flex items-center gap-1.5 font-bold">
+          <span>🎯</span> Product Tour Steps Flow ({node.children.length} steps)
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            const stepNum = node.children.length + 1;
+            const newStep: ComponentNode = {
+              id: `step_${Date.now()}`,
+              type: 'TourStep',
+              name: `Step ${stepNum}`,
+              target: { selector: '#target-element', placement: 'bottom', offset: 12, highlight: true },
+              props: {
+                stepNumber: stepNum,
+                title: `Step ${stepNum}: New Walkthrough Step`,
+                description: 'Explain what users should do next or spotlight this control.',
+                nextButtonText: 'Next Step →',
+                prevButtonText: 'Back',
+                skipButtonText: 'Skip',
+              },
+              styles: {
+                width: '380px',
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                paddingTop: '20px',
+                paddingBottom: '20px',
+                paddingLeft: '24px',
+                paddingRight: '24px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              },
+              children: [],
+            };
+            useEditorStore.getState().insertNode(node.id, newStep);
+          }}
+          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition-all"
+        >
+          + Add Tour Step
+        </button>
+      </div>
+      <div className="w-full flex flex-col items-center gap-8">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// 8b. DemoContainer Renderer
+const DemoContainerRenderer: React.FC<{ node: ComponentNode; children?: React.ReactNode }> = ({ node, children }) => {
+  return (
+    <div className="w-full flex flex-col items-center gap-4">
+      <div className="w-full bg-slate-900 text-white rounded-xl p-3 flex items-center justify-between text-xs">
+        <span className="font-bold flex items-center gap-2">
+          <span>🎮</span> Interactive Demo Screens ({node.children.length} screens)
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            const screenNum = node.children.length + 1;
+            const newScreen: ComponentNode = {
+              id: `screen_${Date.now()}`,
+              type: 'DemoScreen',
+              name: `Screen ${screenNum}`,
+              props: {
+                title: `Screen ${screenNum}`,
+                imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&auto=format&fit=crop&q=80',
+                screenNumber: screenNum,
+              },
+              styles: { width: '100%', minHeight: '540px', position: 'relative' },
+              children: [
+                {
+                  id: `hotspot_${Date.now()}`,
+                  type: 'DemoHotspot',
+                  name: 'Hotspot',
+                  props: {
+                    tooltipTitle: 'Click here',
+                    tooltipText: 'Action step',
+                  },
+                  styles: { position: 'absolute', top: '150px', left: '300px', width: '36px', height: '36px' },
+                  children: [],
+                },
+              ],
+            };
+            useEditorStore.getState().insertNode(node.id, newScreen);
+          }}
+          className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition-all"
+        >
+          + Add Screen
+        </button>
+      </div>
+      <div className="w-full">{children}</div>
+    </div>
+  );
+};
+
+// 8c. DemoScreen Renderer
+const DemoScreenRenderer: React.FC<{ node: ComponentNode; children?: React.ReactNode }> = ({ node, children }) => {
+  const { title = 'Demo Screen', imageUrl, screenNumber = 1 } = node.props;
+  return (
+    <div className="w-full rounded-xl overflow-hidden border border-slate-200 shadow-md relative bg-slate-900" style={{ minHeight: '540px' }}>
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={title}
+          className="w-full h-[540px] object-cover opacity-90 select-none pointer-events-none"
+        />
+      )}
+      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-semibold z-10 flex items-center gap-2">
+        <span>Screen {screenNumber}: {title}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            const newHotspot: ComponentNode = {
+              id: `hotspot_${Date.now()}`,
+              type: 'DemoHotspot',
+              name: 'Interactive Hotspot',
+              props: {
+                tooltipTitle: 'Explore Action',
+                tooltipText: 'Click hotspot to trigger next screen or modal',
+              },
+              styles: { position: 'absolute', top: `${100 + Math.random() * 200}px`, left: `${150 + Math.random() * 300}px`, width: '36px', height: '36px' },
+              children: [],
+            };
+            useEditorStore.getState().insertNode(node.id, newHotspot);
+          }}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 rounded text-[10px] font-bold"
+        >
+          + Add Hotspot
+        </button>
+      </div>
+      {children}
+    </div>
+  );
 };
 
 // 9. TourStep Renderer (for visual tour steps)
@@ -589,6 +732,50 @@ export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
   },
 
   // Interactive & Modules
+  TourContainer: {
+    type: 'TourContainer',
+    displayName: 'Tour Steps Flow',
+    category: 'tour',
+    icon: 'Compass',
+    description: 'Container for product walkthrough steps',
+    isContainer: true,
+    defaultProps: { currentStepIndex: 0 },
+    defaultStyles: { width: '100%' },
+    propertyFields: [],
+    render: TourContainerRenderer,
+  },
+  DemoContainer: {
+    type: 'DemoContainer',
+    displayName: 'Demo Flow Container',
+    category: 'demo',
+    icon: 'PlaySquare',
+    description: 'Container for interactive demo screens',
+    isContainer: true,
+    defaultProps: { currentScreenIndex: 0 },
+    defaultStyles: { width: '100%', minHeight: '600px' },
+    propertyFields: [],
+    render: DemoContainerRenderer,
+  },
+  DemoScreen: {
+    type: 'DemoScreen',
+    displayName: 'Simulated Screen',
+    category: 'demo',
+    icon: 'Monitor',
+    description: 'Product screenshot screen with clickable hotspots',
+    isContainer: true,
+    defaultProps: {
+      title: 'Demo Screen',
+      imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&auto=format&fit=crop&q=80',
+      screenNumber: 1,
+    },
+    defaultStyles: { width: '100%', minHeight: '540px', position: 'relative' },
+    propertyFields: [
+      { key: 'title', label: 'Screen Title', type: 'text', category: 'content' },
+      { key: 'imageUrl', label: 'Background Image URL', type: 'text', category: 'content' },
+      { key: 'screenNumber', label: 'Screen Number', type: 'number', category: 'content' },
+    ],
+    render: DemoScreenRenderer,
+  },
   TourStep: {
     type: 'TourStep',
     displayName: 'Tour Step',

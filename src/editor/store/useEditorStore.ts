@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ComponentNode, DeviceMode, DocumentModel, StyleProperties, TargetSelectorConfig, NodeInteraction } from '../../types/document';
 import { storage } from '../../services/storage';
+import { COMPONENT_REGISTRY } from '../registry/componentRegistry';
 
 export type LeftPanelTab = 'components' | 'blocks' | 'layers' | 'templates' | 'assets';
 export type RightPanelTab = 'content' | 'design' | 'layout' | 'interaction' | 'conditions' | 'responsive';
@@ -125,7 +126,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   isTargetPicking: false,
 
   loadDocument: (docId: string) => {
-    const doc = storage.getDocument(docId);
+    let doc = storage.getDocument(docId);
+    if (!doc) {
+      const proj = storage.getProjectById(docId);
+      if (proj) {
+        doc = storage.getDocument(proj.documentId);
+      }
+    }
+    if (!doc) {
+      const projects = storage.getProjects();
+      if (projects.length > 0 && projects[0].documentId) {
+        doc = storage.getDocument(projects[0].documentId);
+      }
+    }
     if (doc) {
       set({
         document: doc,
@@ -174,11 +187,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { document, setDocument } = get();
     if (!document) return;
 
+    let targetParentId = parentId;
+    let targetIndex = index;
+
+    const targetNode = findNode(document.rootNode, parentId);
+    if (targetNode) {
+      const def = COMPONENT_REGISTRY[targetNode.type];
+      if (def && !def.isContainer) {
+        const parentOfTarget = findParent(document.rootNode, targetNode.id);
+        if (parentOfTarget) {
+          targetParentId = parentOfTarget.id;
+          const idx = parentOfTarget.children.findIndex(c => c.id === targetNode.id);
+          targetIndex = idx >= 0 ? idx + 1 : undefined;
+        } else {
+          targetParentId = document.rootNode.id;
+        }
+      }
+    }
+
     const newRoot = mapTree(document.rootNode, current => {
-      if (current.id === parentId) {
+      if (current.id === targetParentId) {
         const newChildren = [...current.children];
-        if (typeof index === 'number' && index >= 0) {
-          newChildren.splice(index, 0, node);
+        if (typeof targetIndex === 'number' && targetIndex >= 0) {
+          newChildren.splice(targetIndex, 0, node);
         } else {
           newChildren.push(node);
         }
