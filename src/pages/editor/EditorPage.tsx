@@ -33,6 +33,8 @@ export const EditorPage: React.FC = () => {
       const projects = storage.getProjects();
       if (projects.length > 0 && projects[0].documentId) {
         navigate(`/editor/${projects[0].documentId}`, { replace: true });
+      } else {
+        loadDocument('doc_default');
       }
     }
   }, [documentId, loadDocument, navigate]);

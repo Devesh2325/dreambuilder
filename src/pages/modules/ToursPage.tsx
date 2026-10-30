@@ -1,5 +1,6 @@
 import React from 'react';
 import { ModuleListingView } from './ModuleListingView';
+import { CreateTourModal } from '../../components/modals/CreateTourModal';
 import { Compass, Crosshair, CheckCircle, ShieldAlert } from 'lucide-react';
 
 export const ToursPage: React.FC = () => {
@@ -10,6 +11,9 @@ export const ToursPage: React.FC = () => {
       subtitle="Guide users step-by-step through core features with point-and-click spotlighting"
       icon={Compass}
       accentColor="bg-indigo-600"
+      customCreateModal={(isOpen, onClose) => (
+        <CreateTourModal isOpen={isOpen} onClose={onClose} />
+      )}
       specializedMetrics={[
         { label: 'Total Walkthroughs', value: '4' },
         { label: 'Avg Tour Completion', value: '78.4%', change: '+6.1%' },

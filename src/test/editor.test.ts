@@ -81,4 +81,53 @@ describe('Custom Visual Editor Engine (Zustand Store)', () => {
     expect(copies?.length).toBe(1);
     expect(copies?.[0].id).not.toBe('step_1');
   });
+
+  it('updates document module type with complete separation', () => {
+    useEditorStore.getState().setDocumentType('banner');
+    const doc = useEditorStore.getState().document;
+    expect(doc?.documentType).toBe('banner');
+  });
+
+  it('inserts sibling or auto-wraps correctly when target is a non-container leaf node', () => {
+    // Insert into step_1 which is not a container
+    const ctaButton: ComponentNode = {
+      id: 'btn_step_action',
+      type: 'Button',
+      name: 'Step Action',
+      props: { text: 'Next' },
+      styles: { width: '100px' },
+      children: [],
+    };
+
+    useEditorStore.getState().insertNode('step_1', ctaButton);
+    const doc = useEditorStore.getState().document;
+    // Should be inserted as sibling inside tour_root right after step_1
+    const idx = doc?.rootNode.children.findIndex(c => c.id === 'btn_step_action');
+    expect(idx).toBeGreaterThanOrEqual(0);
+  });
+
+  it('applies responsive style overrides independently without overwriting desktop', () => {
+    useEditorStore.getState().updateResponsiveStyles('step_1', 'mobile', {
+      fontSize: '12px',
+      paddingLeft: '8px',
+      paddingRight: '8px',
+      display: 'block',
+    });
+
+    const doc = useEditorStore.getState().document;
+    const step = doc?.rootNode.children.find(c => c.id === 'step_1');
+    expect(step?.responsive?.mobile?.fontSize).toBe('12px');
+    expect(step?.responsive?.mobile?.paddingLeft).toBe('8px');
+    // Desktop base styles remain intact
+    expect(step?.styles.paddingLeft).toBe('24px');
+  });
+
+  it('self-heals and creates valid starter document if requested doc does not exist', () => {
+    useEditorStore.getState().loadDocument('doc_non_existent_999');
+    const doc = useEditorStore.getState().document;
+    expect(doc).toBeDefined();
+    expect(doc?.id).toBe('doc_non_existent_999');
+    expect(doc?.rootNode).toBeDefined();
+  });
 });
+

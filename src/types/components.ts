@@ -26,6 +26,7 @@ export interface ComponentDefinition {
   icon: string;
   description: string;
   isContainer?: boolean;
+  supportedModules?: string[]; // e.g. ['page', 'banner', 'tour'] or ['all']
   allowedParents?: string[]; // If empty, can be placed anywhere valid
   allowedChildren?: string[]; // If empty and isContainer, can contain any
   defaultProps: Record<string, any>;

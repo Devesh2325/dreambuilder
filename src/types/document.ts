@@ -10,7 +10,10 @@ export type ExperienceType =
   | 'faq'
   | 'popup'
   | 'checklist'
-  | 'survey';
+  | 'survey'
+  | 'form'
+  | 'pricing'
+  | 'testimonials';
 
 export type DeviceMode = 'desktop' | 'tablet' | 'mobile';
 
@@ -23,6 +26,11 @@ export interface StyleProperties {
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   lineHeight?: string;
   letterSpacing?: string;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize' | string;
+
+  // Visual Effects & Glassmorphism
+  backdropFilter?: string;
+  filter?: string;
 
   // Background & Borders
   backgroundColor?: string;
@@ -37,14 +45,23 @@ export interface StyleProperties {
   // Layout & Spacing
   display?: 'block' | 'flex' | 'grid' | 'inline-block' | 'inline-flex' | 'none';
   flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse';
-  justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
-  alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
+  flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
+  justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly';
+  alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch' | 'baseline';
+  alignSelf?: 'auto' | 'flex-start' | 'center' | 'flex-end' | 'stretch';
+  flexGrow?: number;
+  flexShrink?: number;
+  flexBasis?: string;
   gap?: string;
+  rowGap?: string;
+  columnGap?: string;
   gridTemplateColumns?: string;
+  background?: string;
 
   margin?: string;
   borderBottomWidth?: string;
 
+  padding?: string;
   paddingTop?: string;
   paddingRight?: string;
   paddingBottom?: string;

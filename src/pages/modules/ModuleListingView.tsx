@@ -31,6 +31,7 @@ interface Props {
   accentColor: string;
   specializedMetrics?: { label: string; value: string; change?: string }[];
   extraConfigPreview?: React.ReactNode;
+  customCreateModal?: (isOpen: boolean, onClose: () => void) => React.ReactNode;
 }
 
 export const ModuleListingView: React.FC<Props> = ({
@@ -41,6 +42,7 @@ export const ModuleListingView: React.FC<Props> = ({
   accentColor,
   specializedMetrics = [],
   extraConfigPreview,
+  customCreateModal,
 }) => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>(() => 
@@ -304,11 +306,15 @@ export const ModuleListingView: React.FC<Props> = ({
         </div>
       </div>
 
-      <CreateExperienceModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        defaultType={moduleType}
-      />
+      {customCreateModal ? (
+        customCreateModal(isCreateModalOpen, () => setIsCreateModalOpen(false))
+      ) : (
+        <CreateExperienceModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          defaultType={moduleType}
+        />
+      )}
     </div>
   );
 };

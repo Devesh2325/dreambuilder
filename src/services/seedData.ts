@@ -1,4 +1,4 @@
-import { DocumentModel, ComponentNode } from '../types/document';
+import { DocumentModel, ComponentNode, ExperienceType } from '../types/document';
 import { Project, Template, Asset, IntegrationConfig } from '../types/modules';
 import { Organization, UserProfile, OrganizationMember } from '../types/auth';
 
@@ -402,18 +402,27 @@ export function createBannerDocument(id: string, projectId: string, title: strin
     updatedAt: new Date().toISOString(),
     rootNode: {
       id: 'banner_root',
-      type: 'BannerWidget',
-      name: 'Sticky Top Banner',
-      props: {
-        badgeText: 'NEW RELEASE',
-        message: 'FlowPilot 2.0 is live! Explore our new AI-assisted visual builder & instant publishing engine.',
-        ctaText: 'See What’s New →',
-        ctaUrl: 'https://flowpilot.dev/updates',
-        isDismissible: true,
-        placement: 'top',
-      },
-      styles: { width: '100%', backgroundColor: '#4338ca', color: '#ffffff', paddingTop: '10px', paddingBottom: '10px', paddingLeft: '16px', paddingRight: '16px' },
-      children: [],
+      type: 'BannerContainer',
+      name: 'Banner Canvas',
+      props: { placement: 'top', sticky: true },
+      styles: { width: '100%', minHeight: '60px', backgroundColor: '#312e81', display: 'flex', flexDirection: 'column' },
+      children: [
+        {
+          id: 'banner_w_1',
+          type: 'BannerWidget',
+          name: 'Announcement Bar',
+          props: {
+            badgeText: 'NEW RELEASE',
+            message: 'FlowPilot 2.0 is live! Explore our new AI-assisted visual builder & instant publishing engine.',
+            ctaText: 'See What’s New →',
+            ctaUrl: 'https://flowpilot.dev/updates',
+            isDismissible: true,
+            placement: 'top',
+          },
+          styles: { width: '100%', backgroundColor: '#4338ca', color: '#ffffff', paddingTop: '10px', paddingBottom: '10px', paddingLeft: '16px', paddingRight: '16px' },
+          children: [],
+        },
+      ],
     },
   };
 }
@@ -452,21 +461,30 @@ export function createMenuDocument(id: string, projectId: string, title: string)
     updatedAt: new Date().toISOString(),
     rootNode: {
       id: 'menu_root',
-      type: 'MenuWidget',
-      name: 'Global Header Navigation',
-      props: {
-        logoText: 'Acme Cloud',
-        ctaText: 'Sign In',
-        items: [
-          { label: 'Platform', href: '#platform', children: ['Tours & Demos', 'In-App Banners', 'Analytics'] },
-          { label: 'Solutions', href: '#solutions', children: ['For SaaS', 'For E-Commerce', 'For Agencies'] },
-          { label: 'Templates', href: '#templates' },
-          { label: 'Pricing', href: '#pricing' },
-          { label: 'Changelog', href: '#changelog' },
-        ],
-      },
-      styles: { width: '100%', backgroundColor: '#ffffff', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)', paddingTop: '12px', paddingBottom: '12px', paddingLeft: '24px', paddingRight: '24px' },
-      children: [],
+      type: 'MenuContainer',
+      name: 'Navigation Bar',
+      props: {},
+      styles: { width: '100%', minHeight: '64px', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' },
+      children: [
+        {
+          id: 'menu_w_1',
+          type: 'MenuWidget',
+          name: 'Global Header Navigation',
+          props: {
+            logoText: 'Acme Cloud',
+            ctaText: 'Sign In',
+            items: [
+              { label: 'Platform', href: '#platform', children: ['Tours & Demos', 'In-App Banners', 'Analytics'] },
+              { label: 'Solutions', href: '#solutions', children: ['For SaaS', 'For E-Commerce', 'For Agencies'] },
+              { label: 'Templates', href: '#templates' },
+              { label: 'Pricing', href: '#pricing' },
+              { label: 'Changelog', href: '#changelog' },
+            ],
+          },
+          styles: { width: '100%', backgroundColor: '#ffffff', boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)', paddingTop: '12px', paddingBottom: '12px', paddingLeft: '24px', paddingRight: '24px' },
+          children: [],
+        },
+      ],
     },
   };
 }
@@ -505,33 +523,42 @@ export function createFaqDocument(id: string, projectId: string, title: string):
     updatedAt: new Date().toISOString(),
     rootNode: {
       id: 'faq_root',
-      type: 'FaqWidget',
-      name: 'Customer Support FAQ',
-      props: {
-        title: 'Frequently Asked Questions',
-        subtitle: 'Everything you need to know about our visual adoption engine and integrations.',
-        showSearch: true,
-        items: [
-          {
-            q: 'How does the FlowPilot embed script work without slowing down my site?',
-            a: 'The FlowPilot client snippet is ultra-lightweight (<18kb gzip) and loads asynchronously (defer). It initializes only when DOM content is ready and executes with zero external dependencies.',
+      type: 'FaqContainer',
+      name: 'Customer Support FAQ Canvas',
+      props: {},
+      styles: { width: '100%', minHeight: '200px', display: 'flex', flexDirection: 'column' },
+      children: [
+        {
+          id: 'faq_w_1',
+          type: 'FaqWidget',
+          name: 'Customer Support FAQ',
+          props: {
+            title: 'Frequently Asked Questions',
+            subtitle: 'Everything you need to know about our visual adoption engine and integrations.',
+            showSearch: true,
+            items: [
+              {
+                q: 'How does the FlowPilot embed script work without slowing down my site?',
+                a: 'The FlowPilot client snippet is ultra-lightweight (<18kb gzip) and loads asynchronously (defer). It initializes only when DOM content is ready and executes with zero external dependencies.',
+              },
+              {
+                q: 'Can I target specific customer cohorts or paid user plans?',
+                a: 'Yes. You can configure audience trigger rules by URL paths, user roles, device types, or custom metadata passed through your frontend application.',
+              },
+              {
+                q: 'Do I need developer support to create or edit tours?',
+                a: 'None! Our point-and-click target picker and visual editor allow any product manager or marketer to build and deploy experiences safely without code.',
+              },
+              {
+                q: 'Are my analytics captured with privacy compliance?',
+                a: 'Yes. FlowPilot utilizes privacy-conscious, pseudonymous visitor identifiers and never captures sensitive PII unless explicitly mapped in your survey responses.',
+              },
+            ],
           },
-          {
-            q: 'Can I target specific customer cohorts or paid user plans?',
-            a: 'Yes. You can configure audience trigger rules by URL paths, user roles, device types, or custom metadata passed through your frontend application.',
-          },
-          {
-            q: 'Do I need developer support to create or edit tours?',
-            a: 'None! Our point-and-click target picker and visual editor allow any product manager or marketer to build and deploy experiences safely without code.',
-          },
-          {
-            q: 'Are my analytics captured with privacy compliance?',
-            a: 'Yes. FlowPilot utilizes privacy-conscious, pseudonymous visitor identifiers and never captures sensitive PII unless explicitly mapped in your survey responses.',
-          },
-        ],
-      },
-      styles: { width: '100%', maxWidth: '800px', margin: '0 auto', paddingTop: '40px', paddingBottom: '40px' },
-      children: [],
+          styles: { width: '100%', maxWidth: '800px', margin: '0 auto', paddingTop: '40px', paddingBottom: '40px' },
+          children: [],
+        },
+      ],
     },
   };
 }
@@ -576,17 +603,26 @@ export function createPopupDocument(id: string, projectId: string, title: string
     updatedAt: new Date().toISOString(),
     rootNode: {
       id: 'popup_root',
-      type: 'PopupWidget',
-      name: 'Special Offer Modal',
-      props: {
-        headline: 'Unlock 25% Off Annual Pro 🎁',
-        bodyText: 'Upgrade your workspace today and get full access to our AI generation suite, unlimited tours, and custom domain hosting.',
-        ctaText: 'Claim Your Discount Now',
-        cancelText: 'Maybe later',
-        icon: 'Sparkles',
-      },
-      styles: { width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', paddingLeft: '32px', paddingRight: '32px', paddingTop: '28px', paddingBottom: '28px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
-      children: [],
+      type: 'PopupContainer',
+      name: 'Popup Lightbox Canvas',
+      props: {},
+      styles: { width: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column' },
+      children: [
+        {
+          id: 'popup_w_1',
+          type: 'PopupWidget',
+          name: 'Special Offer Modal',
+          props: {
+            headline: 'Unlock 25% Off Annual Pro 🎁',
+            bodyText: 'Upgrade your workspace today and get full access to our AI generation suite, unlimited tours, and custom domain hosting.',
+            ctaText: 'Claim Your Discount Now',
+            cancelText: 'Maybe later',
+            icon: 'Sparkles',
+          },
+          styles: { width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', paddingLeft: '32px', paddingRight: '32px', paddingTop: '28px', paddingBottom: '28px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
+          children: [],
+        },
+      ],
     },
   };
 }
@@ -625,21 +661,30 @@ export function createChecklistDocument(id: string, projectId: string, title: st
     updatedAt: new Date().toISOString(),
     rootNode: {
       id: 'checklist_root',
-      type: 'ChecklistWidget',
-      name: 'Get Started Checklist',
-      props: {
-        title: 'Complete Your Setup (2 of 4 done)',
-        subtitle: 'Follow these essential steps to maximize your platform activation.',
-        rewardMessage: 'Congratulations! You unlocked the Early Adopter Badge! 🎉',
-        tasks: [
-          { id: 't1', title: 'Connect your corporate workspace', completed: true, url: '/settings' },
-          { id: 't2', title: 'Create your first interactive tour', completed: true, url: '/tours' },
-          { id: 't3', title: 'Invite team members to collaborate', completed: false, url: '/team' },
-          { id: 't4', title: 'Publish client embed script to staging', completed: false, url: '/domains' },
-        ],
-      },
-      styles: { width: '360px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '20px', paddingRight: '20px', paddingTop: '18px', paddingBottom: '18px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' },
-      children: [],
+      type: 'ChecklistContainer',
+      name: 'Activation Checklist Canvas',
+      props: {},
+      styles: { width: '100%', minHeight: '300px', display: 'flex', flexDirection: 'column' },
+      children: [
+        {
+          id: 'checklist_w_1',
+          type: 'ChecklistWidget',
+          name: 'Get Started Checklist',
+          props: {
+            title: 'Complete Your Setup (2 of 4 done)',
+            subtitle: 'Follow these essential steps to maximize your platform activation.',
+            rewardMessage: 'Congratulations! You unlocked the Early Adopter Badge! 🎉',
+            tasks: [
+              { id: 't1', title: 'Connect your corporate workspace', completed: true, url: '/settings' },
+              { id: 't2', title: 'Create your first interactive tour', completed: true, url: '/tours' },
+              { id: 't3', title: 'Invite team members to collaborate', completed: false, url: '/team' },
+              { id: 't4', title: 'Publish client embed script to staging', completed: false, url: '/domains' },
+            ],
+          },
+          styles: { width: '360px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '20px', paddingRight: '20px', paddingTop: '18px', paddingBottom: '18px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' },
+          children: [],
+        },
+      ],
     },
   };
 }
@@ -678,20 +723,529 @@ export function createSurveyDocument(id: string, projectId: string, title: strin
     updatedAt: new Date().toISOString(),
     rootNode: {
       id: 'survey_root',
-      type: 'SurveyWidget',
-      name: 'Product NPS Survey',
-      props: {
-        question: 'How likely are you to recommend FlowPilot to a colleague?',
-        type: 'nps', // 0 - 10
-        followUpQuestion: 'What is the primary reason for your score?',
-        submitButtonText: 'Submit Feedback',
-        thankYouTitle: 'Thank you for your feedback! ❤️',
-        thankYouSubtitle: 'Your response helps us continuously improve the experience builder.',
-      },
-      styles: { width: '420px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '24px', paddingRight: '24px', paddingTop: '20px', paddingBottom: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)' },
-      children: [],
+      type: 'SurveyContainer',
+      name: 'Customer Feedback Survey Canvas',
+      props: {},
+      styles: { width: '100%', minHeight: '300px', display: 'flex', flexDirection: 'column' },
+      children: [
+        {
+          id: 'survey_w_1',
+          type: 'SurveyWidget',
+          name: 'Product NPS Survey',
+          props: {
+            question: 'How likely are you to recommend FlowPilot to a colleague?',
+            type: 'nps', // 0 - 10
+            followUpQuestion: 'What is the primary reason for your score?',
+            submitButtonText: 'Submit Feedback',
+            thankYouTitle: 'Thank you for your feedback! ❤️',
+            thankYouSubtitle: 'Your response helps us continuously improve the experience builder.',
+          },
+          styles: { width: '420px', backgroundColor: '#ffffff', borderRadius: '12px', paddingLeft: '24px', paddingRight: '24px', paddingTop: '20px', paddingBottom: '20px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)' },
+          children: [],
+        },
+      ],
     },
   };
+}
+
+// Helper to construct Pricing document
+export function createPricingDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'pricing',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '12px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: { accentColor: '#6366f1' },
+    triggerConditions: { urlRules: [], delaySeconds: 0, frequency: 'always' },
+    isPublished: true,
+    publishedVersionId: 'ver_pricing_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'pricing_root',
+      type: 'Container',
+      name: 'Pricing Canvas Root',
+      props: {},
+      styles: { width: '100%', minHeight: '500px', display: 'flex', flexDirection: 'column', padding: '24px' },
+      children: [
+        {
+          id: 'pricing_sec_1',
+          type: 'PricingSection',
+          name: 'Subscription Tiers',
+          props: {
+            headline: 'Simple, Transparent Pricing',
+            subheadline: 'Choose the plan that fits your growth stage. Upgrade or downgrade anytime.',
+          },
+          styles: { width: '100%' },
+          children: [],
+        },
+      ],
+    },
+  };
+}
+
+// Helper to construct Testimonials document
+export function createTestimonialsDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'testimonials',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#8b5cf6',
+      secondaryColor: '#7c3aed',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '12px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: { accentColor: '#8b5cf6' },
+    triggerConditions: { urlRules: [], delaySeconds: 0, frequency: 'always' },
+    isPublished: true,
+    publishedVersionId: 'ver_test_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'test_root',
+      type: 'Container',
+      name: 'Testimonials Canvas Root',
+      props: {},
+      styles: { width: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column', padding: '24px' },
+      children: [
+        {
+          id: 'test_sec_1',
+          type: 'TestimonialsSection',
+          name: 'Customer Wall of Love',
+          props: {
+            title: 'Loved by Product Teams Worldwide',
+            subtitle: 'See how market leaders transform user adoption with FlowPilot.',
+          },
+          styles: { width: '100%' },
+          children: [],
+        },
+      ],
+    },
+  };
+}
+
+// Helper to construct Form document
+export function createFormDocument(id: string, projectId: string, title: string): DocumentModel {
+  return {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    documentType: 'form',
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '12px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: { accentColor: '#6366f1' },
+    triggerConditions: { urlRules: [], delaySeconds: 0, frequency: 'always' },
+    isPublished: true,
+    publishedVersionId: 'ver_form_v1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootNode: {
+      id: 'form_root',
+      type: 'Container',
+      name: 'Lead Capture Canvas Root',
+      props: {},
+      styles: { width: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column', padding: '24px' },
+      children: [
+        {
+          id: 'form_sec_1',
+          type: 'FormSection',
+          name: 'Contact & Demo Inquiries',
+          props: {
+            title: 'Schedule a Guided Demo',
+            subtitle: 'Talk with our product adoption specialists and discover what FlowPilot can do for your metrics.',
+            buttonText: 'Submit Request',
+          },
+          styles: { width: '100%' },
+          children: [],
+        },
+      ],
+    },
+  };
+}
+
+// Helper to construct clean blank documents (without bloated dummy data)
+export function createBlankDocument(id: string, projectId: string, title: string, type: ExperienceType): DocumentModel {
+  const baseDoc: Omit<DocumentModel, 'rootNode' | 'documentType'> = {
+    id,
+    projectId,
+    organizationId: SEED_ORGANIZATION.id,
+    title,
+    schemaVersion: 1,
+    themeVariables: {
+      primaryColor: '#6366f1',
+      secondaryColor: '#4f46e5',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderRadius: '8px',
+      fontFamily: 'Inter',
+    },
+    responsiveSettings: {
+      breakpoints: { mobile: 480, tablet: 768, desktop: 1200 },
+    },
+    experienceSettings: {
+      accentColor: '#6366f1',
+      showProgress: true,
+    },
+    triggerConditions: {
+      urlRules: [],
+      delaySeconds: 0,
+      frequency: 'always',
+    },
+    isPublished: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  switch (type) {
+    case 'tour':
+      return {
+        ...baseDoc,
+        documentType: 'tour',
+        rootNode: {
+          id: 'tour_root',
+          type: 'TourContainer',
+          name: 'Product Tour Canvas',
+          props: {},
+          styles: { width: '100%', minHeight: '500px' },
+          children: [
+            {
+              id: `step_${Date.now()}_1`,
+              type: 'TourStep',
+              name: 'Step 1: Welcome',
+              target: {
+                selector: 'header',
+                placement: 'bottom',
+                offset: 12,
+                highlight: true,
+                spotlightPadding: 8,
+                fallbackBehavior: 'center',
+              },
+              props: {
+                stepNumber: 1,
+                title: 'Welcome to your experience',
+                description: 'Add your message here or customize this step using the right properties panel.',
+                prevButtonText: 'Back',
+                nextButtonText: 'Next →',
+                skipButtonText: 'Skip',
+              },
+              styles: {
+                width: '380px',
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                paddingLeft: '24px',
+                paddingRight: '24px',
+                paddingTop: '20px',
+                paddingBottom: '20px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              },
+              children: [],
+            },
+          ],
+        },
+      };
+
+    case 'demo':
+      return {
+        ...baseDoc,
+        documentType: 'demo',
+        rootNode: {
+          id: 'demo_root',
+          type: 'DemoContainer',
+          name: 'Interactive Demo Canvas',
+          props: { currentScreenIndex: 0 },
+          styles: { width: '100%', minHeight: '600px' },
+          children: [
+            {
+              id: `screen_${Date.now()}_1`,
+              type: 'DemoScreen',
+              name: 'Demo Screen 1',
+              props: {
+                title: 'Screen 1',
+                imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&auto=format&fit=crop&q=80',
+                screenNumber: 1,
+              },
+              styles: { width: '100%', minHeight: '520px', position: 'relative' },
+              children: [],
+            },
+          ],
+        },
+      };
+
+    case 'faq':
+      return {
+        ...baseDoc,
+        documentType: 'faq',
+        rootNode: {
+          id: 'faq_root',
+          type: 'FaqContainer',
+          name: 'FAQ Canvas',
+          props: {},
+          styles: { width: '100%', minHeight: '320px', display: 'flex', flexDirection: 'column' },
+          children: [
+            {
+              id: `faq_${Date.now()}`,
+              type: 'FaqWidget',
+              name: 'FAQ Section',
+              props: {
+                title: 'Frequently Asked Questions',
+                subtitle: 'Find clear answers to help you navigate our platform.',
+                items: [
+                  {
+                    question: 'How does this work?',
+                    answer: 'You can customize questions, add new blocks from the sidebar, or configure targeting rules in the top bar.',
+                  },
+                ],
+              },
+              styles: { width: '100%', maxWidth: '800px', marginLeft: 'auto', marginRight: 'auto', paddingLeft: '24px', paddingRight: '24px', paddingTop: '32px', paddingBottom: '32px' },
+              children: [],
+            },
+          ],
+        },
+      };
+
+    case 'banner':
+      return {
+        ...baseDoc,
+        documentType: 'banner',
+        rootNode: {
+          id: 'banner_root',
+          type: 'BannerContainer',
+          name: 'Banner Canvas',
+          props: {},
+          styles: { width: '100%', minHeight: '80px', display: 'flex', flexDirection: 'column' },
+          children: [
+            {
+              id: `banner_${Date.now()}`,
+              type: 'Banner',
+              name: 'Announcement Banner',
+              props: {
+                text: 'New Announcement: Update your content here or drag blocks into the canvas.',
+                buttonText: 'Learn More',
+                linkUrl: '#',
+                dismissible: true,
+              },
+              styles: { width: '100%', backgroundColor: '#6366f1', color: '#ffffff', paddingLeft: '20px', paddingRight: '20px', paddingTop: '12px', paddingBottom: '12px', borderRadius: '8px' },
+              children: [],
+            },
+          ],
+        },
+      };
+
+    case 'popup':
+      return {
+        ...baseDoc,
+        documentType: 'popup',
+        rootNode: {
+          id: 'popup_root',
+          type: 'PopupContainer',
+          name: 'Popup Canvas',
+          props: {},
+          styles: { width: '100%', minHeight: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
+          children: [
+            {
+              id: `popup_${Date.now()}`,
+              type: 'PopupModal',
+              name: 'Modal Card',
+              props: {
+                title: 'Special Notice',
+                content: 'Add your notice or promotional offer content here.',
+                buttonText: 'Get Started',
+                cancelButtonText: 'Maybe Later',
+              },
+              styles: { width: '480px', backgroundColor: '#ffffff', borderRadius: '16px', paddingLeft: '32px', paddingRight: '32px', paddingTop: '32px', paddingBottom: '32px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
+              children: [],
+            },
+          ],
+        },
+      };
+
+    case 'checklist':
+      return {
+        ...baseDoc,
+        documentType: 'checklist',
+        rootNode: {
+          id: 'chk_root',
+          type: 'ChecklistContainer',
+          name: 'Checklist Canvas',
+          props: {},
+          styles: { width: '380px', backgroundColor: '#ffffff', borderRadius: '16px', paddingLeft: '20px', paddingRight: '20px', paddingTop: '20px', paddingBottom: '20px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' },
+          children: [
+            {
+              id: `chk_item_${Date.now()}`,
+              type: 'ChecklistItem',
+              name: 'Checklist Item 1',
+              props: {
+                title: 'Complete your first task',
+                description: 'Click to mark as done or edit this step in the properties panel.',
+                isCompleted: false,
+              },
+              styles: {},
+              children: [],
+            },
+          ],
+        },
+      };
+
+    case 'survey':
+      return {
+        ...baseDoc,
+        documentType: 'survey',
+        rootNode: {
+          id: 'survey_root',
+          type: 'SurveyContainer',
+          name: 'Survey Canvas',
+          props: { surveyType: 'csat' },
+          styles: { width: '420px', backgroundColor: '#ffffff', borderRadius: '16px', paddingLeft: '24px', paddingRight: '24px', paddingTop: '24px', paddingBottom: '24px', boxShadow: '0 15px 30px -10px rgba(0, 0, 0, 0.15)' },
+          children: [
+            {
+              id: `survey_q_${Date.now()}`,
+              type: 'SurveyQuestion',
+              name: 'Rating Question',
+              props: {
+                questionText: 'How would you rate your experience?',
+                questionType: 'rating',
+              },
+              styles: {},
+              children: [],
+            },
+          ],
+        },
+      };
+
+    case 'pricing':
+      return {
+        ...baseDoc,
+        documentType: 'pricing',
+        rootNode: {
+          id: 'pricing_root',
+          type: 'PricingTable',
+          name: 'Pricing Canvas',
+          props: {
+            title: 'Simple, Transparent Pricing',
+            subtitle: 'Choose the plan that fits your business needs.',
+          },
+          styles: { width: '100%', maxWidth: '1000px', marginLeft: 'auto', marginRight: 'auto', paddingLeft: '24px', paddingRight: '24px', paddingTop: '36px', paddingBottom: '36px' },
+          children: [],
+        },
+      };
+
+    case 'testimonials':
+      return {
+        ...baseDoc,
+        documentType: 'testimonials',
+        rootNode: {
+          id: 'test_root',
+          type: 'TestimonialsGrid',
+          name: 'Testimonials Canvas',
+          props: {
+            title: 'Customer Stories',
+            subtitle: 'See how innovative teams achieve results with our platform.',
+          },
+          styles: { width: '100%', maxWidth: '1000px', marginLeft: 'auto', marginRight: 'auto', paddingLeft: '24px', paddingRight: '24px', paddingTop: '36px', paddingBottom: '36px' },
+          children: [],
+        },
+      };
+
+    case 'form':
+      return {
+        ...baseDoc,
+        documentType: 'form',
+        rootNode: {
+          id: 'form_root',
+          type: 'FormContainer',
+          name: 'Form Canvas',
+          props: {},
+          styles: { width: '100%', minHeight: '320px', display: 'flex', flexDirection: 'column', padding: '24px' },
+          children: [
+            {
+              id: `form_sec_${Date.now()}`,
+              type: 'FormSection',
+              name: 'Inquiry Form',
+              props: {
+                title: 'Get in Touch',
+                subtitle: 'Send us a message and our team will get back to you promptly.',
+                buttonText: 'Submit Inquiry',
+              },
+              styles: { width: '100%', maxWidth: '560px', marginLeft: 'auto', marginRight: 'auto' },
+              children: [],
+            },
+          ],
+        },
+      };
+
+    case 'menu':
+      return {
+        ...baseDoc,
+        documentType: 'menu',
+        rootNode: {
+          id: 'menu_root',
+          type: 'MenuContainer',
+          name: 'Navigation Header Canvas',
+          props: { brandName: 'FlowPilot Brand' },
+          styles: { width: '100%', backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: '1px', borderStyle: 'solid', paddingLeft: '24px', paddingRight: '24px', paddingTop: '16px', paddingBottom: '16px' },
+          children: [],
+        },
+      };
+
+    case 'page':
+    default:
+      return {
+        ...baseDoc,
+        documentType: 'page',
+        rootNode: {
+          id: 'root',
+          type: 'Container',
+          name: 'Main Page Canvas',
+          props: {},
+          styles: {
+            width: '100%',
+            minHeight: '600px',
+            backgroundColor: '#ffffff',
+            paddingLeft: '32px',
+            paddingRight: '32px',
+            paddingTop: '48px',
+            paddingBottom: '48px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px',
+          },
+          children: [],
+        },
+      };
+  }
 }
 
 // All Seed Projects
@@ -831,6 +1385,51 @@ export const SEED_PROJECTS: Project[] = [
     viewsCount: 1950,
     completionRate: 41.2,
   },
+  {
+    id: 'proj_pricing_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Tiered SaaS Subscription Pricing Table',
+    description: 'Responsive multi-tier pricing grid with feature comparison lists and checkout CTAs.',
+    type: 'pricing',
+    status: 'published',
+    tags: ['pricing', 'monetization', 'saas'],
+    documentId: 'doc_pricing_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 5120,
+    completionRate: 29.4,
+  },
+  {
+    id: 'proj_testimonials_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Customer Success & Reviews Grid',
+    description: 'Social proof testimonial cards featuring customer avatars, star ratings, and company badges.',
+    type: 'testimonials',
+    status: 'published',
+    tags: ['social-proof', 'testimonials', 'reviews'],
+    documentId: 'doc_testimonials_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 3890,
+    completionRate: 35.8,
+  },
+  {
+    id: 'proj_form_1',
+    organizationId: SEED_ORGANIZATION.id,
+    title: 'Executive Demo Request Lead Form',
+    description: 'High-conversion contact & demo inquiry form with client validation and feedback response.',
+    type: 'form',
+    status: 'published',
+    tags: ['leads', 'contact', 'form'],
+    documentId: 'doc_form_1',
+    createdBy: SEED_USER.id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    viewsCount: 2410,
+    completionRate: 48.0,
+  },
 ];
 
 // All Seed Documents mapped to projects
@@ -844,10 +1443,14 @@ export const SEED_DOCUMENTS: Record<string, DocumentModel> = {
   doc_popup_1: createPopupDocument('doc_popup_1', 'proj_popup_1', 'Quarterly Upgrade Modal Popup'),
   doc_checklist_1: createChecklistDocument('doc_checklist_1', 'proj_checklist_1', 'New Account Activation Checklist'),
   doc_survey_1: createSurveyDocument('doc_survey_1', 'proj_survey_1', 'Quarterly Customer NPS Survey'),
+  doc_pricing_1: createPricingDocument('doc_pricing_1', 'proj_pricing_1', 'Tiered SaaS Subscription Pricing Table'),
+  doc_testimonials_1: createTestimonialsDocument('doc_testimonials_1', 'proj_testimonials_1', 'Customer Success & Reviews Grid'),
+  doc_form_1: createFormDocument('doc_form_1', 'proj_form_1', 'Executive Demo Request Lead Form'),
 };
 
 // Seed Templates across categories
 export const SEED_TEMPLATES: Template[] = [
+  // 1. Tours
   {
     id: 'tpl_tour_saas',
     title: 'SaaS First-Time User Onboarding Tour',
@@ -860,6 +1463,19 @@ export const SEED_TEMPLATES: Template[] = [
     documentData: createTourDocument('tpl_doc_1', 'tpl_proj_1', 'SaaS Onboarding Tour'),
   },
   {
+    id: 'tpl_tour_feature',
+    title: 'New Feature Spotlight Tour',
+    description: 'Targeted 3-step walkthrough focusing exclusively on new workflow tools and action buttons.',
+    category: 'tour',
+    tags: ['feature', 'spotlight', 'adoption'],
+    thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 3,
+    isPopular: false,
+    documentData: createTourDocument('tpl_doc_1b', 'tpl_proj_1b', 'New Feature Spotlight Tour'),
+  },
+
+  // 2. Demos
+  {
     id: 'tpl_demo_crm',
     title: 'Interactive CRM & Pipeline Demo',
     description: 'Multi-screen interactive walkthrough with clickable hotspots for lead qualification.',
@@ -871,6 +1487,19 @@ export const SEED_TEMPLATES: Template[] = [
     documentData: createDemoDocument('tpl_doc_2', 'tpl_proj_2', 'Interactive CRM Demo'),
   },
   {
+    id: 'tpl_demo_analytics',
+    title: 'Executive Analytics Product Tour',
+    description: 'Self-guided interactive prototype exploring dashboard charts and filters without login.',
+    category: 'demo',
+    tags: ['analytics', 'demo', 'b2b'],
+    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 2,
+    isPopular: false,
+    documentData: createDemoDocument('tpl_doc_2b', 'tpl_proj_2b', 'Executive Analytics Demo'),
+  },
+
+  // 3. Pages
+  {
     id: 'tpl_page_b2b',
     title: 'Modern B2B AI SaaS Landing Page',
     description: 'Responsive layout with Hero, Features grid, Social proof, and High-conversion CTA.',
@@ -881,6 +1510,8 @@ export const SEED_TEMPLATES: Template[] = [
     isPopular: true,
     documentData: createPageDocument('tpl_doc_3', 'tpl_proj_3', 'B2B SaaS Landing Page'),
   },
+
+  // 4. Banners
   {
     id: 'tpl_banner_promo',
     title: 'Urgent Flash Sale & Announcement Banner',
@@ -889,9 +1520,35 @@ export const SEED_TEMPLATES: Template[] = [
     tags: ['banner', 'promo', 'announcement'],
     thumbnail: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&auto=format&fit=crop&q=80',
     stepsCount: 1,
-    isPopular: false,
+    isPopular: true,
     documentData: createBannerDocument('tpl_doc_4', 'tpl_proj_4', 'Flash Sale Banner'),
   },
+  {
+    id: 'tpl_banner_release',
+    title: 'Product Changelog & Update Bar',
+    description: 'Clean notification bar informing visitors about system upgrades and new capabilities.',
+    category: 'banner',
+    tags: ['changelog', 'release', 'banner'],
+    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 1,
+    isPopular: false,
+    documentData: createBannerDocument('tpl_doc_4b', 'tpl_proj_4b', 'Changelog Announcement Bar'),
+  },
+
+  // 5. Menus
+  {
+    id: 'tpl_menu_saas',
+    title: 'Universal Modern SaaS Header Menu',
+    description: 'Sticky header navigation with dropdown columns, search trigger, and login action.',
+    category: 'menu',
+    tags: ['menu', 'header', 'navigation'],
+    thumbnail: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 1,
+    isPopular: true,
+    documentData: createMenuDocument('tpl_doc_menu_1', 'tpl_proj_menu_1', 'Modern SaaS Header Menu'),
+  },
+
+  // 6. FAQs
   {
     id: 'tpl_faq_support',
     title: 'Help Center & Searchable FAQ Accordion',
@@ -900,9 +1557,11 @@ export const SEED_TEMPLATES: Template[] = [
     tags: ['support', 'help', 'faq'],
     thumbnail: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=500&auto=format&fit=crop&q=80',
     stepsCount: 6,
-    isPopular: false,
+    isPopular: true,
     documentData: createFaqDocument('tpl_doc_5', 'tpl_proj_5', 'Searchable FAQ'),
   },
+
+  // 7. Popups
   {
     id: 'tpl_popup_lead',
     title: 'Exit-Intent Lead Magnet Modal',
@@ -915,6 +1574,19 @@ export const SEED_TEMPLATES: Template[] = [
     documentData: createPopupDocument('tpl_doc_6', 'tpl_proj_6', 'Lead Magnet Popup'),
   },
   {
+    id: 'tpl_popup_offer',
+    title: 'Flash Discount Promotional Lightbox',
+    description: 'Centrally anchored lightbox modal offering 25% discount to annual upgraders.',
+    category: 'popup',
+    tags: ['discount', 'offer', 'popup'],
+    thumbnail: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 1,
+    isPopular: false,
+    documentData: createPopupDocument('tpl_doc_6b', 'tpl_proj_6b', 'Special Promotion Modal'),
+  },
+
+  // 8. Checklists
+  {
     id: 'tpl_checklist_gamified',
     title: 'Gamified Product Adoption Checklist',
     description: 'Task checklist with progress bar and celebratory confetti upon completion.',
@@ -925,6 +1597,8 @@ export const SEED_TEMPLATES: Template[] = [
     isPopular: true,
     documentData: createChecklistDocument('tpl_doc_7', 'tpl_proj_7', 'Gamified Checklist'),
   },
+
+  // 9. Surveys
   {
     id: 'tpl_survey_nps',
     title: 'Quarterly Executive Net Promoter Score (NPS)',
@@ -933,8 +1607,47 @@ export const SEED_TEMPLATES: Template[] = [
     tags: ['survey', 'nps', 'feedback'],
     thumbnail: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=500&auto=format&fit=crop&q=80',
     stepsCount: 2,
-    isPopular: false,
+    isPopular: true,
     documentData: createSurveyDocument('tpl_doc_8', 'tpl_proj_8', 'Executive NPS Survey'),
+  },
+
+  // 10. Pricing
+  {
+    id: 'tpl_pricing_tiers',
+    title: 'SaaS 3-Tier Subscription Pricing Table',
+    description: 'Clean Free, Pro, and Enterprise columns with feature checks and checkout CTAs.',
+    category: 'pricing',
+    tags: ['pricing', 'plans', 'saas'],
+    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 3,
+    isPopular: true,
+    documentData: createPricingDocument('tpl_doc_pricing_1', 'tpl_proj_pricing_1', 'SaaS Pricing Table'),
+  },
+
+  // 11. Testimonials
+  {
+    id: 'tpl_testimonials_grid',
+    title: 'Social Proof & Verified Review Grid',
+    description: '3-column card grid with verified customer quotes, 5-star badges, and company roles.',
+    category: 'testimonials',
+    tags: ['testimonials', 'reviews', 'social-proof'],
+    thumbnail: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 3,
+    isPopular: true,
+    documentData: createTestimonialsDocument('tpl_doc_test_1', 'tpl_proj_test_1', 'Customer Reviews Grid'),
+  },
+
+  // 12. Forms
+  {
+    id: 'tpl_form_lead_demo',
+    title: 'B2B Demo Request & Inquiries Form',
+    description: 'Validated form with name, work email, company size, and custom inquiry fields.',
+    category: 'form',
+    tags: ['form', 'leads', 'contact'],
+    thumbnail: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=500&auto=format&fit=crop&q=80',
+    stepsCount: 1,
+    isPopular: true,
+    documentData: createFormDocument('tpl_doc_form_1', 'tpl_proj_form_1', 'Demo Request Form'),
   },
 ];
 

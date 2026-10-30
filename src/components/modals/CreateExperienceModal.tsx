@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { storage } from '../../services/storage';
 import { ExperienceType } from '../../types/document';
@@ -21,9 +21,16 @@ import {
   Smartphone,
   Layers,
   CheckCircle2,
-  Languages
+  Languages,
+  DollarSign,
+  MessageSquareQuote,
+  Send,
+  LayoutTemplate,
+  FilePlus2,
+  Check
 } from 'lucide-react';
 import { 
+  createBlankDocument,
   createTourDocument, 
   createDemoDocument, 
   createPageDocument, 
@@ -32,13 +39,17 @@ import {
   createFaqDocument, 
   createPopupDocument, 
   createChecklistDocument, 
-  createSurveyDocument 
+  createSurveyDocument,
+  createPricingDocument,
+  createTestimonialsDocument,
+  createFormDocument
 } from '../../services/seedData';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   defaultType?: ExperienceType;
+  isGlobal?: boolean;
 }
 
 const EXPERIENCE_TYPES = [
@@ -48,6 +59,9 @@ const EXPERIENCE_TYPES = [
   { type: 'banner' as ExperienceType, title: 'In-App Banner', desc: 'High-visibility announcement header or floating alert', icon: Megaphone, category: 'Engagement' },
   { type: 'popup' as ExperienceType, title: 'Popup & Modal', desc: 'Exit-intent or scroll-triggered modal offer or notice', icon: AppWindow, category: 'Engagement' },
   { type: 'survey' as ExperienceType, title: 'Feedback & Survey', desc: 'In-app CSAT/NPS rating widget and customer feedback form', icon: Star, category: 'Engagement' },
+  { type: 'pricing' as ExperienceType, title: 'Pricing Table', desc: 'Tiered subscription cards with billing intervals and feature lists', icon: DollarSign, category: 'Engagement' },
+  { type: 'testimonials' as ExperienceType, title: 'Testimonials Grid', desc: 'Verified customer review cards, quote walls, and star ratings', icon: MessageSquareQuote, category: 'Content' },
+  { type: 'form' as ExperienceType, title: 'Lead Capture Form', desc: 'Contact inquiries and demo requests with validated fields', icon: Send, category: 'Content' },
   { type: 'page' as ExperienceType, title: 'Landing Page', desc: 'Responsive conversion page with hero and feature blocks', icon: Globe, category: 'Content' },
   { type: 'menu' as ExperienceType, title: 'Navigation Menu', desc: 'Responsive site header navigation with dropdowns', icon: MenuIcon, category: 'Content' },
   { type: 'faq' as ExperienceType, title: 'FAQ & Help Center', desc: 'Searchable accordion knowledgebase for instant answers', icon: HelpCircle, category: 'Content' },
@@ -61,18 +75,46 @@ const LANGUAGES = [
   { code: 'ja', label: 'Japanese (日本語)' },
 ];
 
-export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaultType = 'tour' }) => {
+export const CreateExperienceModal: React.FC<Props> = ({ 
+  isOpen, 
+  onClose, 
+  defaultType, 
+  isGlobal = false 
+}) => {
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<1 | 2>(1);
-  const [selectedType, setSelectedType] = useState<ExperienceType>(defaultType);
+  // If a specific defaultType is provided and not in global mode, skip format picker step
+  const isModuleLocked = Boolean(defaultType && !isGlobal);
+
+  const [step, setStep] = useState<1 | 2>(isModuleLocked ? 2 : 1);
+  const [selectedType, setSelectedType] = useState<ExperienceType>(defaultType || 'tour');
   const [filterCategory, setFilterCategory] = useState<'all' | 'Adoption' | 'Engagement' | 'Content'>('all');
   
+  // Starting canvas layout mode: 'blank' (clean empty canvas) vs 'template' (starter pre-filled demo)
+  const [startMode, setStartMode] = useState<'blank' | 'template'>('blank');
+
   // Step 2 Fields
   const [title, setTitle] = useState('');
   const [targetPageUrl, setTargetPageUrl] = useState('https://app.yourproduct.com/dashboard');
   const [deviceTarget, setDeviceTarget] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [language, setLanguage] = useState('en');
+
+  // Synchronize when modal opens or defaultType changes
+  useEffect(() => {
+    if (isOpen) {
+      if (defaultType && !isGlobal) {
+        setSelectedType(defaultType);
+        setStep(2);
+        const def = EXPERIENCE_TYPES.find(t => t.type === defaultType);
+        setTitle(`My ${def?.title || 'Experience'}`);
+      } else {
+        setStep(1);
+        setSelectedType(defaultType || 'tour');
+        setTitle('');
+      }
+      setStartMode('blank');
+    }
+  }, [isOpen, defaultType, isGlobal]);
 
   if (!isOpen) return null;
 
@@ -81,6 +123,7 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
     : EXPERIENCE_TYPES.filter(t => t.category === filterCategory);
 
   const selectedDef = EXPERIENCE_TYPES.find(t => t.type === selectedType) || EXPERIENCE_TYPES[0];
+  const SelectedIcon = selectedDef.icon;
 
   const handleNextStep = () => {
     if (!title.trim()) {
@@ -96,17 +139,26 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
     const newDocId = `doc_${Date.now()}`;
 
     let doc;
-    switch (selectedType) {
-      case 'tour': doc = createTourDocument(newDocId, newProjectId, finalTitle); break;
-      case 'demo': doc = createDemoDocument(newDocId, newProjectId, finalTitle); break;
-      case 'page': doc = createPageDocument(newDocId, newProjectId, finalTitle); break;
-      case 'banner': doc = createBannerDocument(newDocId, newProjectId, finalTitle); break;
-      case 'menu': doc = createMenuDocument(newDocId, newProjectId, finalTitle); break;
-      case 'faq': doc = createFaqDocument(newDocId, newProjectId, finalTitle); break;
-      case 'popup': doc = createPopupDocument(newDocId, newProjectId, finalTitle); break;
-      case 'checklist': doc = createChecklistDocument(newDocId, newProjectId, finalTitle); break;
-      case 'survey': doc = createSurveyDocument(newDocId, newProjectId, finalTitle); break;
-      default: doc = createTourDocument(newDocId, newProjectId, finalTitle);
+    if (startMode === 'blank') {
+      // Create clean document without bloated dummy data
+      doc = createBlankDocument(newDocId, newProjectId, finalTitle, selectedType);
+    } else {
+      // Create with rich starter template
+      switch (selectedType) {
+        case 'tour': doc = createTourDocument(newDocId, newProjectId, finalTitle); break;
+        case 'demo': doc = createDemoDocument(newDocId, newProjectId, finalTitle); break;
+        case 'page': doc = createPageDocument(newDocId, newProjectId, finalTitle); break;
+        case 'banner': doc = createBannerDocument(newDocId, newProjectId, finalTitle); break;
+        case 'menu': doc = createMenuDocument(newDocId, newProjectId, finalTitle); break;
+        case 'faq': doc = createFaqDocument(newDocId, newProjectId, finalTitle); break;
+        case 'popup': doc = createPopupDocument(newDocId, newProjectId, finalTitle); break;
+        case 'checklist': doc = createChecklistDocument(newDocId, newProjectId, finalTitle); break;
+        case 'survey': doc = createSurveyDocument(newDocId, newProjectId, finalTitle); break;
+        case 'pricing': doc = createPricingDocument(newDocId, newProjectId, finalTitle); break;
+        case 'testimonials': doc = createTestimonialsDocument(newDocId, newProjectId, finalTitle); break;
+        case 'form': doc = createFormDocument(newDocId, newProjectId, finalTitle); break;
+        default: doc = createBlankDocument(newDocId, newProjectId, finalTitle, selectedType);
+      }
     }
 
     // Set trigger url rule based on user input
@@ -117,10 +169,10 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
     storage.saveDocument(doc);
     storage.createProject({
       title: finalTitle,
-      description: `Targeting: ${targetPageUrl} (${deviceTarget})`,
+      description: `Targeting: ${targetPageUrl} (${deviceTarget}) - ${startMode === 'blank' ? 'Blank Canvas' : 'Starter Template'}`,
       type: selectedType,
       status: 'draft',
-      tags: [selectedType, deviceTarget, language],
+      tags: [selectedType, deviceTarget, language, startMode],
       documentId: newDocId,
     });
 
@@ -129,21 +181,29 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans select-none animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh] transition-colors">
+    <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans select-none animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh] transition-colors">
         
         {/* Modal Top Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
-              {step === 1 ? '1' : '2'}
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+              <SelectedIcon className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
-                {step === 1 ? 'Step 1: Choose Experience Format' : 'Step 2: Experience Details & Targeting'}
+                {isModuleLocked
+                  ? `Create New ${selectedDef.title}`
+                  : step === 1
+                  ? 'Step 1: Choose Experience Format'
+                  : `Step 2: Configure ${selectedDef.title}`}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {step === 1 ? 'Select what type of interactive experience you want to design' : 'Configure destination page, device, and language'}
+                {isModuleLocked
+                  ? `Configure your ${selectedDef.title.toLowerCase()} starting canvas, targeting & layout`
+                  : step === 1
+                  ? 'Select what type of interactive experience you want to design'
+                  : 'Select starting canvas mode, destination URL, and device target'}
               </p>
             </div>
           </div>
@@ -157,8 +217,8 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
           </button>
         </div>
 
-        {/* STEP 1: Format & Category Selection */}
-        {step === 1 && (
+        {/* STEP 1: Format & Category Selection (Only shown when not locked to a specific module) */}
+        {step === 1 && !isModuleLocked && (
           <div className="p-6 space-y-6 overflow-y-auto">
             {/* Category Filter Pills */}
             <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -188,7 +248,10 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
                 return (
                   <div
                     key={item.type}
-                    onClick={() => setSelectedType(item.type)}
+                    onClick={() => {
+                      setSelectedType(item.type);
+                      setTitle(`My ${item.title}`);
+                    }}
                     className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
                       isSelected
                         ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 ring-2 ring-indigo-600/30 shadow-md'
@@ -234,9 +297,88 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
           </div>
         )}
 
-        {/* STEP 2: Details, Targeting & Launch */}
-        {step === 2 && (
+        {/* STEP 2: Experience Configuration & Start Mode Selection */}
+        {(step === 2 || isModuleLocked) && (
           <form onSubmit={handleCreate} className="p-6 space-y-5 overflow-y-auto">
+            
+            {/* Start Mode Toggle (Blank vs Template) - Professional Builder Pattern */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
+                Choose Starting Canvas Mode
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                
+                {/* Option 1: Clean / Blank Canvas */}
+                <div
+                  onClick={() => setStartMode('blank')}
+                  className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 relative ${
+                    startMode === 'blank'
+                      ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800/60'
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg shrink-0 ${
+                    startMode === 'blank'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                  }`}>
+                    <FilePlus2 className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        Blank Canvas (Clean Slate)
+                      </span>
+                      {startMode === 'blank' && (
+                        <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                      Clean canvas with no dummy data clutter. Perfect to design from scratch or drag blocks freely.
+                    </p>
+                    <span className="inline-block mt-1 text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
+                      Recommended
+                    </span>
+                  </div>
+                </div>
+
+                {/* Option 2: Starter Template */}
+                <div
+                  onClick={() => setStartMode('template')}
+                  className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 relative ${
+                    startMode === 'template'
+                      ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/40 ring-2 ring-indigo-500/20 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800/60'
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg shrink-0 ${
+                    startMode === 'template'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                  }`}>
+                    <LayoutTemplate className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        Starter Template
+                      </span>
+                      {startMode === 'template' && (
+                        <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                      Pre-populated sample layout with pre-styled cards and mock steps for quick inspiration.
+                    </p>
+                    <span className="inline-block mt-1 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+                      Sample Data Included
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
             {/* Experience Name */}
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
@@ -247,7 +389,7 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={`e.g. New User Welcome ${selectedDef.title}`}
+                placeholder={`e.g. My ${selectedDef.title}`}
                 className="w-full px-3.5 py-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white font-medium"
               />
             </div>
@@ -340,14 +482,25 @@ export const CreateExperienceModal: React.FC<Props> = ({ isOpen, onClose, defaul
 
             {/* Step 2 Footer */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back</span>
-              </button>
+              {!isModuleLocked ? (
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Formats</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+
               <button
                 type="submit"
                 className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all"

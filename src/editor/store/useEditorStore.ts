@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { ComponentNode, DeviceMode, DocumentModel, StyleProperties, TargetSelectorConfig, NodeInteraction } from '../../types/document';
+import { ComponentNode, DeviceMode, DocumentModel, ExperienceType, StyleProperties, TargetSelectorConfig, NodeInteraction } from '../../types/document';
 import { storage } from '../../services/storage';
+import { createBannerDocument } from '../../services/seedData';
 import { COMPONENT_REGISTRY } from '../registry/componentRegistry';
 
 export type LeftPanelTab = 'components' | 'blocks' | 'layers' | 'templates' | 'assets';
@@ -31,9 +32,39 @@ interface EditorState {
   // Target picker mode (for tours & tooltips)
   isTargetPicking: boolean;
 
+  // UI Panel visibility states
+  isLeftPanelOpen: boolean;
+  isRightPanelOpen: boolean;
+  toggleLeftPanel: () => void;
+  toggleRightPanel: () => void;
+  setIsLeftPanelOpen: (open: boolean) => void;
+  setIsRightPanelOpen: (open: boolean) => void;
+
+  // Zoom controls
+  fitToScreen: () => void;
+  resetZoom: () => void;
+
+  // Canvas Grid & Guide Overlay modes
+  gridMode: 'dots' | 'lines' | 'clean';
+  showRulers: boolean;
+  setGridMode: (mode: 'dots' | 'lines' | 'clean') => void;
+  toggleGridMode: () => void;
+  toggleShowRulers: () => void;
+  getNodeAncestry: (nodeId: string) => { id: string; name: string; type: string }[];
+
+  // Interactive Tour Playback
+  isTourPlaying: boolean;
+  activeTourStepIndex: number;
+  startTourPlayback: () => void;
+  nextTourStep: () => void;
+  prevTourStep: () => void;
+  goToTourStep: (index: number) => void;
+  stopTourPlayback: () => void;
+
   // Store actions
   loadDocument: (docId: string) => void;
   setDocument: (doc: DocumentModel, recordHistory?: boolean) => void;
+  setDocumentType: (type: ExperienceType) => void;
   selectNode: (nodeId: string | null) => void;
   hoverNode: (nodeId: string | null) => void;
   setActiveTabLeft: (tab: LeftPanelTab) => void;
@@ -98,6 +129,16 @@ function mapTree(root: ComponentNode, transform: (node: ComponentNode) => Compon
   };
 }
 
+function findAncestryPath(root: ComponentNode, targetId: string, currentPath: { id: string; name: string; type: string }[] = []): { id: string; name: string; type: string }[] | null {
+  const newPath = [...currentPath, { id: root.id, name: root.name || root.type, type: root.type }];
+  if (root.id === targetId) return newPath;
+  for (const child of root.children) {
+    const found = findAncestryPath(child, targetId, newPath);
+    if (found) return found;
+  }
+  return null;
+}
+
 function cloneNodeWithNewIds(node: ComponentNode): ComponentNode {
   return {
     ...JSON.parse(JSON.stringify(node)),
@@ -125,21 +166,108 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   clipboardNode: null,
   isTargetPicking: false,
 
+  // UI Panels
+  isLeftPanelOpen: true,
+  isRightPanelOpen: true,
+  toggleLeftPanel: () => set((state) => ({ isLeftPanelOpen: !state.isLeftPanelOpen })),
+  toggleRightPanel: () => set((state) => ({ isRightPanelOpen: !state.isRightPanelOpen })),
+  setIsLeftPanelOpen: (open: boolean) => set({ isLeftPanelOpen: open }),
+  setIsRightPanelOpen: (open: boolean) => set({ isRightPanelOpen: open }),
+
+  // Zoom
+  fitToScreen: () => set({ zoom: 85 }),
+  resetZoom: () => set({ zoom: 100 }),
+
+  // Canvas Grid & Guide Overlays
+  gridMode: 'dots',
+  showRulers: true,
+  setGridMode: (mode: 'dots' | 'lines' | 'clean') => set({ gridMode: mode }),
+  toggleGridMode: () => set((state) => {
+    const next = state.gridMode === 'dots' ? 'lines' : state.gridMode === 'lines' ? 'clean' : 'dots';
+    return { gridMode: next };
+  }),
+  toggleShowRulers: () => set((state) => ({ showRulers: !state.showRulers })),
+  getNodeAncestry: (nodeId: string) => {
+    const { document } = get();
+    if (!document || !nodeId) return [];
+    return findAncestryPath(document.rootNode, nodeId) || [];
+  },
+
+  // Tour Playback
+  isTourPlaying: false,
+  activeTourStepIndex: 0,
+  startTourPlayback: () => set({ isTourPlaying: true, activeTourStepIndex: 0, selectedNodeId: null }),
+  nextTourStep: () => {
+    const { document, activeTourStepIndex } = get();
+    if (!document) return;
+    // Count TourStep nodes
+    const countTourSteps = (node: ComponentNode): number => {
+      let count = node.type === 'TourStep' ? 1 : 0;
+      for (const child of node.children) {
+        count += countTourSteps(child);
+      }
+      return count;
+    };
+    const totalSteps = countTourSteps(document.rootNode);
+    if (activeTourStepIndex < (totalSteps > 0 ? totalSteps - 1 : 0)) {
+      set({ activeTourStepIndex: activeTourStepIndex + 1 });
+    } else {
+      set({ isTourPlaying: false, activeTourStepIndex: 0 });
+    }
+  },
+  prevTourStep: () => {
+    const { activeTourStepIndex } = get();
+    set({ activeTourStepIndex: Math.max(0, activeTourStepIndex - 1) });
+  },
+  goToTourStep: (index: number) => {
+    set({ activeTourStepIndex: Math.max(0, index) });
+  },
+  stopTourPlayback: () => set({ isTourPlaying: false, activeTourStepIndex: 0 }),
+
   loadDocument: (docId: string) => {
-    let doc = storage.getDocument(docId);
-    if (!doc) {
+    let doc = docId ? storage.getDocument(docId) : undefined;
+    if (!doc && docId) {
       const proj = storage.getProjectById(docId);
       if (proj) {
         doc = storage.getDocument(proj.documentId);
       }
     }
-    if (!doc) {
+    if (!doc && !docId) {
       const projects = storage.getProjects();
       if (projects.length > 0 && projects[0].documentId) {
         doc = storage.getDocument(projects[0].documentId);
       }
     }
+    if (!doc) {
+      // Self-healing fallback: create starter doc for this docId
+      doc = createBannerDocument(docId || 'default-doc', 'proj_default', 'New Experience');
+      storage.saveDocument(doc);
+    }
+
     if (doc) {
+      // Check if rootNode is a legacy leaf node (like BannerWidget) and auto-wrap to container
+      const rootDef = COMPONENT_REGISTRY[doc.rootNode.type];
+      if (rootDef && !rootDef.isContainer) {
+        const containerType = doc.documentType === 'banner' ? 'BannerContainer' :
+          doc.documentType === 'popup' ? 'PopupContainer' :
+          doc.documentType === 'faq' ? 'FaqContainer' :
+          doc.documentType === 'checklist' ? 'ChecklistContainer' :
+          doc.documentType === 'survey' ? 'SurveyContainer' :
+          doc.documentType === 'menu' ? 'MenuContainer' : 'Container';
+        const oldRoot = { ...doc.rootNode };
+        doc = {
+          ...doc,
+          rootNode: {
+            id: `${doc.documentType}_root_container_${Date.now()}`,
+            type: containerType,
+            name: `${doc.title} Canvas`,
+            props: {},
+            styles: { width: '100%', minHeight: '120px', display: 'flex', flexDirection: 'column' },
+            children: [oldRoot],
+          },
+        };
+      }
+
       set({
         document: doc,
         selectedNodeId: doc.rootNode.id,
@@ -172,6 +300,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  setDocumentType: (type: ExperienceType) => {
+    const { document, setDocument } = get();
+    if (!document || document.documentType === type) return;
+    const updatedDoc: DocumentModel = {
+      ...document,
+      documentType: type,
+      updatedAt: new Date().toISOString(),
+    };
+    setDocument(updatedDoc);
+  },
+
   selectNode: (nodeId: string | null) => set({ selectedNodeId: nodeId }),
   hoverNode: (nodeId: string | null) => set({ hoveredNodeId: nodeId }),
   setActiveTabLeft: (tab: LeftPanelTab) => set({ activeTabLeft: tab }),
@@ -186,6 +325,36 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   insertNode: (parentId: string, node: ComponentNode, index?: number) => {
     const { document, setDocument } = get();
     if (!document) return;
+
+    // Check if document root itself is not a container
+    const rootDef = COMPONENT_REGISTRY[document.rootNode.type];
+    if (rootDef && !rootDef.isContainer) {
+      const containerType = document.documentType === 'banner' ? 'BannerContainer' :
+        document.documentType === 'popup' ? 'PopupContainer' :
+        document.documentType === 'faq' ? 'FaqContainer' :
+        document.documentType === 'checklist' ? 'ChecklistContainer' :
+        document.documentType === 'survey' ? 'SurveyContainer' :
+        document.documentType === 'menu' ? 'MenuContainer' : 'Container';
+
+      const oldRoot = { ...document.rootNode };
+      const newRoot: ComponentNode = {
+        id: `${document.documentType}_root_container_${Date.now()}`,
+        type: containerType,
+        name: `${document.title} Canvas`,
+        props: {},
+        styles: { width: '100%', minHeight: '120px', display: 'flex', flexDirection: 'column' },
+        children: [oldRoot, node],
+      };
+
+      const updatedDoc: DocumentModel = {
+        ...document,
+        rootNode: newRoot,
+        updatedAt: new Date().toISOString(),
+      };
+      setDocument(updatedDoc);
+      set({ selectedNodeId: node.id });
+      return;
+    }
 
     let targetParentId = parentId;
     let targetIndex = index;

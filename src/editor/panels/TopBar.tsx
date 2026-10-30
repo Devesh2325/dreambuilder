@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
 import { useTheme } from '../../services/themeContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { MODULE_REGISTRY } from '../modules/moduleRegistry';
+import { ExperienceType } from '../../types/document';
 import { 
   ArrowLeft, 
   Undo2, 
@@ -20,7 +22,11 @@ import {
   UploadCloud,
   Code,
   Sun,
-  Moon
+  Moon,
+  ChevronDown,
+  PanelLeft,
+  PanelRight,
+  Play
 } from 'lucide-react';
 
 export const TopBar: React.FC = () => {
@@ -29,6 +35,7 @@ export const TopBar: React.FC = () => {
   const {
     document,
     updateDocumentTitle,
+    setDocumentType,
     undo,
     redo,
     historyIndex,
@@ -45,10 +52,31 @@ export const TopBar: React.FC = () => {
     isDirty,
     isSaving,
     save,
+    isLeftPanelOpen,
+    isRightPanelOpen,
+    toggleLeftPanel,
+    toggleRightPanel,
+    startTourPlayback,
+    isTourPlaying,
   } = useEditorStore();
 
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(document?.title || '');
+  const [isModuleMenuOpen, setIsModuleMenuOpen] = useState(false);
+  const moduleMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close module menu on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (moduleMenuRef.current && !moduleMenuRef.current.contains(e.target as Node)) {
+        setIsModuleMenuOpen(false);
+      }
+    };
+    if (isModuleMenuOpen) {
+      window.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => window.removeEventListener('mousedown', handleOutsideClick);
+  }, [isModuleMenuOpen]);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -60,9 +88,11 @@ export const TopBar: React.FC = () => {
     setIsTitleEditing(false);
   };
 
+  const activeModuleConfig = document?.documentType ? MODULE_REGISTRY[document.documentType] : undefined;
+
   return (
     <header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between font-sans select-none z-30 transition-colors">
-      {/* Left: Back & Title */}
+      {/* Left: Back & Title & Module Selector */}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -71,6 +101,20 @@ export const TopBar: React.FC = () => {
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Projects</span>
+        </button>
+
+        {/* Left Panel Sidebar Toggle */}
+        <button
+          type="button"
+          onClick={toggleLeftPanel}
+          title={isLeftPanelOpen ? 'Collapse Left Sidebar' : 'Expand Left Sidebar'}
+          className={`p-1.5 rounded-lg border transition-all ${
+            isLeftPanelOpen
+              ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+              : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <PanelLeft className="w-4 h-4" />
         </button>
 
         <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
@@ -96,11 +140,62 @@ export const TopBar: React.FC = () => {
             title="Click to rename experience"
           >
             <span>{document?.title || 'Untitled Experience'}</span>
-            <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded">
-              {document?.documentType}
-            </span>
           </div>
         )}
+
+        {/* Module Selector Pill & Dropdown */}
+        <div className="relative" ref={moduleMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsModuleMenuOpen(!isModuleMenuOpen)}
+            className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 px-2 py-1 rounded-md transition-all shadow-2xs"
+            title="Change module type"
+          >
+            {activeModuleConfig && (
+              <span className={`w-2 h-2 rounded-full ${activeModuleConfig.color}`} />
+            )}
+            <span className="uppercase">{document?.documentType || 'MODULE'}</span>
+            <ChevronDown className="w-3 h-3 text-indigo-500" />
+          </button>
+
+          {isModuleMenuOpen && (
+            <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 py-1.5 z-50 text-xs overflow-hidden animate-in fade-in zoom-in-95">
+              <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                Switch Experience Module
+              </div>
+              <div className="max-h-80 overflow-y-auto py-1">
+                {Object.values(MODULE_REGISTRY).map((mod) => {
+                  const IconComp = mod.icon;
+                  const isCurrent = document?.documentType === mod.id;
+                  return (
+                    <button
+                      key={mod.id}
+                      type="button"
+                      onClick={() => {
+                        setDocumentType(mod.id as ExperienceType);
+                        setIsModuleMenuOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 flex items-center gap-2.5 text-left transition-colors ${
+                        isCurrent
+                          ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-semibold'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-md ${mod.color} text-white flex items-center justify-center shrink-0`}>
+                        <IconComp className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 truncate">
+                        <div className="text-xs font-semibold">{mod.title}</div>
+                        <div className="text-[10px] text-slate-400 truncate">{mod.subtitle}</div>
+                      </div>
+                      {isCurrent && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Save Status Indicator */}
         <div className="flex items-center gap-1.5 text-[11px] text-slate-400 ml-2">
@@ -226,6 +321,19 @@ export const TopBar: React.FC = () => {
           )}
         </button>
 
+        {/* Tour Simulation Play Button (if tour document) */}
+        {document?.documentType === 'tour' && (
+          <button
+            type="button"
+            onClick={startTourPlayback}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all"
+            title="Launch interactive tour simulation"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Play Tour</span>
+          </button>
+        )}
+
         {/* Preview Button */}
         <button
           type="button"
@@ -252,6 +360,20 @@ export const TopBar: React.FC = () => {
         >
           <Sparkles className="w-3.5 h-3.5" />
           <span>AI Assistant</span>
+        </button>
+
+        {/* Right Panel Toggle Button */}
+        <button
+          type="button"
+          onClick={toggleRightPanel}
+          title={isRightPanelOpen ? 'Collapse Properties Panel' : 'Expand Properties Panel'}
+          className={`p-1.5 rounded-lg border transition-all ${
+            isRightPanelOpen
+              ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+              : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <PanelRight className="w-4 h-4" />
         </button>
 
         {/* Publish Button */}

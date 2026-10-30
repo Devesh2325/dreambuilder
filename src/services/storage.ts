@@ -216,7 +216,11 @@ class StorageService {
     const targetOrgId = orgId || this.getCurrentOrganization().id;
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-      const all: Project[] = data ? JSON.parse(data) : SEED_PROJECTS;
+      const userProjects: Project[] = data ? JSON.parse(data) : [];
+      const map = new Map<string, Project>();
+      SEED_PROJECTS.forEach(p => map.set(p.id, p));
+      userProjects.forEach(p => map.set(p.id, p));
+      const all = Array.from(map.values());
       return all.filter(p => p.organizationId === targetOrgId);
     } catch {
       return SEED_PROJECTS;
@@ -275,11 +279,9 @@ class StorageService {
       const docs: Record<string, DocumentModel> = data ? JSON.parse(data) : SEED_DOCUMENTS;
       if (docs && docs[id]) return docs[id];
       if (SEED_DOCUMENTS[id]) return SEED_DOCUMENTS[id];
-      const keys = Object.keys(docs || {});
-      if (keys.length > 0) return docs[keys[0]];
-      return Object.values(SEED_DOCUMENTS)[0];
+      return undefined;
     } catch {
-      return SEED_DOCUMENTS[id] || Object.values(SEED_DOCUMENTS)[0];
+      return SEED_DOCUMENTS[id] || undefined;
     }
   }
 
@@ -366,12 +368,22 @@ class StorageService {
   }
 
   // Templates
-  getTemplates(): Template[] {
+  getTemplates(category?: string): Template[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
-      return data ? JSON.parse(data) : SEED_TEMPLATES;
+      const userTemplates: Template[] = data ? JSON.parse(data) : [];
+      const map = new Map<string, Template>();
+      SEED_TEMPLATES.forEach(t => map.set(t.id, t));
+      userTemplates.forEach(t => map.set(t.id, t));
+      const combined = Array.from(map.values());
+      if (category && category !== 'all') {
+        return combined.filter(t => t.category === category);
+      }
+      return combined;
     } catch {
-      return SEED_TEMPLATES;
+      return category && category !== 'all' 
+        ? SEED_TEMPLATES.filter(t => t.category === category)
+        : SEED_TEMPLATES;
     }
   }
 

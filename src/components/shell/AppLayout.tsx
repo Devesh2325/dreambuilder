@@ -20,6 +20,7 @@ export const AppLayout: React.FC = () => {
       <CreateExperienceModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        isGlobal={true}
       />
     </div>
   );

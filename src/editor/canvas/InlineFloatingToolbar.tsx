@@ -16,12 +16,16 @@ import {
   Maximize2, 
   Sparkles,
   ChevronDown,
-  CornerDownRight
+  CornerDownRight,
+  GripVertical
 } from 'lucide-react';
+import { DND_TYPES } from '../utils/dragDropUtils';
 
 interface Props {
   node: ComponentNode;
   definition: ComponentDefinition;
+  parentId?: string;
+  index?: number;
   onUpdateStyles: (styles: Partial<StyleProperties>) => void;
   onUpdateProps: (props: Record<string, any>) => void;
   onDuplicate: () => void;
@@ -56,6 +60,8 @@ const RADIUS_OPTIONS = [
 export const InlineFloatingToolbar: React.FC<Props> = ({
   node,
   definition,
+  parentId,
+  index = 0,
   onUpdateStyles,
   onUpdateProps,
   onDuplicate,
@@ -88,6 +94,29 @@ export const InlineFloatingToolbar: React.FC<Props> = ({
   const currentAlign = node.styles.textAlign || 'left';
   const currentRadius = node.styles.borderRadius || '0px';
 
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [placement, setPlacement] = useState<'top' | 'bottom'>(index === 0 ? 'bottom' : 'top');
+
+  useEffect(() => {
+    if (toolbarRef.current) {
+      const parent = toolbarRef.current.parentElement;
+      if (parent) {
+        const rect = parent.getBoundingClientRect();
+        // If element is in top portion of screen or first item, position below element to avoid clipping/overlapping
+        if (rect.top < 220 || index === 0) {
+          setPlacement('bottom');
+        } else {
+          setPlacement('top');
+        }
+      }
+    }
+  }, [index, node.id]);
+
+  // Root canvas node is configured via Right Panel and doesn't need an overlapping toolbar
+  if (!parentId) {
+    return null;
+  }
+
   const handleTextSave = () => {
     if (textPropKey) {
       onUpdateProps({ [textPropKey]: draftText });
@@ -97,13 +126,31 @@ export const InlineFloatingToolbar: React.FC<Props> = ({
 
   return (
     <div 
+      ref={toolbarRef}
       onClick={(e) => e.stopPropagation()}
-      className="absolute -top-12 left-0 flex items-center gap-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-700/90 text-slate-800 dark:text-slate-100 px-2 py-1.5 rounded-xl shadow-xl z-50 pointer-events-auto select-none font-sans text-xs animate-in fade-in duration-100"
+      className={`absolute ${
+        placement === 'top' ? '-top-12' : 'top-full mt-2'
+      } left-0 flex items-center gap-1 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-700/90 text-slate-800 dark:text-slate-100 px-2 py-1.5 rounded-xl shadow-xl z-50 pointer-events-auto select-none font-sans text-xs animate-in fade-in duration-100`}
     >
       {/* Component Name Badge */}
       <span className="font-extrabold text-[11px] text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 mr-1 shrink-0">
         {definition.displayName}
       </span>
+
+      {/* Drag to Reorder Handle (Competitor UX: Webflow & Framer) */}
+      <div
+        draggable={true}
+        onDragStart={(e) => {
+          e.stopPropagation();
+          e.dataTransfer.setData(DND_TYPES.NODE_ID, node.id);
+          e.dataTransfer.setData('text/plain', node.id);
+          e.dataTransfer.effectAllowed = 'move';
+        }}
+        className="flex items-center gap-1 px-1.5 py-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-grab active:cursor-grabbing transition-colors"
+        title="Drag to reorder position on canvas"
+      >
+        <GripVertical className="w-3.5 h-3.5" />
+      </div>
 
       <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />
 
