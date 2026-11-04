@@ -4,12 +4,17 @@ import { defaultValues, VariableValues } from '../core/variables';
 import { NewProject } from '../data/services';
 import { OrganizationBranding } from '../types/auth';
 import { buildContent, el, TemplateDefinition, TemplatePage } from './dsl';
+import { BANNER_TEMPLATES } from './banners';
 import { EXPERIENCE_TEMPLATES } from './experiences';
+import { INDUSTRY_TEMPLATES } from './industries';
+import { PAGE_TEMPLATES } from './pages';
 import { WEBSITE_TEMPLATES } from './websites';
 
 export * from './dsl';
 
-export const TEMPLATES: TemplateDefinition[] = [...WEBSITE_TEMPLATES, ...EXPERIENCE_TEMPLATES];
+export const TEMPLATES: TemplateDefinition[] = [
+  ...WEBSITE_TEMPLATES, ...INDUSTRY_TEMPLATES, ...EXPERIENCE_TEMPLATES, ...PAGE_TEMPLATES, ...BANNER_TEMPLATES,
+];
 
 export function getTemplate(id: string): TemplateDefinition | undefined {
   return TEMPLATES.find((template) => template.id === id);
@@ -66,7 +71,6 @@ const STARTING_BLOCK: Partial<Record<ProjectType, ReturnType<typeof el>[]>> = {
   form: [el('Form', {}, [el('FormField', { props: { name: 'email', label: 'Email', inputType: 'email', required: true } })])],
   demo: [el('DemoScreen', {}, [el('DemoHotspot')])],
   banner: [el('Banner', {}, [el('Text', { props: { text: 'Your announcement' } })])],
-  popup: [el('Popup', {}, [el('Heading', { props: { text: 'Your message', level: 'h3' } })])],
   menu: [el('Navbar')],
   faq: [el('Accordion')],
 };

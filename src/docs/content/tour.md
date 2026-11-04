@@ -35,7 +35,7 @@ FlowPilot waits about 2.5 seconds for the element to appear. After that, it foll
 
 ## When it appears
 
-Click an empty part of the canvas to set page rules, delay and frequency. Choose **Once per visitor** for onboarding.
+Click an empty part of the page in the editor to set page rules, delay and frequency. Choose **Once per visitor** for onboarding.
 
 To start a tour from a button in your app, use the [JavaScript API](api):
 

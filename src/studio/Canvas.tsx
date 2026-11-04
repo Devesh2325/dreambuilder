@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ChevronRight, Copy, GripVertical, Trash2 } from 'lucide-react';
 import { findParentId, getAncestors } from '../core/tree';
+import { resolveString, tokensIn } from '../core/variables';
 import { buildNavLinks } from '../experience/SiteView';
 import { BLOCK_META, canContain } from '../renderer/blockMeta';
 import { ExperienceView } from '../renderer/ExperienceView';
@@ -25,6 +26,10 @@ const DESKTOP_MIN_WIDTH = 1000;
 // they couldn't be seen, clicked or dropped on. None of this reaches published pages.
 const CANVAS_CSS = `
 html{scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.45) transparent}
+*{user-select:none}
+a:not([draggable=true]),img:not([draggable=true]){-webkit-user-drag:none}
+[draggable=true]{cursor:grab}
+.fp-hotspot{cursor:move;animation:none}
 .fp-section:empty,.fp-container:empty,.fp-box:empty,.fp-grid:empty,.fp-row:empty,.fp-page:empty{min-height:88px;display:flex;align-items:center;justify-content:center;border:1.5px dashed rgba(99,102,241,.4);border-radius:8px;background:rgba(99,102,241,.04)}
 .fp-section:empty::after,.fp-container:empty::after,.fp-box:empty::after,.fp-grid:empty::after,.fp-row:empty::after,.fp-page:empty::after{content:'Empty: drag blocks here';font:500 13px system-ui,sans-serif;color:rgba(79,70,229,.8)}
 `;
@@ -72,7 +77,7 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
   const [selectedBox, setSelectedBox] = useState<Box | null>(null);
   const [hoverBox, setHoverBox] = useState<Box | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
-  const [editing, setEditing] = useState<{ id: string; prop: string; value: string } | null>(null);
+  const [editing, setEditing] = useState<{ id: string; prop: string; value: string; initial: string } | null>(null);
   const dropRef = useRef<DropTarget | null>(null);
 
   // Blocks can move for many reasons (typing, images loading, scrolling), so measuring every frame is simplest and reliable.
@@ -149,18 +154,91 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
       if ((event.target as Element).closest?.('[data-fp-overlay]')) return;
       event.preventDefault();
       const element = closestNode(event.target);
-      useStudio.getState().select(element?.getAttribute('data-fp-node') ?? null);
+      const state = useStudio.getState();
+      const id = element?.getAttribute('data-fp-node') ?? null;
+      // A click on empty space lands on the page itself, which opens the project's
+      // settings. The page block can still be selected from Layers.
+      const isPageRoot = id !== null && state.documentOfNode(id)?.content.rootId === id;
+      state.select(isPageRoot ? null : id);
+      state.setTool('edit');
     };
+    // Any block can be grabbed directly. Only the block under the mouse is draggable, so
+    // the browser starts the drag on the innermost one instead of on a parent.
+    let grabbable: Element | null = null;
     const onMove = (event: MouseEvent) => {
-      useStudio.getState().hover(closestNode(event.target)?.getAttribute('data-fp-node') ?? null);
+      // While the button is held a drag may be starting, and it needs the block it
+      // started on to stay draggable until the browser has begun the drag.
+      if (event.buttons !== 0) return;
+      const state = useStudio.getState();
+      const element = closestNode(event.target);
+      const id = element?.getAttribute('data-fp-node') ?? null;
+      state.hover(id);
+      if (element === grabbable) return;
+      grabbable?.removeAttribute('draggable');
+      grabbable = null;
+      const node = id ? state.getNode(id) : null;
+      const owner = id ? state.documentOfNode(id) : null;
+      if (element && node && !state.readOnly && !node.locked && owner?.content.rootId !== id && node.type !== 'DemoHotspot') {
+        element.setAttribute('draggable', 'true');
+        grabbable = element;
+      }
+    };
+    const onDragStart = (event: DragEvent) => {
+      // The toolbar's grip handles its own drag.
+      if ((event.target as Element).closest?.('[data-fp-overlay]')) return;
+      const state = useStudio.getState();
+      if (state.dragging) return;
+      const id = closestNode(event.target)?.getAttribute('data-fp-node');
+      if (!id || state.readOnly) {
+        event.preventDefault();
+        return;
+      }
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', id);
+      }
+      state.beginDrag({ kind: 'node', id }, id);
+    };
+    const onDragEnd = () => useStudio.getState().setDragging(null);
+    // Hotspots are moved by dragging them across their screenshot.
+    const onMouseDown = (event: MouseEvent) => {
+      const state = useStudio.getState();
+      const element = closestNode(event.target);
+      const id = element?.getAttribute('data-fp-node');
+      if (!element || !id || state.readOnly || state.getNode(id)?.type !== 'DemoHotspot') return;
+      const screen = element.parentElement?.closest('[data-fp-node]');
+      if (!screen) return;
+      event.preventDefault();
+      state.select(id);
+      const move = (moveEvent: MouseEvent) => {
+        const box = screen.getBoundingClientRect();
+        const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
+        state.updateProps(id, {
+          x: clamp(((moveEvent.clientX - box.left) / box.width) * 100),
+          y: clamp(((moveEvent.clientY - box.top) / box.height) * 100),
+        });
+      };
+      const up = () => {
+        doc.removeEventListener('mousemove', move);
+        doc.removeEventListener('mouseup', up);
+      };
+      doc.addEventListener('mousemove', move);
+      doc.addEventListener('mouseup', up);
     };
     const onLeave = () => useStudio.getState().hover(null);
     const onDoubleClick = (event: MouseEvent) => {
-      if (useStudio.getState().readOnly) return;
+      const state = useStudio.getState();
+      if (state.readOnly) return;
       const id = closestNode(event.target)?.getAttribute('data-fp-node');
-      const node = id ? useStudio.getState().getNode(id) : null;
+      const node = id ? state.getNode(id) : null;
       const prop = node ? INLINE_PROP[node.type] : undefined;
-      if (id && node && prop) setEditing({ id, prop, value: String(node.props[prop] ?? '') });
+      if (!id || !node || !prop) return;
+      const raw = String(node.props[prop] ?? '');
+      const values = state.draft?.variables ?? {};
+      // Values from inside a repeating block aren't known here, so those keep their code.
+      const canResolve = [...tokensIn(raw)].every((key) => key in values);
+      const initial = canResolve ? String(resolveString(raw, values)) : raw;
+      setEditing({ id, prop, value: initial, initial });
     };
     const onDragOver = (event: DragEvent) => {
       if (!useStudio.getState().dragging) return;
@@ -193,6 +271,9 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
     doc.addEventListener('click', onClick, true);
     doc.addEventListener('submit', onClick, true);
     doc.addEventListener('mousemove', onMove);
+    doc.addEventListener('mousedown', onMouseDown);
+    doc.addEventListener('dragstart', onDragStart);
+    doc.addEventListener('dragend', onDragEnd);
     doc.addEventListener('mouseleave', onLeave);
     doc.addEventListener('dblclick', onDoubleClick);
     doc.addEventListener('dragover', onDragOver);
@@ -204,6 +285,9 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
       doc.removeEventListener('click', onClick, true);
       doc.removeEventListener('submit', onClick, true);
       doc.removeEventListener('mousemove', onMove);
+      doc.removeEventListener('mousedown', onMouseDown);
+      doc.removeEventListener('dragstart', onDragStart);
+      doc.removeEventListener('dragend', onDragEnd);
       doc.removeEventListener('mouseleave', onLeave);
       doc.removeEventListener('dblclick', onDoubleClick);
       doc.removeEventListener('dragover', onDragOver);
@@ -225,7 +309,7 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
   const parentId = owner && selectedId ? findParentId(owner.content, selectedId) : null;
 
   const commitEdit = () => {
-    if (editing) updateProps(editing.id, { [editing.prop]: editing.value });
+    if (editing && editing.value !== editing.initial) updateProps(editing.id, { [editing.prop]: editing.value });
     setEditing(null);
   };
 
@@ -245,7 +329,7 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
   // Inline styles because the iframe deliberately has none of the app's CSS.
   return (
     <div data-fp-overlay="" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 2147483600, fontFamily: 'system-ui, sans-serif' }}>
-      {hoverBox && <div style={{ position: 'fixed', ...hoverBox, outline: `1px solid ${OUTLINE}`, outlineOffset: -1 }} />}
+      {hoverBox && !dragging && <div style={{ position: 'fixed', ...hoverBox, outline: `1px solid ${OUTLINE}`, outlineOffset: -1 }} />}
       {selectedBox && !editing && (
         <>
           <div data-testid="selection" style={{ position: 'fixed', ...selectedBox, outline: `2px solid ${OUTLINE}`, outlineOffset: -1 }} />
@@ -261,7 +345,7 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
                   onDragStart={(event) => {
                     event.dataTransfer.effectAllowed = 'move';
                     event.dataTransfer.setData('text/plain', selected.id);
-                    setDragging({ kind: 'node', id: selected.id });
+                    useStudio.getState().beginDrag({ kind: 'node', id: selected.id });
                   }}
                   onDragEnd={() => setDragging(null)}
                   style={{ cursor: 'grab', display: 'flex' }}
@@ -331,7 +415,10 @@ const Breadcrumbs: React.FC = () => {
             <button
               type="button"
               aria-current={isLast || undefined}
-              onClick={() => select(id)}
+              onClick={() => {
+                select(id);
+                useStudio.getState().setTool('edit');
+              }}
               className={`shrink-0 px-1.5 py-0.5 rounded text-xs ${isLast ? 'font-semibold text-indigo-700 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
             >
               {node.name ?? BLOCK_META[node.type]?.label ?? node.type}

@@ -8,7 +8,7 @@ Choose a website template, fill in your details, then **Create website**. You ca
 
 ## Pages
 
-In the editor's **Pages** tab you can add pages, rename them, change their address, and set the title and description search engines show. The navigation bar lists your pages automatically. To choose your own items, such as Home, About and Blog, select the navigation block and click **Choose items myself**. Each item can go to a page, a web address, or a new page created for it.
+In the editor's **Pages** tab you can add pages, rename them, change their address, and set the title and description search engines show. The navigation bar lists your pages automatically. To choose your own items, such as Home, About and Blog, select the navigation block and click **Choose items myself**. Each item can go to a page, a web address, or a new page created for it. **Menu position** puts the items on the left, center or right.
 
 The header and footer are shared, so changing them on one page updates all pages.
 

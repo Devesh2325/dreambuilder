@@ -23,6 +23,8 @@ export interface TemplateDefinition {
   title: string;
   description: string;
   tags: string[];
+  /** Groups templates in the gallery, such as an industry or a banner style. */
+  category?: string;
   /** The variable used to title the project. */
   titleVariable?: string;
   variables: VariableDef[];

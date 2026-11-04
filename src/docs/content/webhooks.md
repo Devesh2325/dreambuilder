@@ -4,7 +4,7 @@ Every form response is saved with its project. Open the project to read response
 
 ## Sending responses to your own system
 
-In the editor, click an empty area of the canvas, then enter an address under **Form responses**. Each response is sent there as a `POST` request with a JSON body:
+In the editor, click an empty part of the page, then enter an address under **Form responses**. Each response is sent there as a `POST` request with a JSON body:
 
 ```json
 {

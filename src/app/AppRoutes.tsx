@@ -4,6 +4,7 @@ import { MODULE_LIST } from '../core/modules';
 import { StudioPage } from '../studio/StudioPage';
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SignUpPage } from './auth/AuthPages';
 import { FullPageSpinner, RedirectIfAuthenticated, RequireAuth } from './auth/RequireAuth';
+import { DashboardPage } from './dashboard/DashboardPage';
 import { ProjectPage } from './projects/ProjectPage';
 import { ProjectsPage } from './projects/ProjectsPage';
 import { Shell } from './shell/Shell';
@@ -48,7 +49,7 @@ export const AppRoutes: React.FC = () => (
         <Route path="studio/:projectId" element={<StudioPage />} />
         <Route path="invite/:token" element={<AcceptInvitePage />} />
         <Route element={<Shell />}>
-          <Route index element={<ProjectsPage />} />
+          <Route index element={<DashboardPage />} />
           {MODULE_LIST.map((module) => (
             <Route key={module.type} path={module.path.slice(1)} element={<ProjectsPage key={module.type} type={module.type} />} />
           ))}
@@ -59,7 +60,7 @@ export const AppRoutes: React.FC = () => (
           <Route path="team" element={<TeamPage />} />
           <Route path="brand" element={<BrandPage />} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<ProjectsPage />} />
+          <Route path="*" element={<DashboardPage />} />
         </Route>
       </Route>
     </Route>

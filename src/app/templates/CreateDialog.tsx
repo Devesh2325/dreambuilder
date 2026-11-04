@@ -20,6 +20,7 @@ const Dialog: React.FC<{ initialType?: ProjectType; onClose: () => void }> = ({ 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [type, setType] = useState<ProjectType | null>(initialType ?? null);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState<string | null>(null);
   const [blankName, setBlankName] = useState('');
   const module = type ? MODULES[type] : null;
 
@@ -43,9 +44,11 @@ const Dialog: React.FC<{ initialType?: ProjectType; onClose: () => void }> = ({ 
   };
 
   const term = search.trim().toLowerCase();
-  const templates = type
-    ? templatesFor(type).filter((t) => !term || [t.title, t.description, ...t.tags].join(' ').toLowerCase().includes(term))
-    : [];
+  const moduleTemplates = type ? templatesFor(type) : [];
+  const categories = [...new Set(moduleTemplates.flatMap((t) => (t.category ? [t.category] : [])))];
+  const templates = moduleTemplates.filter((t) =>
+    (!category || t.category === category)
+    && (!term || [t.title, t.description, t.category ?? '', ...t.tags].join(' ').toLowerCase().includes(term)));
 
   return (
     <dialog
@@ -94,10 +97,25 @@ const Dialog: React.FC<{ initialType?: ProjectType; onClose: () => void }> = ({ 
               type="search"
               aria-label="Search templates"
               placeholder="Search templates..."
-              className={`${inputClass} max-w-xs mb-4`}
+              className={`${inputClass} max-w-xs mb-3`}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
+            {categories.length > 1 && (
+              <div role="group" aria-label="Filter templates" className="flex flex-wrap gap-1.5 mb-4">
+                {[null, ...categories].map((item) => (
+                  <button
+                    key={item ?? 'all'}
+                    type="button"
+                    aria-pressed={category === item}
+                    onClick={() => setCategory(item)}
+                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${category === item ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+                  >
+                    {item ?? 'All'}
+                  </button>
+                ))}
+              </div>
+            )}
             {templates.length === 0 && <p className="text-sm text-slate-500 dark:text-slate-400">No templates match your search.</p>}
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {templates.map((template) => (
@@ -152,18 +170,20 @@ interface CreateButtonProps {
   type?: ProjectType;
   label?: string;
   className?: string;
+  iconOnly?: boolean;
 }
 
-export const CreateButton: React.FC<CreateButtonProps> = ({ type, label, className = primaryButton }) => {
+export const CreateButton: React.FC<CreateButtonProps> = ({ type, label, className = primaryButton, iconOnly }) => {
   const { can } = useWorkspace();
   const [isOpen, setIsOpen] = useState(false);
   if (!can('create:project')) return null;
+  const text = label ?? (type ? `New ${MODULES[type].label.toLowerCase()}` : 'Create new');
 
   return (
     <>
-      <button type="button" className={className} onClick={() => setIsOpen(true)}>
+      <button type="button" className={className} aria-label={iconOnly ? text : undefined} title={iconOnly ? text : undefined} onClick={() => setIsOpen(true)}>
         <Plus className="w-4 h-4" aria-hidden="true" />
-        {label ?? (type ? `New ${MODULES[type].label.toLowerCase()}` : 'Create new')}
+        {!iconOnly && text}
       </button>
       {isOpen && <Dialog initialType={type} onClose={() => setIsOpen(false)} />}
     </>

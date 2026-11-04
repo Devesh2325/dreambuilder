@@ -1,29 +1,53 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { BarChart3, BookOpen, ChevronDown, Image, LayoutDashboard, LayoutTemplate, LogOut, Moon, Palette, Plus, Settings, Sun, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Image, LayoutDashboard, LayoutTemplate, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Palette, Settings, Sun, Users } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
-import { useTheme } from '../theme';
 import { isLocalBackend } from '../../data';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
 import { Icon } from '../shared/Icon';
 import { CreateButton } from '../templates/CreateDialog';
+import { useTheme } from '../theme';
 import { useWorkspace } from '../workspace';
 
-const linkClass = (active: boolean) =>
-  `flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-    active
-      ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300'
-      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-  }`;
+const STORAGE_KEY = 'fp_sidebar_collapsed';
 
-const SideLink: React.FC<{ to: string; icon: React.ReactNode; children: React.ReactNode; end?: boolean }> = ({ to, icon, children, end }) => (
-  <NavLink to={to} end={end} className={({ isActive }) => linkClass(isActive)}>
-    {icon}
-    {children}
+const readCollapsed = () => {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+const SideLink: React.FC<{ to: string; icon: React.ReactNode; label: string; collapsed: boolean; end?: boolean }> = ({ to, icon, label, collapsed, end }) => (
+  <NavLink
+    to={to}
+    end={end}
+    title={collapsed ? label : undefined}
+    aria-label={collapsed ? label : undefined}
+    className={({ isActive }) => `flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors ${collapsed ? 'justify-center h-9 w-9 mx-auto' : 'px-2.5 h-9'} ${
+      isActive
+        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+    }`}
+  >
+    <span className="shrink-0">{icon}</span>
+    {!collapsed && <span className="truncate">{label}</span>}
   </NavLink>
 );
+
+const Group: React.FC<{ label: string; collapsed: boolean; children: React.ReactNode }> = ({ label, collapsed, children }) => (
+  <div className="space-y-0.5">
+    {collapsed
+      ? <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" aria-hidden="true" />
+      : <p className="px-2.5 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>}
+    {children}
+  </div>
+);
+
+const iconSize = 'w-[18px] h-[18px]';
 
 export const Shell: React.FC = () => {
   const { auth } = useServices();
@@ -32,7 +56,17 @@ export const Shell: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [showMore, setShowMore] = useState(true);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
+    } catch {
+      // Only a convenience: it opens expanded next time.
+    }
+  };
 
   const handleSignOut = async () => {
     const { error } = await auth.signOut();
@@ -41,80 +75,92 @@ export const Shell: React.FC = () => {
   };
 
   return (
-    <div className="app-scroll h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
-      <aside className="w-60 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="p-3 border-b border-slate-200 dark:border-slate-800">
-          <p className="px-1 pb-2 font-extrabold text-indigo-600 dark:text-indigo-400">FlowPilot</p>
-          {memberships.length > 1 ? (
-            <select
-              aria-label="Workspace"
-              value={workspace?.organizationId}
-              onChange={(event) => {
-                select(event.target.value);
-                queryClient.invalidateQueries({ queryKey: ['projects'] });
-                navigate(ROUTES.home);
-              }}
-              className="w-full text-sm rounded-lg px-2 py-1.5 bg-slate-100 dark:bg-slate-800 border-0"
-            >
-              {memberships.map((m) => <option key={m.organizationId} value={m.organizationId}>{m.name}</option>)}
-            </select>
-          ) : (
-            <p className="px-1 text-sm font-medium truncate">{workspace?.name}</p>
-          )}
-        </div>
-
-        <nav aria-label="Main" className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          <CreateButton className="w-full flex items-center justify-center gap-1.5 mb-3 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors" />
-          <SideLink to={ROUTES.home} end icon={<LayoutDashboard className="w-4 h-4" aria-hidden="true" />}>All projects</SideLink>
-          {MODULE_LIST.filter((m) => m.primary).map((m) => <SideLink key={m.type} to={m.path} icon={<Icon name={m.icon} />}>{m.plural}</SideLink>)}
-
+    <div className="app-scroll h-screen flex overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+      <aside className={`shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-[width] duration-200 ${collapsed ? 'w-[60px]' : 'w-60'}`}>
+        <div className={`h-14 shrink-0 flex items-center ${collapsed ? 'justify-center' : 'justify-between px-3'}`}>
+          {!collapsed && <span className="font-extrabold text-indigo-600 dark:text-indigo-400">FlowPilot</span>}
           <button
             type="button"
-            aria-expanded={showMore}
-            onClick={() => setShowMore(!showMore)}
-            className="w-full flex items-center justify-between px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={toggleCollapsed}
           >
-            More modules
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMore ? '' : '-rotate-90'}`} aria-hidden="true" />
+            {collapsed ? <PanelLeftOpen className={iconSize} /> : <PanelLeftClose className={iconSize} />}
           </button>
-          {showMore && MODULE_LIST.filter((m) => !m.primary).map((m) => <SideLink key={m.type} to={m.path} icon={<Icon name={m.icon} />}>{m.plural}</SideLink>)}
+        </div>
 
-          <p className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Workspace</p>
-          <SideLink to={ROUTES.templates} icon={<LayoutTemplate className="w-4 h-4" aria-hidden="true" />}>Templates</SideLink>
-          <SideLink to={ROUTES.assets} icon={<Image className="w-4 h-4" aria-hidden="true" />}>Assets</SideLink>
-          <SideLink to={ROUTES.analytics} icon={<BarChart3 className="w-4 h-4" aria-hidden="true" />}>Analytics</SideLink>
-          <SideLink to={ROUTES.brand} icon={<Palette className="w-4 h-4" aria-hidden="true" />}>Brand kit</SideLink>
-          <SideLink to={ROUTES.team} icon={<Users className="w-4 h-4" aria-hidden="true" />}>Team</SideLink>
-          <SideLink to={ROUTES.settings} icon={<Settings className="w-4 h-4" aria-hidden="true" />}>Settings</SideLink>
-          <SideLink to={ROUTES.docs} icon={<BookOpen className="w-4 h-4" aria-hidden="true" />}>Docs</SideLink>
+        {!collapsed && (
+          <div className="px-3 pb-2">
+            {memberships.length > 1 ? (
+              <select
+                aria-label="Workspace"
+                value={workspace?.organizationId}
+                onChange={(event) => {
+                  select(event.target.value);
+                  queryClient.invalidateQueries({ queryKey: ['projects'] });
+                  navigate(ROUTES.home);
+                }}
+                className="w-full text-sm rounded-lg px-2 py-1.5 bg-slate-100 dark:bg-slate-800 border-0"
+              >
+                {memberships.map((m) => <option key={m.organizationId} value={m.organizationId}>{m.name}</option>)}
+              </select>
+            ) : (
+              <p className="px-1 text-sm font-medium truncate text-slate-500 dark:text-slate-400">{workspace?.name}</p>
+            )}
+          </div>
+        )}
+
+        <div className={`shrink-0 ${collapsed ? 'px-2 pb-2' : 'px-3 pb-2'}`}>
+          <CreateButton iconOnly={collapsed} className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors" />
+        </div>
+
+        <nav aria-label="Main" className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden ${collapsed ? 'px-2' : 'px-3'} pb-3`}>
+          <SideLink to={ROUTES.home} end collapsed={collapsed} label="Dashboard" icon={<LayoutDashboard className={iconSize} aria-hidden="true" />} />
+          <Group label="Build" collapsed={collapsed}>
+            {MODULE_LIST.filter((m) => m.primary).map((m) => <SideLink key={m.type} to={m.path} collapsed={collapsed} label={m.plural} icon={<Icon name={m.icon} className={iconSize} />} />)}
+          </Group>
+          <Group label="Engage" collapsed={collapsed}>
+            {MODULE_LIST.filter((m) => !m.primary).map((m) => <SideLink key={m.type} to={m.path} collapsed={collapsed} label={m.plural} icon={<Icon name={m.icon} className={iconSize} />} />)}
+          </Group>
+          <Group label="Library" collapsed={collapsed}>
+            <SideLink to={ROUTES.templates} collapsed={collapsed} label="Templates" icon={<LayoutTemplate className={iconSize} aria-hidden="true" />} />
+            <SideLink to={ROUTES.assets} collapsed={collapsed} label="Assets" icon={<Image className={iconSize} aria-hidden="true" />} />
+            <SideLink to={ROUTES.brand} collapsed={collapsed} label="Brand kit" icon={<Palette className={iconSize} aria-hidden="true" />} />
+          </Group>
+          <Group label="Workspace" collapsed={collapsed}>
+            <SideLink to={ROUTES.analytics} collapsed={collapsed} label="Analytics" icon={<BarChart3 className={iconSize} aria-hidden="true" />} />
+            <SideLink to={ROUTES.team} collapsed={collapsed} label="Team" icon={<Users className={iconSize} aria-hidden="true" />} />
+            <SideLink to={ROUTES.settings} collapsed={collapsed} label="Settings" icon={<Settings className={iconSize} aria-hidden="true" />} />
+            <SideLink to={ROUTES.docs} collapsed={collapsed} label="Docs" icon={<BookOpen className={iconSize} aria-hidden="true" />} />
+          </Group>
         </nav>
 
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800">
-          <p className="px-1 text-xs truncate text-slate-500 dark:text-slate-400">{user?.email}</p>
-          <div className="mt-2 flex gap-1">
-            <button type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+        <div className={`shrink-0 border-t border-slate-200 dark:border-slate-800 ${collapsed ? 'p-2 space-y-1' : 'p-3'}`}>
+          {isLocalBackend && !collapsed && (
+            <p role="note" title="Everything is saved only in this browser. Connect Supabase to go live." className="mb-2 px-2 py-1 rounded-md text-[11px] font-medium text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-500/10">
+              Demo mode: saved in this browser only
+            </p>
+          )}
+          {!collapsed && <p className="px-1 mb-1 text-xs truncate text-slate-500 dark:text-slate-400">{user?.email}</p>}
+          <div className={collapsed ? 'flex flex-col items-center gap-1' : 'flex items-center gap-1'}>
+            <button type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} title={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button type="button" onClick={handleSignOut} className="flex-1 flex items-center justify-center gap-1.5 p-2 text-sm rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+            <button type="button" onClick={handleSignOut} aria-label={collapsed ? 'Log out' : undefined} title={collapsed ? 'Log out' : undefined} className={`flex items-center justify-center gap-1.5 p-2 text-sm rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 ${collapsed ? '' : 'flex-1'}`}>
               <LogOut className="w-4 h-4" aria-hidden="true" />
-              Log out
+              {!collapsed && 'Log out'}
             </button>
           </div>
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        {isLocalBackend && (
-          <p role="note" className="px-4 py-1.5 text-xs text-center text-amber-900 bg-amber-100 dark:text-amber-100 dark:bg-amber-900/60">
-            Demo mode: everything is saved only in this browser. Connect Supabase to go live.
-          </p>
-        )}
-        <main className="relative flex-1 overflow-y-auto p-8">
-          <div className="max-w-6xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      <main className="relative flex-1 min-w-0 overflow-y-auto">
+        <div className="max-w-[1200px] mx-auto px-8 py-7">
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 };

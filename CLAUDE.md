@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-FlowPilot builds websites, pages, tours, forms, demos, banners, menus, FAQs and popups from variable-driven templates. It is a React 19 + TypeScript + Vite + Tailwind 3 app with a Supabase backend, and has no server code of its own.
+FlowPilot builds websites, pages, tours, forms, demos, banners, menus and FAQs from variable-driven templates. Popups and carousels are styles of the banner module, not modules of their own. It is a React 19 + TypeScript + Vite + Tailwind 3 app with a Supabase backend, and has no server code of its own.
 
 ## Commands
 
@@ -49,17 +49,20 @@ There is **one renderer** for the editor, previews, public sites and the embed: 
 
 - `blocks.tsx` must not use Tailwind or lucide, because it also runs in a Shadow DOM on customers' sites under Preact. Styling is `BASE_CSS` plus generated per-node rules in `css.ts`. Blocks must spread `attrs` on their outer element, which carries the style class and the `data-fp-node` attribute the editor relies on.
 - Device styles become real media queries. The editor and previews draw inside an iframe (`Frame.tsx`) so those queries respond to the simulated width.
-- User data reaches CSS and links, so `safeCssValue` and `safeUrl` must stay in the path. Public sites share an origin with the builder, so there is deliberately no custom HTML or script block, and text is never rendered as HTML.
+- User data reaches CSS and links, so `safeCssValue`, `safeUrl` and `safeImageUrl` must stay in the path. `safeImageUrl` also allows SVG data, which is only safe in an `img` tag, so never use it for links.
+- Links go through `handleLinkClick` in `blocks.tsx`. Previews run in a `srcdoc` iframe, where every link, even `#`, resolves against the app's address, so following one would load the app inside the preview. Public sites share an origin with the builder, so there is deliberately no custom HTML or script block, and text is never rendered as HTML.
 
 `src/experience/` is what plays published content: `ExperiencePlayer` for tours, demos, overlays and so on, and `SiteView` for multi-page sites (header + page + footer). Each module's `delivery` in `src/core/modules.ts` (`site`, `overlay`, `inline`) decides how it reaches visitors.
 
 To add a block, add it to both `blockMeta.ts` and `BLOCK_RENDERERS`; a test checks they match. The properties panel is generated from `fields`. It only appears in a module's Add panel if listed in `BLOCK_GROUPS` in `src/studio/LeftPanel.tsx`.
 
-To add a module, update `PROJECT_TYPES`, `MODULES` and `PATHS` (`src/core/modules.ts`), the `projects.type` check in the migrations, `MODULE_COLUMNS` (`ProjectsPage.tsx`), `BLOCK_GROUPS`, templates, and a docs guide. Each module has its own list page at `MODULES[type].path`, with table columns from `MODULE_COLUMNS`.
+To add a module, update `PROJECT_TYPES`, `MODULES` and `PATHS` (`src/core/modules.ts`), the `projects.type` check in the migrations, `MODULE_COLUMNS` (`moduleColumns.tsx`), `BLOCK_GROUPS`, templates, and a docs guide. Each module has its own list page at `MODULES[type].path`. `ProjectsPage` and `ProjectPage` are shared by all modules, and what differs comes from `MODULE_COLUMNS`.
 
 ## Templates
 
 `src/templates/` defines templates with the `el()` helpers. Each declares `variables`, which also generate the wizard form (`VariableForm`). Values are stored per project, and nodes keep their tokens, so a change in **Details** updates everywhere. Typing over a token in the editor detaches only that spot.
+
+Files: `websites.ts` and `industries.ts` (websites, using `industrySite` for most), `pages.ts` and `experiences.ts` (landing pages and the other modules), `banners.ts`, and `assets.ts` (stock photos that were checked to load, and generated product screens for demos). A template's `category` drives the filter in the create dialog.
 
 `src/test/core/templates.test.tsx` is a contract test over every template: tokens must be declared and used, defaults must validate, block nesting must be allowed, and nothing may render a leftover `{{`.
 
@@ -68,9 +71,11 @@ To add a module, update `PROJECT_TYPES`, `MODULES` and `PATHS` (`src/core/module
 `src/studio/store.ts` is a Zustand store.
 
 - All edits go through `editDocument` or `updateDraft`, which use immer `produceWithPatches` to record undo history. Edits with the same `key` within 1 second merge into one undo step.
+- There is one side panel, with the active tool in the store (`tool`). Clicking a block on the canvas opens `edit`, so the canvas gets the rest of the screen.
 - A website canvas shows header + page + footer together, so actions find the owning document with `documentOfNode`.
 - Autosave is debounced. Each save sends the `revision` it loaded; a stale one matches no rows and returns `conflict`, which the UI resolves through `reloadFromServer` or `overwriteServer`.
 - `Canvas.tsx` attaches native listeners to the iframe's document, and draws the selection overlay inside the iframe with inline styles, since app CSS doesn't reach it. Elements there fail `instanceof` checks because they belong to another document.
+- Blocks are dragged directly: `onMove` sets `draggable` on only the block under the mouse, so the drag starts on the innermost one. Hotspots are moved with the mouse instead.
 - The canvas shows exactly what visitors see: hidden blocks and unmet `showIf` conditions aren't drawn, and stay reachable from Layers.
 - The frame is sized to fit the stage at every zoom, so the stage never scrolls and pages scroll only inside the frame. Desktop renders at least `DESKTOP_MIN_WIDTH` wide and scales down, so small screens don't trigger tablet styles.
 - `sr-only` elements are absolutely positioned. Keep a `relative` ancestor inside any scrolling panel, or they extend the whole page's scroll height. `e2e/studio.spec.ts` checks this.

@@ -1,15 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, Crosshair, EyeOff, Link2, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, ChevronDown, Crosshair, EyeOff, Link2, Plus, Trash2 } from 'lucide-react';
 import { DEFAULT_TRIGGERS, DEVICES, DocNode, Triggers } from '../core/schema';
 import { MODULES } from '../core/modules';
-import { hasToken, resolveValue, VariableDef } from '../core/variables';
+import { hasToken, resolveValue, VariableDef, VariableValues } from '../core/variables';
 import { ImageInput } from '../app/shared/VariableForm';
 import { pagesOf } from '../experience/SiteView';
 import { BLOCK_META } from '../renderer/blockMeta';
 import { BlockField } from '../renderer/types';
 import { getTemplate } from '../templates';
-import { ColorField, fieldClass, labelClass } from './fields';
-import { slugFromTitle } from './LeftPanel';
+import { ColorField, fieldClass, labelClass, slugFromTitle } from './fields';
 import { useStudio } from './store';
 
 const useTemplateVariables = (): VariableDef[] => {
@@ -22,6 +21,7 @@ interface MenuItem {
   href: string;
 }
 
+const EMPTY_VALUES: VariableValues = {};
 const CUSTOM = '__custom';
 const NEW_PAGE = '__new';
 
@@ -29,10 +29,12 @@ const NEW_PAGE = '__new';
 const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, fieldKey }) => {
   const readOnly = useStudio((s) => s.readOnly);
   const documents = useStudio((s) => s.documents);
-  const variables = useStudio((s) => s.draft?.variables ?? {});
+  const variables = useStudio((s) => s.draft?.variables ?? EMPTY_VALUES);
   const isWebsite = useStudio((s) => s.project?.type === 'website');
   const { updateProps, addPage } = useStudio.getState();
   const [error, setError] = useState<string | null>(null);
+  // Only one item is expanded, so a long menu doesn't push everything else out of reach.
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
   const pages = pagesOf(documents);
   const value = node.props[fieldKey];
 
@@ -67,7 +69,11 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
   };
 
   const startCustom = () => setItems(pages.map((page) => ({ label: page.title, href: `/${page.slug}` })));
-  const addItem = () => setItems([...(usesPages ? pages.map((page) => ({ label: page.title, href: `/${page.slug}` })) : items), { label: 'New item', href: '#' }]);
+  const addItem = () => {
+    const next = [...(usesPages ? pages.map((page) => ({ label: page.title, href: `/${page.slug}` })) : items), { label: 'New item', href: '#' }];
+    setItems(next);
+    setOpenIndex(next.length - 1);
+  };
 
   const createPageFor = async (index: number) => {
     const item = items[index];
@@ -104,7 +110,7 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
             return (
               <li key={index} className="rounded-md border border-slate-200 dark:border-slate-700 p-2 space-y-1.5">
                 <div className="flex items-center gap-1">
-                  <input aria-label={`Menu item ${index + 1} label`} disabled={readOnly} className={fieldClass} value={item.label}
+                  <input aria-label={`Menu item ${index + 1} label`} disabled={readOnly} className={fieldClass} value={item.label} onFocus={() => setOpenIndex(index)}
                     onChange={(e) => setItems(items.map((other, i) => (i === index ? { ...other, label: e.target.value } : other)))} />
                   {!readOnly && (
                     <div className="flex shrink-0 text-slate-400">
@@ -114,7 +120,7 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
                     </div>
                   )}
                 </div>
-                {pages.length > 0 && (
+                {openIndex === index && pages.length > 0 && (
                   <select
                     aria-label={`Menu item ${index + 1} goes to`}
                     disabled={readOnly}
@@ -131,7 +137,7 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
                     {isWebsite && <option value={NEW_PAGE}>+ Create a new page for this item</option>}
                   </select>
                 )}
-                {(!isPage || pages.length === 0) && (
+                {openIndex === index && (!isPage || pages.length === 0) && (
                   <input aria-label={`Menu item ${index + 1} address`} disabled={readOnly} className={fieldClass} placeholder="https://example.com" value={item.href}
                     onChange={(e) => setItems(items.map((other, i) => (i === index ? { ...other, href: e.target.value } : other)))} />
                 )}
@@ -160,6 +166,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
   const readOnly = useStudio((s) => s.readOnly);
   const { updateProps } = useStudio.getState();
   const variables = useTemplateVariables();
+  const draftVariables = useStudio((s) => s.draft?.variables ?? EMPTY_VALUES);
 
   if (field.type === 'menu') return <MenuEditor node={node} fieldKey={field.key} />;
 
@@ -178,6 +185,29 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
   }
 
   const linked = hasToken(value);
+  // A field that is exactly one detail shows that detail's name, not its {{code}}.
+  const wholeToken = typeof value === 'string' ? value.match(/^\{\{\s*([\w.]+)\s*\}\}$/)?.[1] : undefined;
+  const linkedDetail = wholeToken ? variables.find((def) => def.key === wholeToken) : undefined;
+  if (linkedDetail) {
+    const current = draftVariables[linkedDetail.key];
+    return (
+      <div>
+        <p className={`${labelClass} mb-1`}>{field.label}</p>
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 px-2.5 py-2 text-xs">
+          <p className="flex items-center gap-1.5 font-medium text-emerald-800 dark:text-emerald-300">
+            <Link2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            Uses your {linkedDetail.label}
+          </p>
+          {!readOnly && (
+            <div className="mt-1.5 flex gap-3 font-semibold">
+              <button type="button" className="text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().setTool('details')}>Change it</button>
+              <button type="button" aria-label={`Type your own ${field.label}`} className="text-slate-500 dark:text-slate-400 hover:underline" onClick={() => set(typeof current === 'string' ? current : '')}>Type your own</button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
   const textual = field.type === 'text' || field.type === 'longtext' || field.type === 'url';
   const usable = variables.filter((def) => def.type !== 'list');
 
@@ -410,10 +440,12 @@ const openElementPicker = (url: string, nodeId: string) => {
 const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
   const readOnly = useStudio((s) => s.readOnly);
   const { updateNode } = useStudio.getState();
-  const [tab, setTab] = useState<'content' | 'style' | 'advanced'>('content');
+  const tab = useStudio((s) => s.inspectorTab);
+  const { setInspectorTab } = useStudio.getState();
   const [pickerUrl, setPickerUrl] = useState<string | null>(null);
   const [pickerError, setPickerError] = useState<string | null>(null);
   const meta = BLOCK_META[node.type];
+  const projectType = useStudio((s) => s.project?.type) ?? 'page';
   const inputRef = useRef<HTMLInputElement>(null);
   const hasFields = (meta?.fields.length ?? 0) > 0;
   const activeTab = tab === 'content' && !hasFields ? 'style' : tab;
@@ -427,6 +459,10 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
   return (
     <>
       <div className="px-3 pt-3 shrink-0">
+        <button type="button" className="mb-1 inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => useStudio.getState().select(null)}>
+          <ArrowLeft className="w-3 h-3" aria-hidden="true" />
+          {MODULES[projectType].label} settings
+        </button>
         <h3 className="font-semibold text-sm truncate">{node.name ?? meta?.label ?? node.type}</h3>
         {node.name && node.name !== meta?.label && <p className="text-[11px] text-slate-500 dark:text-slate-400">{meta?.label}</p>}
       </div>
@@ -439,7 +475,7 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
       )}
       <div role="tablist" aria-label="Block settings" className="flex shrink-0 mt-2 px-3 border-b border-slate-200 dark:border-slate-800">
         {tabs.map((id) => (
-          <button key={id} role="tab" type="button" aria-selected={activeTab === id} onClick={() => setTab(id as typeof tab)}
+          <button key={id} role="tab" type="button" aria-selected={activeTab === id} onClick={() => setInspectorTab(id as typeof tab)}
             className={`mr-4 py-2 text-xs font-semibold capitalize border-b-2 -mb-px transition-colors ${activeTab === id ? 'border-indigo-600 text-indigo-700 dark:text-indigo-300' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
             {id}
           </button>
@@ -500,7 +536,7 @@ const ProjectSettingsPanel: React.FC = () => {
   const setTriggers = (patch: Partial<Triggers>, key: string) =>
     updateDraft((d) => { d.settings.triggers = { ...triggers, ...patch }; }, `triggers:${key}`);
   const rule = triggers.urlRules[0];
-  const collectsResponses = ['website', 'page', 'form', 'popup'].includes(project.type);
+  const collectsResponses = ['website', 'page', 'form', 'banner'].includes(project.type);
 
   return (
     <fieldset disabled={readOnly} className="relative flex-1 min-h-0 overflow-y-auto p-3 space-y-4 min-w-0">
@@ -567,6 +603,7 @@ const ProjectSettingsPanel: React.FC = () => {
               <select className={`${fieldClass} mt-1`} value={draft.settings.position ?? 'top'} onChange={(e) => updateDraft((d) => { d.settings.position = e.target.value as 'top'; })}>
                 <option value="top">Top of the page</option>
                 <option value="bottom">Bottom of the page</option>
+                <option value="inline">Inside my page</option>
               </select>
             </label>
           )}
@@ -590,15 +627,16 @@ const ProjectSettingsPanel: React.FC = () => {
   );
 };
 
-export const RightPanel: React.FC = () => {
+/** The Edit tool: the selected block's settings, or the project's when nothing is selected. */
+export const SettingsPanel: React.FC = () => {
   const selectedId = useStudio((s) => s.selectedId);
   // Subscribes to documents so edits show in the fields.
   useStudio((s) => s.documents);
   const node = selectedId ? useStudio.getState().getNode(selectedId) : null;
 
   return (
-    <aside aria-label="Settings" className="w-[280px] shrink-0 flex flex-col min-h-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
+    <div className="h-full flex flex-col min-h-0">
       {node ? <NodeInspector key={node.id} node={node} /> : <ProjectSettingsPanel />}
-    </aside>
+    </div>
   );
 };

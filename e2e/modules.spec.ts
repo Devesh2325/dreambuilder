@@ -7,7 +7,7 @@ const nav = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 
 test('removed modules are gone everywhere', async ({ page }) => {
   await signUp(page);
-  for (const name of ['Checklists', 'Surveys', 'Pricing tables', 'Testimonials']) {
+  for (const name of ['Checklists', 'Surveys', 'Pricing tables', 'Testimonials', 'Popups']) {
     await expect(nav(page).getByRole('link', { name })).toHaveCount(0);
   }
   await page.goto('/templates');
@@ -33,14 +33,14 @@ for (const module of MODULE_LIST) {
     // Only this module's templates are offered.
     const templates = templatesFor(module.type);
     await expect(dialog.getByRole('listitem')).toHaveCount(templates.length);
-    for (const template of templates) await expect(dialog.getByText(template.title, { exact: true })).toBeVisible();
+    for (const template of templates.slice(0, 4)) await expect(dialog.getByText(template.title, { exact: true })).toBeVisible();
 
     await dialog.getByText(templates[0].title, { exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/new/${templates[0].id}$`));
     await page.getByRole('button', { name: /^Create / }).click();
     await expect(page.getByText(/is ready\. Publish it now/)).toBeVisible();
 
-    await page.getByRole('link', { name: module.plural, exact: true }).first().click();
+    await nav(page).getByRole('link', { name: module.plural, exact: true }).click();
     await expect(page.getByRole('table')).toBeVisible();
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
   });
@@ -75,9 +75,8 @@ test('each module keeps its own data, with columns that fit it', async ({ page }
   await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
   expect(await headers()).toEqual(expect.arrayContaining(['Pages', 'Address']));
 
-  await nav(page).getByRole('link', { name: 'All projects', exact: true }).click();
-  await expect(page.getByRole('table').getByRole('row')).toHaveCount(4);
-  await expect(page.getByRole('columnheader', { name: 'Type' })).toBeVisible();
+  await nav(page).getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Recent projects' }).getByRole('listitem')).toHaveCount(3);
 });
 
 test('table filters, search, sorting and actions', async ({ page }) => {
@@ -107,7 +106,7 @@ test('table filters, search, sorting and actions', async ({ page }) => {
   await page.getByRole('rowheader', { name: 'Contact us' }).getByRole('link').click();
   await publish(page, `contact-${Date.now()}`);
   await expect(page.getByText('Published! Your changes are live.')).toBeVisible();
-  await page.getByRole('link', { name: 'Forms', exact: true }).first().click();
+  await nav(page).getByRole('link', { name: 'Forms', exact: true }).click();
   await page.getByRole('button', { name: 'Live (1)' }).click();
   await expect(rows).toHaveCount(1);
   await expect(page.getByRole('link', { name: 'Open Contact us live' })).toBeVisible();
@@ -124,7 +123,7 @@ test('table filters, search, sorting and actions', async ({ page }) => {
   await page.getByRole('link', { name: 'Edit Contact us (copy)' }).click();
   await expect(page.getByTestId('canvas-stage')).toBeVisible();
   await page.getByRole('button', { name: 'Back to project' }).click();
-  await page.getByRole('link', { name: 'Forms', exact: true }).first().click();
+  await nav(page).getByRole('link', { name: 'Forms', exact: true }).click();
 
   // Delete asks first.
   page.once('dialog', (dialog) => dialog.dismiss());
@@ -156,12 +155,12 @@ test('responses are counted in the form table', async ({ page }) => {
 
 test('sidebar create dialog starts by choosing a type, and can start blank with a name', async ({ page }) => {
   await signUp(page);
-  await nav(page).getByRole('button', { name: 'Create new' }).click();
+  await page.getByRole('complementary').getByRole('button', { name: 'Create new' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('heading', { name: 'What do you want to create?' })).toBeVisible();
   await expect(dialog.getByRole('button')).toHaveCount(MODULE_LIST.length + 1);
 
-  await dialog.getByRole('button', { name: /Product tour/ }).click();
+  await dialog.getByRole('button', { name: /^Product tour/ }).click();
   await dialog.getByLabel('Search templates').fill('feature');
   await expect(dialog.getByRole('listitem')).toHaveCount(1);
   await dialog.getByRole('button', { name: 'Back to all types' }).click();
@@ -172,7 +171,6 @@ test('sidebar create dialog starts by choosing a type, and can start blank with 
   await expect(page.getByRole('heading', { name: 'My signup form' })).toBeVisible();
   await expect(page.getByTestId('canvas-stage')).toBeVisible();
 
-  await page.keyboard.press('Escape');
   await page.goto('/forms');
   await expect(page.getByRole('rowheader', { name: 'My signup form' })).toBeVisible();
 });

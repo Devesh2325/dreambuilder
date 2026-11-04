@@ -98,6 +98,18 @@ export function isSafeUrl(url: string): boolean {
   return !scheme || SAFE_PROTOCOLS.includes(`${scheme[1].toLowerCase()}:`);
 }
 
+/**
+ * For image sources only. SVG can carry scripts when opened as a page, but browsers
+ * don't run them in an img tag. That's why this is separate from links.
+ */
+export function isSafeImageUrl(url: string): boolean {
+  return isSafeUrl(url) || /^data:image\/svg\+xml[,;]/i.test(url.trim());
+}
+
+export function safeImageUrl(value: unknown): string {
+  return typeof value === 'string' && value !== '' && isSafeImageUrl(value) ? value : '';
+}
+
 export function safeUrl(value: unknown, fallback = '#'): string {
   return typeof value === 'string' && value !== '' && isSafeUrl(value) ? value : fallback;
 }

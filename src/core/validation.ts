@@ -1,6 +1,6 @@
 // Separate from variables.ts so the embed script, which only renders, doesn't bundle zod.
 import { z } from 'zod';
-import { isSafeUrl, VariableDef, VariableValues } from './variables';
+import { isSafeImageUrl, isSafeUrl, VariableDef, VariableValues } from './variables';
 
 function fieldSchema(def: VariableDef): z.ZodType {
   const text = (schema: z.ZodString) =>
@@ -15,11 +15,13 @@ function fieldSchema(def: VariableDef): z.ZodType {
     case 'email':
       return text(z.string().trim().email(`${def.label} must be a valid email address`));
     case 'url':
-    case 'image':
       return text(
         z.string().trim().refine((value) => isSafeUrl(value) && value !== '', `${def.label} must be a valid link`),
       );
-    case 'color':
+    case 'image':
+      return text(
+        z.string().trim().refine((value) => isSafeImageUrl(value) && value !== '', `${def.label} must be a valid image link`),
+      );    case 'color':
       return text(z.string().trim().regex(/^#[0-9a-fA-F]{3,8}$/, `${def.label} must be a hex color`));
     case 'number':
       return z.coerce.number({ error: `${def.label} must be a number` });

@@ -44,7 +44,7 @@ describe('authentication', () => {
 
     it('shows the protected page to logged-in users', async () => {
       renderApp('/', createFakeServices({ user: TEST_USER }));
-      expect(await screen.findByRole('heading', { name: 'All projects' })).toBeTruthy();
+      expect(await screen.findByRole('heading', { name: 'Welcome, Alice' })).toBeTruthy();
     });
 
     it('never shows protected content before the session check finishes', () => {
@@ -55,7 +55,7 @@ describe('authentication', () => {
 
     it('moves logged-in users away from the login page', async () => {
       renderApp('/login', createFakeServices({ user: TEST_USER }));
-      await screen.findByRole('heading', { name: 'All projects' });
+      await screen.findByRole('heading', { name: 'Welcome, Alice' });
       expect(screen.getByTestId('path').textContent).toBe('/');
     });
   });
@@ -106,7 +106,7 @@ describe('authentication', () => {
       await screen.findByRole('heading', { name: 'Create your account' });
       fillSignUp();
 
-      await screen.findByRole('heading', { name: 'All projects' });
+      await screen.findByRole('heading', { name: 'Welcome, Alice' });
       expect(fake.calls.signUp[0]).toEqual({
         fullName: 'Alice',
         workspaceName: 'Alice Co',
@@ -137,7 +137,7 @@ describe('authentication', () => {
   describe('logout', () => {
     it('returns to the login page', async () => {
       renderApp('/', createFakeServices({ user: TEST_USER }));
-      await screen.findByRole('heading', { name: 'All projects' });
+      await screen.findByRole('heading', { name: 'Welcome, Alice' });
       click('Log out');
 
       expect(await screen.findByRole('heading', { name: 'Log in' })).toBeTruthy();
@@ -166,7 +166,7 @@ describe('authentication', () => {
       fill('New password', 'brand-new-password');
       click('Save password');
 
-      await screen.findByRole('heading', { name: 'All projects' });
+      await screen.findByRole('heading', { name: 'Welcome, Alice' });
       expect(fake.calls.updatePassword).toEqual(['brand-new-password']);
     });
   });

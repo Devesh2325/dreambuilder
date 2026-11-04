@@ -217,7 +217,7 @@ function evaluate(projectId: string, experience: Experience) {
   const { project } = experience.snapshot;
   const delivery = MODULES[project.type].delivery;
 
-  if (delivery !== 'overlay') {
+  if (delivery !== 'overlay' || project.settings.position === 'inline') {
     document.querySelectorAll<HTMLElement>(`[data-flowpilot="${CSS.escape(projectId)}"]`).forEach((element) => {
       if (element.hasAttribute('data-flowpilot-mounted')) return;
       element.setAttribute('data-flowpilot-mounted', '');

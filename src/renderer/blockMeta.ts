@@ -56,7 +56,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
   },
   Image: {
     type: 'Image', label: 'Image', category: 'content', icon: 'Image',
-    defaultProps: { src: 'https://picsum.photos/seed/flowpilot/1200/800', alt: '' },
+    defaultProps: { src: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&h=800&q=75&auto=format&fit=crop', alt: '' },
     fields: [{ key: 'src', label: 'Image', type: 'image' }, text('alt', 'Description (for screen readers)')],
   },
   Divider: { type: 'Divider', label: 'Divider', category: 'content', icon: 'Minus', defaultProps: {}, fields: [] },
@@ -67,9 +67,18 @@ export const BLOCK_META: Record<string, BlockMeta> = {
   },
   Navbar: {
     type: 'Navbar', label: 'Navigation', category: 'content', icon: 'Menu',
-    defaultProps: { brand: 'Brand', showBrand: true, logo: '', links: [], ctaText: '', ctaHref: '#' },
+    defaultProps: { brand: 'Brand', showBrand: true, logo: '', links: [], align: 'right', sticky: false, ctaText: '', ctaHref: '#' },
     fields: [
       { key: 'links', label: 'Menu items', type: 'menu' },
+      {
+        key: 'align', label: 'Menu position', type: 'select',
+        options: [
+          { label: 'Right', value: 'right' },
+          { label: 'Center', value: 'center' },
+          { label: 'Left, next to the logo', value: 'left' },
+        ],
+      },
+      { key: 'sticky', label: 'Stay at the top while scrolling', type: 'boolean' },
       text('brand', 'Brand name'),
       { key: 'showBrand', label: 'Show the brand name', type: 'boolean' },
       { key: 'logo', label: 'Logo', type: 'image' },
@@ -143,7 +152,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
 
   DemoScreen: {
     type: 'DemoScreen', label: 'Demo screen', category: 'demo', icon: 'Monitor', isContainer: true, parentType: 'Root',
-    defaultProps: { image: 'https://picsum.photos/seed/demo/1280/800', alt: 'Product screen' },
+    defaultProps: { image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1280&h=800&q=75&auto=format&fit=crop', alt: 'Product screen' },
     fields: [{ key: 'image', label: 'Screenshot', type: 'image' }, text('alt', 'Description')],
   },
   DemoHotspot: {
@@ -157,6 +166,18 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     ],
   },
 
+  Carousel: {
+    type: 'Carousel', label: 'Carousel', category: 'interactive', icon: 'GalleryHorizontal', isContainer: true,
+    defaultProps: { interval: 5, showArrows: true },
+    fields: [
+      { key: 'interval', label: 'Seconds per slide (0 to turn off)', type: 'number' },
+      { key: 'showArrows', label: 'Show arrows', type: 'boolean' },
+    ],
+  },
+  Slide: {
+    type: 'Slide', label: 'Slide', category: 'interactive', icon: 'RectangleHorizontal', isContainer: true, parentType: 'Carousel',
+    defaultProps: {}, fields: [],
+  },
   Banner: {
     type: 'Banner', label: 'Banner', category: 'interactive', icon: 'Megaphone', isContainer: true,
     defaultProps: { dismissible: true },

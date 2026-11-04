@@ -9,7 +9,7 @@ export async function signUp(page: Page, workspace = 'Test Workspace') {
   await page.getByLabel('Email').fill(`user${Date.now()}${Math.floor(Math.random() * 1000)}@example.com`);
   await page.getByLabel('Password').fill('a-long-enough-password');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('heading', { name: 'All projects' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Welcome/ })).toBeVisible();
 }
 
 export const canvas = (page: Page): FrameLocator => page.frameLocator('iframe[title="Design canvas"]');
@@ -27,7 +27,7 @@ export async function createFromTemplate(page: Page, templateId: string) {
 }
 
 export async function publish(page: Page, slug: string) {
-  await page.getByRole('button', { name: /^Publish/ }).click();
+  await page.locator('header').getByRole('button', { name: /^Publish/ }).click();
   await page.getByLabel('Web address').fill(slug);
   await page.getByRole('dialog').getByRole('button', { name: 'Publish' }).click();
 }

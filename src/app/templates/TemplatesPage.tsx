@@ -17,7 +17,7 @@ export const TemplatesPage: React.FC = () => {
   const list = TEMPLATES.filter((template) => {
     if (type && template.type !== type) return false;
     if (!term) return true;
-    return [template.title, template.description, ...template.tags, MODULES[template.type].label].join(' ').toLowerCase().includes(term);
+    return [template.title, template.description, template.category ?? '', ...template.tags, MODULES[template.type].label].join(' ').toLowerCase().includes(term);
   });
 
   return (
@@ -67,7 +67,7 @@ export const TemplatesPage: React.FC = () => {
             <Link to={ROUTES.newFromTemplate(template.id)} className={`${cardClass} block hover:border-indigo-400 transition-colors`}>
               <LiveThumbnail template={template} className="h-48 rounded-t-2xl" />
               <div className="p-4">
-                <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">{MODULES[template.type].label}</p>
+                <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">{MODULES[template.type].label}{template.category ? `  ·  ${template.category}` : ''}</p>
                 <h2 className="mt-0.5 font-semibold">{template.title}</h2>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{template.description}</p>
               </div>

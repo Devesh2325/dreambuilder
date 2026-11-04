@@ -3,13 +3,13 @@ import { VariableDef } from '../core/variables';
 import {
   actionButton, buildContent, button, el, El, experience, heading, image, section, TemplateDefinition, TemplatePage, text, ThemePreset,
 } from './dsl';
+import { mockScreen, photo } from './assets';
 import { ALL_THEMES, THEME_CORAL, THEME_EMERALD, THEME_INDIGO, THEME_MIDNIGHT, THEME_MONO, THEME_TERRACOTTA } from './themes';
 
-const pic = (seed: string, width = 1280, height = 800) => `https://picsum.photos/seed/${seed}/${width}/${height}`;
 
 const OVERLAY_SETTINGS: ProjectSettings = { triggers: DEFAULT_TRIGGERS };
 
-function make(
+export function make(
   type: ProjectType,
   id: string,
   title: string,
@@ -18,7 +18,7 @@ function make(
   theme: ThemePreset,
   variables: VariableDef[],
   pages: TemplatePage[],
-  extra: { settings?: ProjectSettings; titleVariable?: string } = {},
+  extra: { settings?: ProjectSettings; titleVariable?: string; category?: string } = {},
 ): TemplateDefinition {
   return {
     id: `${type}-${id}`,
@@ -34,16 +34,16 @@ function make(
   };
 }
 
-const textVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
+export const textVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
   key, label, type: 'text', required: true, default: value, group,
 });
-const longVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
+export const longVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
   key, label, type: 'longtext', default: value, group,
 });
-const urlVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
+export const urlVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
   key, label, type: 'url', default: value, group,
 });
-const listVar = (key: string, label: string, items: Record<string, unknown>[], itemFields: VariableDef[], group?: string): VariableDef => ({
+export const listVar = (key: string, label: string, items: Record<string, unknown>[], itemFields: VariableDef[], group?: string): VariableDef => ({
   key, label, type: 'list', default: items, itemFields, minItems: 1, maxItems: 20, group,
 });
 
@@ -163,6 +163,13 @@ const tourTemplates = [
     tourStep('{{invite.selector}}', 'bottom', 'Invite your team', 'Work goes faster together.', nextBack),
     tourStep('{{settings.selector}}', 'left', 'Adjust your settings', 'Make it work the way you do.', [actionButton('Back', 'prev', 'secondary'), actionButton('Done', 'next')]),
   ])], { settings: OVERLAY_SETTINGS }),
+  make('tour', 'upgrade', 'Upgrade prompt', 'Show free users what they get by upgrading.', ['upsell', 'revenue'], THEME_MIDNIGHT, [
+    textVar('plan', 'Plan name', 'Pro', 'The offer'),
+    longVar('benefit', 'Main benefit', 'Unlimited reports, more seats and priority support.', 'The offer'),
+    textVar('upgrade.selector', 'Upgrade button', '#upgrade', 'Elements on your site'),
+  ], [experience([
+    tourStep('{{upgrade.selector}}', 'bottom', 'Ready for {{plan}}?', '{{benefit}}', [actionButton('Not now', 'close', 'link'), actionButton('Show me', 'next')]),
+  ])], { settings: OVERLAY_SETTINGS }),
 ];
 
 // ---- Forms ------------------------------------------------------------------
@@ -170,7 +177,7 @@ const tourTemplates = [
 const formPage = (submitText: string, success: string, children: El[]): TemplatePage =>
   experience([el('Form', { props: { submitText, successMessage: success } }, children)], { padding: '24px', maxWidth: '640px', marginLeft: 'auto', marginRight: 'auto' });
 
-const field = (name: string, label: string, inputType = 'text', required = true, optionsText = ''): El =>
+export const field = (name: string, label: string, inputType = 'text', required = true, optionsText = ''): El =>
   el('FormField', { props: { name, label, inputType, required, optionsText } });
 
 const formTemplates = [
@@ -221,6 +228,30 @@ const formTemplates = [
     el('ScaleField', { props: { name: 'score', label: '{{form.question}}', min: 0, max: 10, required: true } }),
     field('reason', 'What is the main reason for your score?', 'textarea', false),
   ])], { titleVariable: 'form.title' }),
+  make('form', 'job-application', 'Job application', 'Collect applications with contact details and experience.', ['hr', 'careers', 'recruiting'], THEME_MONO, [
+    textVar('form.title', 'Title', 'Apply to join our team', 'Form text'),
+    longVar('form.roles', 'Open roles (one per line)', 'Designer\nDeveloper\nCustomer support', 'Questions'),
+    textVar('form.thanks', 'Thank-you message', 'Thanks for applying! We read every application.', 'Form text'),
+  ], [formPage('Send application', '{{form.thanks}}', [
+    heading('{{form.title}}', 'h2'),
+    field('name', 'Full name'),
+    field('email', 'Email', 'email'),
+    el('FormField', { props: { name: 'role', label: 'Role', inputType: 'select', required: true, optionsText: '{{form.roles}}' } }),
+    field('portfolio', 'Portfolio or LinkedIn', 'url', false),
+    field('about', 'Why would you like to join us?', 'textarea'),
+  ])], { titleVariable: 'form.title' }),
+
+  make('form', 'event-rsvp', 'Event RSVP', 'Let guests confirm and share their preferences.', ['event', 'invitation', 'wedding'], THEME_CORAL, [
+    textVar('form.title', 'Title', 'Will you join us?', 'Form text'),
+    longVar('form.details', 'Event details', 'Saturday, June 14 at 6pm', 'Form text'),
+    textVar('form.thanks', 'Thank-you message', 'Thanks! We look forward to seeing you.', 'Form text'),
+  ], [formPage('Send RSVP', '{{form.thanks}}', [
+    heading('{{form.title}}', 'h2'),
+    text('{{form.details}}', { color: 'var(--fp-muted)' }, 'form.details'),
+    field('name', 'Your name'),
+    el('FormField', { props: { name: 'attending', label: 'Are you coming?', inputType: 'radio', required: true, optionsText: 'Yes, I will be there\nSorry, I cannot make it' } }),
+    field('guests', 'Number of guests', 'number', false),
+  ])], { titleVariable: 'form.title' }),
 ];
 
 // ---- Demos ------------------------------------------------------------------
@@ -228,62 +259,43 @@ const formTemplates = [
 const screen = (imageKey: string, x: number, y: number, tip: string): El =>
   el('DemoScreen', { props: { image: imageKey, alt: 'Product screen' } }, [el('DemoHotspot', { props: { x, y, tip } })]);
 
-const screenVar = (key: string, label: string, seed: string): VariableDef => ({
-  key, label, type: 'image', required: true, default: pic(seed), group: 'Screenshots',
+const screenVar = (key: string, label: string, kind: Parameters<typeof mockScreen>[0], accent?: string): VariableDef => ({
+  key, label, type: 'image', required: true, default: mockScreen(kind, accent), group: 'Screenshots', help: 'Replace with a screenshot of your product.',
 });
 
 const demoTemplates = [
   make('demo', 'walkthrough', 'Product walkthrough', 'Three clickable screens showing your main flow.', ['walkthrough', 'sales'], THEME_INDIGO, [
-    screenVar('screen.one', 'First screen', 'demo1'),
-    screenVar('screen.two', 'Second screen', 'demo2'),
-    screenVar('screen.three', 'Last screen', 'demo3'),
+    screenVar('screen.one', 'First screen', 'dashboard'),
+    screenVar('screen.two', 'Second screen', 'list'),
+    screenVar('screen.three', 'Last screen', 'success'),
     textVar('tip.one', 'First tip', 'Start here', 'Tips'),
     textVar('tip.two', 'Second tip', 'Then choose an option', 'Tips'),
     textVar('tip.three', 'Last tip', 'And see the result', 'Tips'),
   ], [experience([
-    screen('{{screen.one}}', 30, 40, '{{tip.one}}'),
-    screen('{{screen.two}}', 60, 55, '{{tip.two}}'),
-    screen('{{screen.three}}', 50, 30, '{{tip.three}}'),
+    screen('{{screen.one}}', 12, 15, '{{tip.one}}'),
+    screen('{{screen.two}}', 90, 5, '{{tip.two}}'),
+    screen('{{screen.three}}', 58, 68, '{{tip.three}}'),
   ])]),
 
   make('demo', 'feature', 'Single feature demo', 'Two screens to show one feature in action.', ['feature', 'marketing'], THEME_MIDNIGHT, [
-    screenVar('screen.before', 'Before', 'demo4'),
-    screenVar('screen.after', 'After', 'demo5'),
+    screenVar('screen.before', 'Before', 'list', '#7c3aed'),
+    screenVar('screen.after', 'After', 'detail', '#7c3aed'),
     textVar('tip.action', 'Tip', 'Click to see the magic', 'Tips'),
     textVar('tip.done', 'Closing tip', "That's it!", 'Tips'),
-  ], [experience([screen('{{screen.before}}', 50, 50, '{{tip.action}}'), screen('{{screen.after}}', 50, 50, '{{tip.done}}')])]),
+  ], [experience([screen('{{screen.before}}', 40, 26, '{{tip.action}}'), screen('{{screen.after}}', 28, 83, '{{tip.done}}')])]),
 
   make('demo', 'dashboard', 'Dashboard tour', 'Explore a dashboard with several stops.', ['dashboard', 'analytics'], THEME_EMERALD, [
-    screenVar('screen.overview', 'Overview', 'demo6'),
-    screenVar('screen.report', 'Report', 'demo7'),
-    screenVar('screen.share', 'Share', 'demo8'),
+    screenVar('screen.overview', 'Overview', 'dashboard', '#059669'),
+    screenVar('screen.report', 'Report', 'report', '#059669'),
+    screenVar('screen.share', 'Share', 'success', '#059669'),
     textVar('tip.overview', 'Overview tip', 'Open a report', 'Tips'),
     textVar('tip.report', 'Report tip', 'Share with your team', 'Tips'),
     textVar('tip.share', 'Share tip', 'All done', 'Tips'),
   ], [experience([
-    screen('{{screen.overview}}', 25, 30, '{{tip.overview}}'),
-    screen('{{screen.report}}', 75, 20, '{{tip.report}}'),
-    screen('{{screen.share}}', 50, 60, '{{tip.share}}'),
+    screen('{{screen.overview}}', 40, 20, '{{tip.overview}}'),
+    screen('{{screen.report}}', 90, 5, '{{tip.report}}'),
+    screen('{{screen.share}}', 58, 68, '{{tip.share}}'),
   ])]),
-];
-
-// ---- Banners ----------------------------------------------------------------
-
-const bannerTemplates = [
-  make('banner', 'announcement', 'Announcement', 'Share news with a link.', ['news'], THEME_INDIGO, [
-    textVar('message', 'Message', 'We just launched something new!', 'Message'),
-    textVar('cta.label', 'Link text', 'Learn more', 'Message'),
-    urlVar('cta.link', 'Link', 'https://example.com', 'Message'),
-  ], [experience([el('Banner', {}, [text('{{message}}'), el('Button', { props: { text: '{{cta.label}}', href: '{{cta.link}}', variant: 'link', action: 'link' }, styles: { color: '#ffffff', textDecoration: 'underline' } })])], { background: 'transparent' })], { settings: { ...OVERLAY_SETTINGS, position: 'top' } }),
-
-  make('banner', 'sale', 'Sale or promotion', 'Promote an offer with a code.', ['sale', 'promotion'], THEME_CORAL, [
-    textVar('message', 'Offer', 'Summer sale: 20% off everything', 'Offer'),
-    textVar('code', 'Discount code', 'SUMMER20', 'Offer'),
-  ], [experience([el('Banner', {}, [text('{{message}} with code {{code}}', { fontWeight: 600 })])], { background: 'transparent' })], { settings: { ...OVERLAY_SETTINGS, position: 'top' } }),
-
-  make('banner', 'maintenance', 'Maintenance notice', 'Warn users about planned downtime.', ['notice', 'status'], THEME_MONO, [
-    textVar('message', 'Notice', 'Scheduled maintenance on Saturday, 2am to 4am UTC.', 'Notice'),
-  ], [experience([el('Banner', { props: { dismissible: true } }, [text('{{message}}')])], { background: 'transparent' })], { settings: { ...OVERLAY_SETTINGS, position: 'bottom' } }),
 ];
 
 // ---- Menus ------------------------------------------------------------------
@@ -355,44 +367,6 @@ const faqTemplates = [
   ], [faqPage(false)], { titleVariable: 'title' }),
 ];
 
-// ---- Popups -----------------------------------------------------------------
-
-const popupTemplates = [
-  make('popup', 'newsletter', 'Newsletter sign-up', 'Grow your list with a simple offer.', ['email', 'leads'], THEME_INDIGO, [
-    textVar('headline', 'Headline', 'Get our best tips', 'Text'),
-    longVar('body', 'Text', 'One useful email a week. No spam.', 'Text'),
-    textVar('thanks', 'Thank-you message', 'Thanks for subscribing!', 'Text'),
-  ], [experience([el('Popup', {}, [
-    heading('{{headline}}', 'h3'),
-    text('{{body}}', { color: 'var(--fp-muted)' }),
-    el('Form', { props: { submitText: 'Subscribe', successMessage: '{{thanks}}' } }, [field('email', 'Email', 'email')]),
-  ])], { background: 'transparent' })], { settings: { triggers: { ...DEFAULT_TRIGGERS, delaySeconds: 5 } } }),
-
-  make('popup', 'discount', 'Discount offer', 'Show an offer before visitors leave.', ['sale', 'exit-intent'], THEME_CORAL, [
-    textVar('headline', 'Headline', 'Wait! Take 10% off', 'Text'),
-    textVar('code', 'Code', 'WELCOME10', 'Text'),
-    textVar('cta.label', 'Button label', 'Shop now', 'Text'),
-    urlVar('cta.link', 'Button link', 'https://example.com/shop', 'Text'),
-  ], [experience([el('Popup', { styles: { textAlign: 'center', alignItems: 'center' } }, [
-    heading('{{headline}}', 'h2'),
-    text('Use code {{code}} at checkout.', { color: 'var(--fp-muted)' }),
-    button('{{cta.label}}', '{{cta.link}}'),
-  ])], { background: 'transparent' })], { settings: { triggers: { ...DEFAULT_TRIGGERS, exitIntent: true } } }),
-
-  make('popup', 'announcement', 'Feature announcement', 'Tell users about something new, with an image.', ['news', 'product'], THEME_EMERALD, [
-    textVar('headline', 'Headline', 'Say hello to our new look', 'Text'),
-    longVar('body', 'Text', "We've redesigned everything to help you work faster.", 'Text'),
-    { key: 'image', label: 'Image', type: 'image', default: pic('popup', 900, 500), group: 'Text' },
-    textVar('cta.label', 'Button label', 'Got it', 'Text'),
-  ], [experience([el('Popup', {}, [
-    image('{{image}}', '', { height: '200px' }, 'image'),
-    heading('{{headline}}', 'h3'),
-    text('{{body}}', { color: 'var(--fp-muted)' }),
-    actionButton('{{cta.label}}', 'close'),
-  ])], { background: 'transparent' })], { settings: OVERLAY_SETTINGS }),
-];
-
 export const EXPERIENCE_TEMPLATES: TemplateDefinition[] = [
-  ...pageTemplates, ...tourTemplates, ...formTemplates, ...demoTemplates, ...bannerTemplates, ...menuTemplates,
-  ...faqTemplates, ...popupTemplates,
+  ...pageTemplates, ...tourTemplates, ...formTemplates, ...demoTemplates, ...menuTemplates, ...faqTemplates,
 ];

@@ -28,6 +28,7 @@ interface HistoryEntry {
   at: number;
 }
 
+export type StudioTool = 'edit' | 'details' | 'add' | 'layers' | 'pages' | 'theme';
 export type SaveStatus = 'saved' | 'dirty' | 'saving' | 'conflict' | 'error';
 export type DragPayload = { kind: 'block'; type: string } | { kind: 'node'; id: string };
 
@@ -53,6 +54,12 @@ interface StudioState {
   status: SaveStatus;
   saveError: string | null;
   dragging: DragPayload | null;
+  /** The one open side panel, or null when closed to give the canvas more room. */
+  tool: StudioTool | null;
+  setTool: (tool: StudioTool | null) => void;
+  /** Stays the same across blocks and tools, so you can style one block after another. */
+  inspectorTab: 'content' | 'style' | 'advanced';
+  setInspectorTab: (tab: 'content' | 'style' | 'advanced') => void;
 
   load: (services: AppServices, project: ProjectRecord, documents: DocumentRecord[], readOnly: boolean) => void;
   reset: () => void;
@@ -61,6 +68,11 @@ interface StudioState {
   setDevice: (device: Device) => void;
   setZoom: (zoom: number) => void;
   setDragging: (payload: DragPayload | null) => void;
+  /**
+   * For use in dragstart handlers. Chrome cancels a drag if the page changes while it
+   * starts, and this state changes the overlay, so it waits one tick.
+   */
+  beginDrag: (payload: DragPayload, select?: string) => void;
 
   /** The documents drawn on the canvas right now. */
   visibleDocuments: () => DocumentRecord[];
@@ -133,6 +145,8 @@ const initialState = {
   status: 'saved' as SaveStatus,
   saveError: null,
   dragging: null,
+  tool: 'details' as StudioTool | null,
+  inspectorTab: 'content' as const,
 };
 
 export const useStudio = create<StudioState>((set, get) => {
@@ -239,6 +253,9 @@ export const useStudio = create<StudioState>((set, get) => {
         documents: sorted,
         activeDocumentId: firstPage?.id ?? null,
         draft: { title: project.title, variables: project.variables, theme: project.theme, settings: project.settings },
+        // Templates start on their details form, and blank projects on blocks to add.
+        // Small screens start closed, leaving the room to the canvas.
+        tool: window.innerWidth < 1100 ? null : project.templateId ? 'details' : 'add',
       });
     },
 
@@ -254,6 +271,11 @@ export const useStudio = create<StudioState>((set, get) => {
     setDevice: (device) => set({ device }),
     setZoom: (zoom) => set({ zoom: Math.max(25, Math.min(200, zoom)) }),
     setDragging: (dragging) => set({ dragging }),
+    beginDrag: (dragging, selectId) => {
+      window.setTimeout(() => set(selectId ? { dragging, selectedId: selectId } : { dragging }), 0);
+    },
+    setTool: (tool) => set({ tool }),
+    setInspectorTab: (inspectorTab) => set({ inspectorTab }),
 
     visibleDocuments: () => {
       const { documents, activeDocumentId } = get();

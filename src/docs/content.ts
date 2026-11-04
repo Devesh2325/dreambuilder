@@ -20,7 +20,7 @@ export const allDocs = () => [...docs.values()];
 export const DOC_SECTIONS: { title: string; slugs: string[] }[] = [
   { title: 'Start here', slugs: ['getting-started', 'install'] },
   { title: 'Main modules', slugs: ['website', 'page', 'tour', 'form'] },
-  { title: 'More modules', slugs: ['demo', 'banner', 'menu', 'faq', 'popup'] },
+  { title: 'More modules', slugs: ['demo', 'banner', 'menu', 'faq'] },
   { title: 'Reference', slugs: ['api', 'webhooks', 'troubleshooting'] },
 ];
 

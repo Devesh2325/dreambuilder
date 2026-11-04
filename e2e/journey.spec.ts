@@ -7,7 +7,7 @@ test('full journey: template, details, editor, publish, live site, form response
   await signUp(page);
 
   // Choose a template.
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Create new' }).click();
+  await page.getByRole('complementary').getByRole('button', { name: 'Create new' }).click();
   await page.getByRole('dialog').getByRole('button', { name: /^Website/ }).click();
   await page.getByRole('searchbox', { name: 'Search templates' }).fill('restaurant');
   await page.getByRole('dialog').getByRole('button', { name: /Restaurant or cafe/ }).click();
@@ -60,9 +60,11 @@ test('full journey: template, details, editor, publish, live site, form response
 
   // The owner sees the response.
   await page.goBack();
-  await page.goto('/');
+  await page.goto('/websites');
   await page.getByRole('rowheader', { name: 'Rosa Trattoria' }).getByRole('link').click();
+  await page.getByRole('tab', { name: /Responses/ }).click();
   await expect(page.getByRole('cell', { name: 'A table for two please' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Overview' }).click();
 
   // Publishing again updates the live site.
   await publish(page, slug);
@@ -158,11 +160,13 @@ test('editor warns about a conflicting edit from another tab', async ({ page, co
   await other.goto(page.url());
   const otherHeading = canvas(other).getByRole('heading', { level: 1 });
   await otherHeading.click();
+  await other.getByRole('button', { name: 'Type your own Text' }).click();
   await other.getByLabel('Text', { exact: true }).fill('Saved in another tab');
   await waitForSaved(other);
   await other.close();
 
   await canvas(page).getByRole('heading', { level: 1 }).click();
+  await page.getByRole('button', { name: 'Type your own Text' }).click();
   await page.getByLabel('Text', { exact: true }).fill('Saved here');
   await expect(page.getByRole('alert').filter({ hasText: 'Someone else changed' })).toBeVisible({ timeout: 10_000 });
 

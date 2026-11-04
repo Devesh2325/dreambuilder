@@ -201,31 +201,42 @@ const DemoPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
+  const goTo = (next: number) => {
+    if (next >= screens.length || next < 0 || Number.isNaN(next)) {
+      host.track?.('demo_completed');
+      setIsDone(true);
+      host.onFinish?.('completed');
+    } else {
+      setIsDone(false);
+      setIndex(next);
+    }
+  };
+
   const ctx: RenderContext = {
     ...ctxBase,
-    onAction: (action, value) => {
-      const next = action === 'goto' ? Number(value) : index + 1;
-      if (next >= screens.length || next < 0 || Number.isNaN(next)) {
-        host.track?.('demo_completed');
-        setIsDone(true);
-        host.onFinish?.('completed');
-      } else {
-        setIndex(next);
-      }
-    },
+    onAction: (action, value) => goTo(action === 'goto' ? Number(value) : index + 1),
   };
 
   if (!screens[index]) return null;
   return (
-    <div style={{ position: 'relative' }}>
-      <RenderedNode node={screens[index]} ctx={ctx} />
-      {isDone && (
-        <div style={{ textAlign: 'center', padding: 12 }}>
-          <button type="button" className="fp-btn fp-btn-secondary" onClick={() => { setIsDone(false); setIndex(0); }}>
-            Restart
-          </button>
+    <div>
+      <div className="fp-demo-bar">
+        <span>Step {index + 1} of {screens.length}</span>
+        <div className="fp-demo-dots" aria-hidden="true">
+          {screens.map((screen, i) => <span key={screen.key} data-active={i === index} />)}
         </div>
-      )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {isDone ? (
+            <button type="button" className="fp-btn fp-btn-primary" onClick={() => goTo(0)}>Restart</button>
+          ) : (
+            <>
+              {index > 0 && <button type="button" className="fp-btn fp-btn-secondary" onClick={() => goTo(index - 1)}>Back</button>}
+              <button type="button" className="fp-btn fp-btn-primary" onClick={() => goTo(index + 1)}>{index === screens.length - 1 ? 'Finish' : 'Next'}</button>
+            </>
+          )}
+        </div>
+      </div>
+      <RenderedNode node={screens[index]} ctx={ctx} />
     </div>
   );
 };
@@ -265,23 +276,29 @@ export const ExperiencePlayer: React.FC<ExperiencePlayerProps> = ({ type, conten
   } else if (type === 'demo') {
     body = <DemoPlayer tree={tree} ctxBase={ctxBase} host={host} />;
   } else if (type === 'banner') {
-    const edge = settings.position === 'bottom' ? { bottom: 0 } : { top: 0 };
-    body = (
-      <div style={{ position: 'fixed', left: 0, right: 0, zIndex: 2147483000, ...edge }}>
-        <RenderedNode node={tree} ctx={ctxBase} />
-      </div>
-    );
-  } else if (type === 'popup') {
-    body = (
-      <div
-        style={{ ...FIXED_FULL, background: 'rgba(15,23,42,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflow: 'auto' }}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) ctxBase.onAction?.('close');
-        }}
-      >
-        <RenderedNode node={tree} ctx={ctxBase} />
-      </div>
-    );
+    // A banner comes in several styles. One with a Popup block shows as a modal.
+    if (tree.children.some((child) => child.type === 'Popup')) {
+      body = (
+        <div
+          data-fp-modal=""
+          style={{ ...FIXED_FULL, background: 'rgba(15,23,42,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflow: 'auto' }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) ctxBase.onAction?.('close');
+          }}
+        >
+          <RenderedNode node={tree} ctx={ctxBase} />
+        </div>
+      );
+    } else if (settings.position === 'inline') {
+      body = <RenderedNode node={tree} ctx={ctxBase} />;
+    } else {
+      const edge = settings.position === 'bottom' ? { bottom: 0 } : { top: 0 };
+      body = (
+        <div style={{ position: 'fixed', left: 0, right: 0, zIndex: 2147483000, ...edge }}>
+          <RenderedNode node={tree} ctx={ctxBase} />
+        </div>
+      );
+    }
   } else {
     body = <RenderedNode node={tree} ctx={ctxBase} />;
   }

@@ -111,7 +111,6 @@ const EVENT_LABELS: Record<string, string> = {
   checklist_item_completed: 'Checklist items done',
   checklist_completed: 'Checklists finished',
   banner_dismissed: 'Banners closed',
-  popup_dismissed: 'Popups closed',
 };
 
 export const AnalyticsPage: React.FC = () => {

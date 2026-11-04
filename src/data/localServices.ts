@@ -63,6 +63,10 @@ function load(): LocalState {
     if (!raw) return emptyState();
     const state: LocalState = { ...emptyState(), ...JSON.parse(raw) };
     // Saved demo data can include modules that no longer exist.
+    for (const project of state.projects as { type: string }[]) {
+      // Popups became a kind of banner.
+      if (project.type === 'popup') project.type = 'banner';
+    }
     state.projects = state.projects.filter((project) => PROJECT_TYPES.includes(project.type));
     return state;
   } catch {

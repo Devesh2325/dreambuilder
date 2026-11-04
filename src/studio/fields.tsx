@@ -6,6 +6,8 @@ export const labelClass = 'block text-xs font-medium text-slate-600 dark:text-sl
 export const fieldClass =
   'w-full h-8 px-2 text-xs rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-60';
 
+export const slugFromTitle = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
+
 const isHex = (value: string) => /^#[0-9a-fA-F]{6}$/.test(value);
 
 const THEME_SWATCHES = [

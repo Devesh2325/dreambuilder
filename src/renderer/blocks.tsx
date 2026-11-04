@@ -1,5 +1,5 @@
-import React, { FormEvent, useRef, useState } from 'react';
-import { safeUrl } from '../core/variables';
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
+import { safeImageUrl, safeUrl } from '../core/variables';
 import { BlockRenderProps, NavLink, RenderContext } from './types';
 
 type Block = React.FC<BlockRenderProps>;
@@ -32,6 +32,19 @@ const Text: Block = ({ node, attrs }) => <p {...withClass(attrs, 'fp-text')}>{as
 function handleLinkClick(event: React.MouseEvent, href: string, ctx: RenderContext) {
   if (ctx.mode === 'edit') {
     event.preventDefault();
+    return;
+  }
+  if (ctx.mode === 'preview') {
+    // Previews run in a srcdoc iframe, where even "#" resolves against the app's own
+    // address, so following a link would load the whole app inside the preview.
+    event.preventDefault();
+    if (href.startsWith('#')) {
+      if (href.length > 1) (event.currentTarget as Element).ownerDocument.getElementById(href.slice(1))?.scrollIntoView({ behavior: 'smooth' });
+    } else if (href.startsWith('/')) {
+      ctx.navigate?.(href);
+    } else {
+      window.open(href, '_blank', 'noopener');
+    }
     return;
   }
   if (ctx.navigate && href.startsWith('/')) {
@@ -69,7 +82,7 @@ const Button: Block = ({ node, attrs, ctx }) => {
 };
 
 const Image: Block = ({ node, attrs }) => {
-  const src = safeUrl(node.props.src, '');
+  const src = safeImageUrl(node.props.src);
   if (!src) return <div {...withClass(attrs, 'fp-image')} />;
   return <img {...withClass(attrs, 'fp-image')} src={src} alt={asText(node.props.alt)} loading="lazy" />;
 };
@@ -95,18 +108,19 @@ const Navbar: Block = ({ node, attrs, ctx }) => {
           return { label: asText(link.label), href, current: ctx.navLinks?.some((page) => page.current && page.href === href) };
         })
     : (ctx.navLinks ?? []);
-  const logo = safeUrl(node.props.logo, '');
+  const logo = safeImageUrl(node.props.logo);
   const brand = asText(node.props.brand);
   const ctaText = asText(node.props.ctaText);
   const ctaHref = safeUrl(node.props.ctaHref);
   const homeHref = ctx.navLinks?.[0]?.href ?? '#';
+  const align = ['left', 'center', 'right'].includes(asText(node.props.align)) ? asText(node.props.align) : 'right';
   const go = (event: React.MouseEvent, href: string) => {
     setIsOpen(false);
     handleLinkClick(event, href, ctx);
   };
 
   return (
-    <nav {...withClass(attrs, 'fp-nav')} aria-label="Main">
+    <nav {...withClass(attrs, 'fp-nav')} aria-label="Main" data-align={align} data-sticky={node.props.sticky === true || undefined}>
       <a className="fp-nav-brand" href={homeHref} onClick={(event) => go(event, homeHref)}>
         {logo && <img src={logo} alt={node.props.showBrand === false ? brand : ''} />}
         {node.props.showBrand !== false && <span>{brand}</span>}
@@ -131,6 +145,8 @@ const Navbar: Block = ({ node, attrs, ctx }) => {
             {link.label}
           </a>
         ))}
+      </div>
+      <div className="fp-nav-cta" data-open={isOpen}>
         {ctaText && (
           <a className="fp-btn fp-btn-primary" href={ctaHref} onClick={(event) => go(event, ctaHref)}>
             {ctaText}
@@ -345,7 +361,7 @@ const ScaleField: Block = ({ node, attrs, ctx }) => {
 const TourStep: Block = ({ attrs, children }) => <div {...withClass(attrs, 'fp-step')}>{children}</div>;
 
 const DemoScreen: Block = ({ node, attrs, children }) => {
-  const image = safeUrl(node.props.image, '');
+  const image = safeImageUrl(node.props.image);
   return (
     <div {...withClass(attrs, 'fp-screen')}>
       {image && <img src={image} alt={asText(node.props.alt)} />}
@@ -395,7 +411,53 @@ const Popup: Block = ({ node, attrs, children, ctx }) => (
   </div>
 );
 
+/**
+ * Every slide stays mounted, so forms inside keep their values. In the editor they're
+ * all shown, so each one can be selected and edited.
+ */
+const Carousel: Block = ({ node, attrs, children, ctx }) => {
+  const count = children.length;
+  const isEditing = ctx.mode === 'edit';
+  const [index, setIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const seconds = Number(node.props.interval) || 0;
+  const current = count > 0 ? Math.min(index, count - 1) : 0;
+
+  useEffect(() => {
+    if (isEditing || isPaused || seconds <= 0 || count < 2) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const timer = window.setInterval(() => setIndex((value) => (value + 1) % count), seconds * 1000);
+    return () => window.clearInterval(timer);
+  }, [isEditing, isPaused, seconds, count]);
+
+  const go = (next: number) => setIndex((next + count) % count);
+
+  return (
+    <div
+      {...withClass(attrs, 'fp-carousel')}
+      role="group"
+      aria-roledescription="carousel"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {children.map((child, i) => (
+        <div key={node.children[i].key} style={{ display: isEditing || i === current ? 'block' : 'none' }} aria-hidden={!isEditing && i !== current}>
+          {child}
+        </div>
+      ))}
+      {!isEditing && count > 1 && node.props.showArrows !== false && (
+        <>
+          <button type="button" className="fp-carousel-arrow" data-side="prev" aria-label="Previous slide" onClick={() => go(current - 1)}>‹</button>
+          <button type="button" className="fp-carousel-arrow" data-side="next" aria-label="Next slide" onClick={() => go(current + 1)}>›</button>
+        </>
+      )}
+    </div>
+  );
+};
+
 export const BLOCK_RENDERERS: Record<string, Block> = {
+  Carousel,
+  Slide: container('fp-box fp-slide'),
   Root: container('fp-page'),
   Section,
   Container: container('fp-container'),

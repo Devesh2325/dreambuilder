@@ -25,7 +25,7 @@ export interface ModuleInfo {
 
 const PATHS: Record<ProjectType, string> = {
   website: 'websites', page: 'pages', tour: 'tours', form: 'forms', demo: 'demos',
-  banner: 'banners', menu: 'menus', faq: 'faqs', popup: 'popups',
+  banner: 'banners', menu: 'menus', faq: 'faqs',
 };
 
 const info = (
@@ -38,10 +38,9 @@ export const MODULES: Record<ProjectType, ModuleInfo> = {
   tour: info('tour', 'Product tour', 'Product tours', 'Guide users step by step around your own app.', 'Compass', 'overlay', true),
   form: info('form', 'Form', 'Forms', 'Collect leads and answers, on a page or in your site.', 'ClipboardList', 'inline', true),
   demo: info('demo', 'Interactive demo', 'Interactive demos', 'Clickable screens that show your product without a signup.', 'PlaySquare', 'inline'),
-  banner: info('banner', 'Banner', 'Banners', 'Announcement bars at the top or bottom of your site.', 'Megaphone', 'overlay'),
+  banner: info('banner', 'Banner', 'Banners', 'Bars, popups and carousels that get your message seen.', 'Megaphone', 'overlay'),
   menu: info('menu', 'Menu', 'Menus', 'A navigation bar you can drop into any site.', 'Menu', 'inline'),
   faq: info('faq', 'FAQ', 'FAQs', 'Answer common questions with an accordion.', 'HelpCircle', 'inline'),
-  popup: info('popup', 'Popup', 'Popups', 'Offers and messages shown at the right moment.', 'AppWindow', 'overlay'),
 };
 
 export const MODULE_LIST = Object.values(MODULES);

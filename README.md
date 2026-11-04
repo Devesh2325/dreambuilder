@@ -18,10 +18,10 @@ To go live, connect Supabase: see [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.m
 | Module | How visitors see it |
 |---|---|
 | Websites, Pages | Hosted at `/s/your-address` |
-| Tours, Banners, Popups | Float over your site, using one script |
+| Tours, Banners (bars, popups, carousels) | Float over your site, using one script |
 | Forms, Demos, Menus, FAQs | Placed inside your page, or shared as a link |
 
-- **Templates with variables:** 30 templates. A detail changed once updates everywhere it's used.
+- **Templates with variables:** 60 templates, by industry, including blogs, docs and landing pages. A detail changed once updates everywhere it's used.
 - **Module pages:** each module has its own table with search, filters, sorting and row actions, and a create dialog showing its own templates.
 - **Editor:** drag and drop, per-device styles, a menu editor, undo and redo, autosave, save conflict handling.
 - **Publishing:** versions and restore. Editing never affects what's live until you publish.

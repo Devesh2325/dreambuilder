@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const PROJECT_TYPES = [
-  'website', 'page', 'tour', 'form', 'demo', 'banner', 'menu', 'faq', 'popup',
+  'website', 'page', 'tour', 'form', 'demo', 'banner', 'menu', 'faq',
 ] as const;
 export type ProjectType = (typeof PROJECT_TYPES)[number];
 
@@ -79,8 +79,8 @@ export const DEFAULT_TRIGGERS: Triggers = { urlRules: [], delaySeconds: 0, frequ
 
 export interface ProjectSettings {
   triggers?: Triggers;
-  /** Banner position. */
-  position?: 'top' | 'bottom';
+  /** Where a banner sits. Inline means inside the customer's page, at a <div> they choose. */
+  position?: 'top' | 'bottom' | 'inline';
   /** Web address that receives form submissions. */
   webhookUrl?: string;
 }

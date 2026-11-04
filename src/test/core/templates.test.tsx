@@ -18,8 +18,18 @@ describe('template contract', () => {
     expect(templatesFor(type).length).toBeGreaterThanOrEqual(3);
   });
 
-  it('offers 6 website templates', () => {
-    expect(templatesFor('website')).toHaveLength(6);
+  it('offers a wide choice of websites and pages', () => {
+    expect(templatesFor('website').length).toBeGreaterThanOrEqual(15);
+    expect(templatesFor('page').length).toBeGreaterThanOrEqual(10);
+    expect(templatesFor('website').map((t) => t.id)).toEqual(expect.arrayContaining(['website-blog', 'website-docs']));
+  });
+
+  it('groups every website under an industry', () => {
+    for (const template of templatesFor('website')) expect(template.category, template.id).toBeTruthy();
+  });
+
+  it('offers all banner styles', () => {
+    expect(new Set(templatesFor('banner').map((t) => t.category))).toEqual(new Set(['Simple', 'Modern', 'Popup', 'Carousel']));
   });
 
   it('has a renderer for every block type', () => {

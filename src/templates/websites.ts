@@ -1,9 +1,16 @@
 import { GLOBAL_FOOTER_SLUG, GLOBAL_HEADER_SLUG } from '../core/schema';
+import { photo } from './assets';
 import { VariableDef } from '../core/variables';
 import { buildContent, button, el, El, heading, image, section, TemplateDefinition, TemplatePage, text, ThemePreset } from './dsl';
 import { ALL_THEMES, THEME_CORAL, THEME_EMERALD, THEME_INDIGO, THEME_MIDNIGHT, THEME_MONO, THEME_TERRACOTTA } from './themes';
 
-const pic = (seed: string, width = 1200, height = 800) => `https://picsum.photos/seed/${seed}/${width}/${height}`;
+const PHOTO_FOR: Record<string, Parameters<typeof photo>[0]> = {
+  'business-hero': 'cleaning', 'business-about': 'team', 'restaurant-hero': 'restaurant', 'restaurant-about': 'food',
+  dish1: 'food', dish2: 'pizza', dish3: 'dessert', 'portfolio-hero': 'design', 'portfolio-about': 'camera',
+  work1: 'design', work2: 'phone', work3: 'camera', 'agency-hero': 'meeting', 'agency-about': 'team',
+  'saas-hero': 'dashboard', 'store-hero': 'shop', 'store-about': 'ceramics', product1: 'mug', product2: 'sofa', product3: 'ceramics',
+};
+const pic = (seed: string, width = 1200, height = 800) => photo(PHOTO_FOR[seed], width, height);
 
 // ---- Shared variables -------------------------------------------------------
 
@@ -176,6 +183,11 @@ const home = (seoDescription: string, children: El[]): TemplatePage => ({
   content: buildContent('p', children),
 });
 
+const CATEGORY: Record<string, string> = {
+  'website-business': 'Professional services', 'website-restaurant': 'Hospitality and travel', 'website-portfolio': 'Creative',
+  'website-agency': 'Creative', 'website-saas': 'Technology', 'website-store': 'Retail',
+};
+
 const website = (
   template: Omit<TemplateDefinition, 'type' | 'version' | 'themes' | 'titleVariable' | 'pages'> & { pages: TemplatePage[]; theme: ThemePreset },
 ): TemplateDefinition => {
@@ -185,6 +197,7 @@ const website = (
     type: 'website',
     version: 1,
     titleVariable: 'brand.name',
+    category: CATEGORY[rest.id],
     themes: [theme, ...ALL_THEMES.filter((other) => other !== theme)],
     pages: [...pages, header(), footer()],
   };
@@ -290,7 +303,7 @@ const portfolio = website({
           text('{{project.description}}', { color: 'var(--fp-muted)' }),
           button('View project', '{{project.link}}', 'link', 'project.link'),
         ]),
-      ]),
+      ], undefined, { props: { anchor: 'work' } }),
     ]),
     aboutPage(),
     contactPage('Work with me', 'Tell me about your project.', 'Send enquiry'),

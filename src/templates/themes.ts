@@ -31,4 +31,6 @@ export const THEME_MONO = preset('Clean mono', {
 });
 export const THEME_CORAL = preset('Friendly coral', { primary: '#e11d48', surface: '#fff1f2', fontHeading: 'Poppins', fontBody: 'Nunito', radius: '16px' });
 
-export const ALL_THEMES = [THEME_INDIGO, THEME_MIDNIGHT, THEME_EMERALD, THEME_TERRACOTTA, THEME_MONO, THEME_CORAL];
+export const THEME_OCEAN = preset('Calm ocean', { primary: '#0369a1', secondary: '#0c4a6e', surface: '#f0f9ff', fontHeading: 'Sora', fontBody: 'DM Sans', radius: '12px' });
+
+export const ALL_THEMES = [THEME_INDIGO, THEME_MIDNIGHT, THEME_EMERALD, THEME_TERRACOTTA, THEME_MONO, THEME_CORAL, THEME_OCEAN];

@@ -31,6 +31,17 @@ export function moduleCount(project: ProjectRecord, documents: DocumentRecord[],
   return documents.reduce((sum, doc) => sum + count(expandContent(doc.content, project.variables)), 0);
 }
 
+/** A banner's style follows from the blocks it's made of. */
+export function bannerStyle(documents: DocumentRecord[]): string {
+  const types = documents.flatMap((doc) => Object.values(doc.content.nodes).map((node) => node.type));
+  if (types.includes('Carousel')) return 'Carousel';
+  if (types.includes('Popup')) return 'Popup';
+  return 'Bar';
+}
+
+export const isPopupBanner = (documents: DocumentRecord[]): boolean =>
+  documents.some((doc) => Object.values(doc.content.nodes).some((node) => node.type === 'Popup'));
+
 export function describePages(settings: ProjectSettings): string {
   const rule = settings.triggers?.urlRules[0];
   if (!rule?.value) return 'All pages';

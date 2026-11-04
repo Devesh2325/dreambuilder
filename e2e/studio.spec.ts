@@ -74,6 +74,7 @@ test('hidden layers disappear from the canvas and the live site, and can be show
   const selectedRow = page.getByRole('tabpanel', { name: 'Layers' }).locator('div.group:has(button[aria-current="true"])');
   await selectedRow.hover();
   await selectedRow.getByRole('button', { name: /^Hide/ }).click();
+  await page.getByRole('tab', { name: 'Edit' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Hidden from the page' })).toBeVisible();
   await expect(frame.getByRole('heading', { name: 'What we do' })).toHaveCount(0);
   await expect(frame.getByTestId('selection')).toHaveCount(0);
@@ -141,7 +142,7 @@ test('mobile menu collapses behind a button on the live site', async ({ page }) 
   await signUp(page);
   await createFromTemplate(page, 'website-business');
   const slug = `mobile-${Date.now()}`;
-  await page.getByRole('button', { name: /^Publish/ }).click();
+  await page.locator('header').getByRole('button', { name: /^Publish/ }).click();
   await page.getByLabel('Web address').fill(slug);
   await page.getByRole('dialog').getByRole('button', { name: 'Publish' }).click();
   await expect(page.getByText('Published! Your changes are live.')).toBeVisible();
@@ -180,6 +181,9 @@ test('each module offers only the blocks that fit it', async ({ page }) => {
   expect(website).toContain('Section');
   expect(website).not.toContain('Tour step');
   expect(website).not.toContain('Popup');
+
+  const banner = await offered('Banners', 'banner');
+  expect(banner).toEqual(expect.arrayContaining(['Banner', 'Popup', 'Carousel']));
 });
 
 test('blank website: empty blocks show where to drop, and the toolbar stays on screen', async ({ page }) => {
@@ -228,9 +232,10 @@ test('style panel: theme colors, device overrides and clearing', async ({ page }
 
   // Changing the theme updates blocks that use theme colors.
   await page.getByRole('tab', { name: 'Theme' }).click();
-  await page.getByLabel('Primary color', { exact: true }).fill('#ff0000');
+  await page.getByRole('textbox', { name: 'Primary color', exact: true }).fill('#ff0000');
   await expect(heading).toHaveCSS('color', 'rgb(255, 0, 0)');
 
+  await page.getByRole('tab', { name: 'Edit' }).click();
   await page.getByRole('button', { name: 'Clear Text color' }).click();
   await expect(heading).not.toHaveCSS('color', 'rgb(255, 0, 0)');
 });

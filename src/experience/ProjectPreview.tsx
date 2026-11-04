@@ -93,7 +93,7 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
           />
         ) : (
           <>
-            {delivery === 'overlay' && <SampleHostPage />}
+            {delivery === 'overlay' && settings.position !== 'inline' && <SampleHostPage />}
             {host && documents[0] && (
               <div style={delivery === 'inline' ? { padding: 16 } : undefined}>
                 <ExperiencePlayer

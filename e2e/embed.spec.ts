@@ -133,7 +133,7 @@ test.describe('embed script on another origin', () => {
   });
 
   test('popup: waits for the delay, and closes', async ({ page }) => {
-    await mockBackend(page, 'popup', { settings: { triggers: { urlRules: [], delaySeconds: 1, frequency: 'always' } } });
+    await mockBackend(page, 'banner', { templateIndex: 6, settings: { triggers: { urlRules: [], delaySeconds: 1, frequency: 'always' } } });
     await page.goto(`${HOST}/`);
     await page.waitForTimeout(400);
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -143,7 +143,7 @@ test.describe('embed script on another origin', () => {
   });
 
   test('popup: exit intent shows when the mouse leaves the window', async ({ page }) => {
-    await mockBackend(page, 'popup', { templateIndex: 1, settings: { triggers: { urlRules: [], delaySeconds: 0, exitIntent: true, frequency: 'always' } } });
+    await mockBackend(page, 'banner', { templateIndex: 7, settings: { triggers: { urlRules: [], delaySeconds: 0, exitIntent: true, frequency: 'always' } } });
     await page.goto(`${HOST}/`);
     await page.waitForTimeout(300);
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -166,6 +166,19 @@ test.describe('embed script on another origin', () => {
     const submission = calls.find((call) => call.name === 'submit_form')!;
     expect(submission.body.p_project).toBe('project-1');
     expect(submission.body.p_data).toMatchObject({ name: 'Vera', email: 'vera@example.com', message: 'Hello' });
+  });
+
+  test('banner placed inside the page mounts in its slot', async ({ page }) => {
+    await mockBackend(page, 'banner', { settings: { ...noRules, position: 'inline' } });
+    await page.goto(`${HOST}/?inline=1`);
+    await expect(page.locator('#slot').getByText('We just launched something new!')).toBeVisible();
+  });
+
+  test('carousel rotates by itself on a customer site', async ({ page }) => {
+    await mockBackend(page, 'banner', { templateIndex: 9, settings: noRules, variables: {} });
+    await page.goto(`${HOST}/`);
+    await expect(page.getByText('Free shipping over $50')).toBeVisible();
+    await expect(page.getByText('New arrivals are here')).toBeVisible({ timeout: 7000 });
   });
 
   test('demo: hotspots move between screens', async ({ page }) => {

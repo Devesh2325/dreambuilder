@@ -182,11 +182,11 @@ describe('experience player', () => {
       const content = buildContent('n', [el('Popup', {}, [el('Heading', { props: { text: 'Offer' } })])]);
       const onFinish = vi.fn();
       const track = vi.fn();
-      render(<ExperiencePlayer type="popup" content={content} theme={DEFAULT_THEME} variables={{}} settings={{}} host={host({ onFinish, track })} />);
+      render(<ExperiencePlayer type="banner" content={content} theme={DEFAULT_THEME} variables={{}} settings={{}} host={host({ onFinish, track })} />);
       fireEvent.click(screen.getByRole('button', { name: 'Close' }));
       await waitFor(() => expect(screen.queryByRole('heading', { name: 'Offer' })).toBeNull());
       expect(onFinish).toHaveBeenCalledWith('closed');
-      expect(track).toHaveBeenCalledWith('popup_dismissed');
+      expect(track).toHaveBeenCalledWith('banner_dismissed');
     });
   });
 

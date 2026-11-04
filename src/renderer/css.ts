@@ -123,14 +123,19 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-card{background:var(--fp-surface);border-radius:var(--fp-radius);padding:24px}
 :where(.fp-root) .fp-image{width:100%;object-fit:cover;border-radius:var(--fp-radius)}
 :where(.fp-root) .fp-divider{border:0;border-top:1px solid color-mix(in srgb,var(--fp-text) 15%,transparent);margin:0;width:100%}
-:where(.fp-root) .fp-nav{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:16px 24px}
-:where(.fp-root) .fp-nav-brand{display:flex;align-items:center;gap:10px;font-family:var(--fp-font-heading);font-weight:800;font-size:1.125rem;text-decoration:none}
+:where(.fp-root) .fp-nav{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px 24px;padding:16px 24px;background:var(--fp-background)}
+:where(.fp-root) .fp-nav[data-sticky=true]{position:sticky;top:0;z-index:50}
+:where(.fp-root) .fp-nav[data-align=center]{display:grid;grid-template-columns:1fr auto 1fr}
+:where(.fp-root) .fp-nav[data-align=center] .fp-nav-cta{justify-self:end}
+:where(.fp-root) .fp-nav[data-align=left] .fp-nav-links{flex:1;margin-left:24px}
+:where(.fp-root) .fp-nav[data-align=right] .fp-nav-links{flex:1;justify-content:flex-end}
+:where(.fp-root) .fp-nav-cta:empty{display:none}:where(.fp-root) .fp-nav-brand{display:flex;align-items:center;gap:10px;font-family:var(--fp-font-heading);font-weight:800;font-size:1.125rem;text-decoration:none}
 :where(.fp-root) .fp-nav-brand img{height:32px;width:auto}
 :where(.fp-root) .fp-nav-links{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
 :where(.fp-root) .fp-nav-links a{text-decoration:none;font-weight:500}
 :where(.fp-root) .fp-nav-links a[aria-current=page]{color:var(--fp-primary)}
 :where(.fp-root) .fp-nav-toggle{display:none;background:none;border:0;font-size:1.5rem;line-height:1;padding:4px 8px;color:inherit;cursor:pointer}
-@media (max-width:640px){:where(.fp-root) .fp-nav-toggle{display:block}:where(.fp-root) .fp-nav-links{display:none;flex-direction:column;align-items:flex-start;width:100%}:where(.fp-root) .fp-nav-links[data-open=true]{display:flex}}
+@media (max-width:640px){:where(.fp-root) .fp-nav[data-align]{display:flex}:where(.fp-root) .fp-nav-toggle{display:block}:where(.fp-root) .fp-nav[data-align] .fp-nav-links{display:none;flex:none;margin:0;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%}:where(.fp-root) .fp-nav[data-align] .fp-nav-links[data-open=true]{display:flex}:where(.fp-root) .fp-nav-cta{display:none;width:100%}:where(.fp-root) .fp-nav-cta[data-open=true]{display:block}}
 :where(.fp-root) .fp-accordion{border-bottom:1px solid color-mix(in srgb,var(--fp-text) 15%,transparent);padding:14px 0}
 :where(.fp-root) .fp-accordion summary{cursor:pointer;font-weight:600}
 :where(.fp-root) .fp-accordion p{margin-top:8px;color:var(--fp-muted);white-space:pre-line}
@@ -150,8 +155,20 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-step{background:var(--fp-background);border-radius:var(--fp-radius);padding:20px;width:360px;max-width:100%;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 40px -12px rgba(15,23,42,.35)}
 :where(.fp-root) .fp-screen{position:relative;width:100%;overflow:hidden;border-radius:var(--fp-radius)}
 :where(.fp-root) .fp-screen>img{width:100%}
-:where(.fp-root) .fp-hotspot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:0;padding:0;background:var(--fp-primary);box-shadow:0 0 0 6px color-mix(in srgb,var(--fp-primary) 35%,transparent);cursor:pointer}
-:where(.fp-root) .fp-hotspot-tip{position:absolute;background:var(--fp-secondary);color:#fff;padding:6px 10px;font-size:.8125rem;border-radius:6px;transform:translate(-50%,16px);max-width:220px}
+:where(.fp-root) .fp-hotspot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid #fff;padding:0;background:var(--fp-primary);box-shadow:0 2px 8px rgba(15,23,42,.4);cursor:pointer;animation:fp-pulse 1.8s infinite}
+@keyframes fp-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--fp-primary) 55%,transparent)}70%{box-shadow:0 0 0 16px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){:where(.fp-root) .fp-hotspot{animation:none}}
+:where(.fp-root) .fp-hotspot-tip{position:absolute;background:#0f172a;color:#fff;padding:7px 12px;font-size:.8125rem;font-weight:500;border-radius:8px;transform:translate(-50%,22px);max-width:240px;box-shadow:0 8px 20px rgba(15,23,42,.35);pointer-events:none;white-space:nowrap}
+:where(.fp-root) .fp-demo-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px 10px;font-size:.875rem;color:var(--fp-muted)}
+:where(.fp-root) .fp-demo-bar .fp-btn{padding:6px 14px;font-size:.875rem}
+:where(.fp-root) .fp-demo-dots{display:flex;gap:6px}
+:where(.fp-root) .fp-demo-dots span{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--fp-text) 18%,transparent)}
+:where(.fp-root) .fp-demo-dots span[data-active=true]{background:var(--fp-primary)}
+:where(.fp-root) .fp-carousel{position:relative;width:100%}
+:where(.fp-root) .fp-slide{min-width:0}
+:where(.fp-root) .fp-carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:rgba(15,23,42,.55);color:#fff;font-size:1.25rem;line-height:1;cursor:pointer}
+:where(.fp-root) .fp-carousel-arrow[data-side=prev]{left:10px}
+:where(.fp-root) .fp-carousel-arrow[data-side=next]{right:10px}
 :where(.fp-root) .fp-banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;padding:10px 44px 10px 16px;background:var(--fp-primary);color:#fff;position:relative}
 :where(.fp-root) .fp-close{position:absolute;top:8px;right:10px;background:none;border:0;color:inherit;font-size:1.125rem;line-height:1;cursor:pointer;padding:4px}
 :where(.fp-root) .fp-popup{position:relative;background:var(--fp-background);border-radius:var(--fp-radius);padding:32px;width:460px;max-width:100%;display:flex;flex-direction:column;gap:14px;box-shadow:0 25px 50px -12px rgba(15,23,42,.45)}

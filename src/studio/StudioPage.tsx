@@ -10,7 +10,6 @@ import { useWorkspace } from '../app/workspace';
 import { ProjectPreview } from '../experience/ProjectPreview';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
-import { RightPanel } from './RightPanel';
 import { handleStudioShortcut } from './shortcuts';
 import { useStudio } from './store';
 
@@ -166,7 +165,6 @@ const Editor: React.FC = () => {
         <div className="flex-1 min-h-0 flex overflow-hidden">
           <LeftPanel />
           <Canvas />
-          <RightPanel />
         </div>
       )}
 

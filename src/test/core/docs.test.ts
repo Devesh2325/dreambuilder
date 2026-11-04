@@ -33,7 +33,8 @@ describe('documentation', () => {
       const { delivery } = MODULES[type];
       if (delivery === 'overlay') {
         expect(body, type).toContain('data-project-id');
-        expect(body, type).not.toContain('<div data-flowpilot');
+        // Banners can optionally sit inside the page, which their guide explains.
+        if (type !== 'banner') expect(body, type).not.toContain('<div data-flowpilot');
       }
       if (delivery === 'inline' && type !== 'form') expect(body, type).toContain('<div data-flowpilot');
     }
