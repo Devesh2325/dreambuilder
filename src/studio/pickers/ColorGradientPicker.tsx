@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   Flame
 } from 'lucide-react';
-import { generateHarmonies, getWcagRating } from '../../services/colorHarmonies';
+import { generateHarmonies, getWcagRating } from './colorHarmonies';
 
 export interface GradientStop {
   color: string;

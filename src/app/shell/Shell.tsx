@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useSearchParams, useLocation } from 'reac
 import { useQueryClient } from '@tanstack/react-query';
 import { BarChart3, BookOpen, ChevronDown, Image, LayoutDashboard, LayoutTemplate, LogOut, Moon, Palette, Plus, Settings, Sun, Users } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
-import { useTheme } from '../../services/themeContext';
+import { useTheme } from '../theme';
 import { isLocalBackend } from '../../data';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';

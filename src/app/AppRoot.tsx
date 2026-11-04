@@ -4,6 +4,7 @@ import { AppServices } from '../data/services';
 import { AppProviders } from './AppProviders';
 import { AppRoutes } from './AppRoutes';
 import { FullPageSpinner } from './auth/RequireAuth';
+import { ThemeProvider } from './theme';
 
 const SetupNotice: React.FC = () => (
   <main className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 font-sans">
@@ -27,9 +28,11 @@ const AppRoot: React.FC = () => {
   if (!isBackendAvailable) return <SetupNotice />;
   if (!services) return <FullPageSpinner />;
   return (
-    <AppProviders services={services}>
-      <AppRoutes />
-    </AppProviders>
+    <ThemeProvider>
+      <AppProviders services={services}>
+        <AppRoutes />
+      </AppProviders>
+    </ThemeProvider>
   );
 };
 

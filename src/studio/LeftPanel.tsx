@@ -9,8 +9,8 @@ import { getTemplate } from '../templates';
 import { ALL_THEMES } from '../templates/themes';
 import { pagesOf } from '../experience/SiteView';
 import { MODULES } from '../core/modules';
-import { ColorGradientPicker } from '../editor/panels/ColorGradientPicker';
-import { FontPicker } from '../editor/panels/FontPicker';
+import { ColorGradientPicker } from './pickers/ColorGradientPicker';
+import { FontPicker } from './pickers/FontPicker';
 import { useStudio } from './store';
 import { validateValues } from '../core/validation';
 

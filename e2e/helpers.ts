@@ -1,6 +1,6 @@
 import { expect, FrameLocator, Page } from '@playwright/test';
 
-export const BASE = '/v2';
+export const BASE = '';
 
 export async function signUp(page: Page, workspace = 'Test Workspace') {
   await page.goto(`${BASE}/signup`);

@@ -1,128 +1,54 @@
-# FlowPilot — AI Visual Experience Builder SaaS
+# FlowPilot
 
-> **Design Every Experience. Guide Every User.**
+Build websites, pages, product tours, forms and other in-app experiences from templates. Choose a template, fill in your details, adjust the design in the editor if you want, then publish to a web address or embed it in your own site.
 
-FlowPilot is an enterprise-grade, multi-tenant visual experience platform that empowers product teams to create, customize, preview, publish, and measure 15 interactive experience types without coding.
+## Try it
 
----
-
-## 🌟 Key Features
-
-### 1. 100% Custom DOM Visual Editor Engine
-- **No Third-Party Builder Dependencies**: No GrapesJS, Craft.js, or iframe crutches.
-- **Real DOM-Based Canvas**: Fully responsive canvas supporting desktop, tablet (768px), and mobile (375px) device viewports.
-- **Layer & Hierarchy Tree**: Deep selection, parent-child nesting, element lock, duplicate, and deletion.
-- **Point-and-Click Selector Targeting**: Interactive target picker with automatic spotlighting and viewport collision detection.
-- **Transactional History**: Instant Undo (`Ctrl+Z`), Redo (`Ctrl+Shift+Z`), Copy/Paste (`Ctrl+C/V`), and Autosave (`Ctrl+S`).
-
-### 2. Supported Experience Modules
-1. **Product Tours**: Guided walkthroughs with element spotlights, target selectors, steps management, and missing-target fallbacks.
-2. **Interactive Product Demos**: Multi-step simulated screens with pulsing hotspots and branching decision paths.
-3. **Landing Pages & Websites**: Structured responsive sections (Hero, Features, Pricing, Testimonials, CTA, Footer) with CSS variable theming.
-4. **Banners & Announcements**: Sticky top/bottom and inline announcement bars with dismiss actions.
-5. **Navigation Menus**: Header navigation bars with dropdowns and mobile drawer menus.
-6. **FAQs & Help Centers**: Searchable accordions with expandable rich answers.
-7. **Popups & Modals**: Centered conversion modals, exit-intent triggers, and backdrop controls.
-8. **Onboarding Checklists**: Gamified user activation checklists with progress bars and celebratory rewards.
-9. **Feedback & NPS Surveys**: Net Promoter Score (0-10) capture with qualitative feedback recording.
-
-### 3. Integrated AI Assistant (Copilot)
-- **Generate**: Create entire structured multi-step experiences from natural-language prompts.
-- **Edit**: Contextually improve the selected component (contrast, spacing, typography, layouts).
-- **Ask**: Design critiques, accessibility suggestions, and conversion rate advice.
-- **Safe Operations**: AI outputs typed structural JSON commands with side-by-side diff preview and Apply/Reject controls.
-
-### 4. Zero-Dependency Embed Runtime (`flowpilot.js`)
-- Published experiences can be embedded into any web application:
-  ```html
-  <script src="https://your-domain.com/flowpilot.js" data-project-id="PROJECT_ID" defer></script>
-  ```
-- Handles trigger conditions (URL rules, delays, frequencies).
-- Gracefully handles missing host DOM elements.
-- Emits real telemetry and analytics without collecting sensitive PII.
-
-### 5. Multi-Tenant Workspace & Security
-- PostgreSQL database schemas with Row Level Security (RLS) migrations (`supabase/migrations/20260101_init.sql`).
-- Role-Based Access Control: Owner, Admin, Editor, Viewer.
-- Dual-mode persistence: Local development mode with IndexedDB/LocalStorage fallback and seamless Supabase cloud sync.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js >= 18
-- npm >= 9
-
-### Installation
 ```bash
-git clone https://github.com/your-org/flowpilot.git
-cd flowpilot
 npm install
-```
-
-### Development Server
-```bash
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
 
-### Run Tests
+Open http://localhost:5173. With no configuration it runs in demo mode, saving everything in your browser, so you can use the whole app without an account anywhere. Sign up with any email.
+
+To go live, connect Supabase: see [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
+
+## What's included
+
+| Module | How visitors see it |
+|---|---|
+| Websites, Pages | Hosted at `/s/your-address` |
+| Tours, Banners, Popups, Checklists, Surveys | Float over your site, using one script |
+| Forms, Demos, Menus, FAQs, Pricing, Testimonials | Placed inside your page, or shared as a link |
+
+- **Templates with variables:** 42 templates. A detail changed once updates everywhere it's used.
+- **Editor:** drag and drop, per-device styles, undo and redo, autosave, save conflict handling.
+- **Publishing:** versions and restore. Editing never affects what's live until you publish.
+- **Forms:** multi-step, responses inbox, CSV export, webhooks, spam protection.
+- **Tours:** target real elements on your site, with a visual picker, missing-target handling and resume.
+- **Embed script:** about 21 KB compressed, isolated in Shadow DOM, with a JavaScript API.
+- **Teams:** workspaces, roles enforced by the database, invitation links.
+- **Docs:** integration guides inside the app at `/docs`.
+
+## Not included yet
+
+- Online payments. Plan limits are enforced, but plans are changed manually.
+- Custom domains.
+- Server-side rendering of public sites, which would help SEO.
+- Invitation and form notification emails. Invitations are links you send yourself.
+- Connectors such as GA4 or Slack. Webhooks are available for forms.
+- An AI assistant.
+
+## Commands
+
 ```bash
-npm test
+npm run dev        # dev server (also builds the embed script into public/)
+npm run build      # typecheck, build the app and embed script, check embed size
+npm run lint       # oxlint
+npm test           # unit, component and database security tests
+npm run test:e2e   # browser tests (first run: npx playwright install chromium)
 ```
 
-### Build for Production
-```bash
-npm run build
-```
+## License
 
----
-
-## 🏛 Project Structure
-```
-d:\Builder\
-├── public\
-│   └── flowpilot.js               # Standalone embed runtime script
-├── src\
-│   ├── components\
-│   │   ├── modals\                # CreateExperienceModal, etc.
-│   │   └── shell\                 # AppLayout, Sidebar, Header
-│   ├── editor\
-│   │   ├── ai\                    # AI Assistant drawer and diff preview
-│   │   ├── canvas\                # Real DOM Canvas renderer and selection rings
-│   │   ├── panels\                # TopBar, LeftPanel, RightPanel, PublishModal
-│   │   ├── registry\              # 19+ typed visual and interactive components
-│   │   └── store\                 # Zustand store with transactional undo/redo
-│   ├── pages\
-│   │   ├── analytics\             # Analytics dashboard and event streams
-│   │   ├── assets\                # Media assets library and upload simulator
-│   │   ├── auth\                  # Login, SignUp, ForgotPassword
-│   │   ├── billing\               # Subscription tiers and usage meters
-│   │   ├── dashboard\             # Unified SaaS dashboard
-│   │   ├── domains\               # Custom domains and CDN DNS setup
-│   │   ├── integrations\          # Webhooks, GA4, Slack integrations
-│   │   ├── modules\               # Dedicated listing & editor launch views
-│   │   ├── preview\               # Public Live Preview mode
-│   │   ├── projects\              # Project management and filters
-│   │   ├── settings\              # Workspace and account settings
-│   │   └── templates\             # Templates marketplace
-│   ├── runtime\
-│   │   └── flowpilot-runtime.ts   # Core client runtime engine
-│   ├── services\
-│   │   ├── aiService.ts           # Autonomous structured AI generator
-│   │   ├── authContext.tsx        # Multi-tenant workspace & role permissions
-│   │   ├── seedData.ts            # Realistic pre-built documents and templates
-│   │   └── storage.ts             # Storage service with persistent local adapter
-│   └── types\                     # Strongly-typed schemas for documents & modules
-├── supabase\
-│   └── migrations\
-│       └── 20260101_init.sql      # Multi-tenant PostgreSQL schema with RLS
-├── BUILD_PLAN.md                  # Architectural master plan
-└── IMPLEMENTATION_STATUS.md       # Milestone completion tracker
-```
-
----
-
-## 📜 License
-MIT © FlowPilot
+MIT

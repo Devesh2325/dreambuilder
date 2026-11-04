@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { ThemeProvider } from '../../services/themeContext';
+import { ThemeProvider } from '../../app/theme';
 import { AppProviders } from '../../app/AppProviders';
 import { AppRoutes } from '../../app/AppRoutes';
 import { createFakeServices, TEST_USER } from './fakeServices';
@@ -13,7 +13,7 @@ function renderApp(path: string, fake = createFakeServices()) {
     <ThemeProvider><MemoryRouter initialEntries={[path]}>
       <AppProviders services={fake.services}>
         <Routes>
-          <Route path="/v2/*" element={<AppRoutes />} />
+          <Route path="/*" element={<AppRoutes />} />
         </Routes>
         <LocationProbe />
       </AppProviders>
@@ -37,51 +37,51 @@ describe('authentication', () => {
 
   describe('route guard', () => {
     it('sends logged-out visitors to the login page', async () => {
-      renderApp('/v2');
+      renderApp('/');
       expect(await screen.findByRole('heading', { name: 'Log in' })).toBeTruthy();
-      expect(screen.getByTestId('path').textContent).toBe('/v2/login');
+      expect(screen.getByTestId('path').textContent).toBe('/login');
     });
 
     it('shows the protected page to logged-in users', async () => {
-      renderApp('/v2', createFakeServices({ user: TEST_USER }));
+      renderApp('/', createFakeServices({ user: TEST_USER }));
       expect(await screen.findByRole('heading', { name: 'All projects' })).toBeTruthy();
     });
 
     it('never shows protected content before the session check finishes', () => {
-      renderApp('/v2', createFakeServices({ user: TEST_USER }));
+      renderApp('/', createFakeServices({ user: TEST_USER }));
       expect(screen.getByRole('status', { name: 'Loading' })).toBeTruthy();
       expect(screen.queryByRole('heading', { name: 'Log in' })).toBeNull();
     });
 
     it('moves logged-in users away from the login page', async () => {
-      renderApp('/v2/login', createFakeServices({ user: TEST_USER }));
+      renderApp('/login', createFakeServices({ user: TEST_USER }));
       await screen.findByRole('heading', { name: 'All projects' });
-      expect(screen.getByTestId('path').textContent).toBe('/v2');
+      expect(screen.getByTestId('path').textContent).toBe('/');
     });
   });
 
   describe('login', () => {
     it('returns the user to the page they originally asked for', async () => {
-      const fake = renderApp('/v2/settings');
+      const fake = renderApp('/settings');
       await screen.findByRole('heading', { name: 'Log in' });
       fillLogin();
 
       await screen.findByRole('heading', { name: 'Settings' });
       expect(fake.calls.signIn).toEqual([{ email: 'alice@example.com', password: 'secret-password' }]);
-      expect(screen.getByTestId('path').textContent).toBe('/v2/settings');
+      expect(screen.getByTestId('path').textContent).toBe('/settings');
     });
 
     it('shows the error and stays on the page when login fails', async () => {
-      renderApp('/v2/login', createFakeServices({ signInError: 'Invalid login credentials' }));
+      renderApp('/login', createFakeServices({ signInError: 'Invalid login credentials' }));
       await screen.findByRole('heading', { name: 'Log in' });
       fillLogin('wrong');
 
       expect((await screen.findByRole('alert')).textContent).toBe('Invalid login credentials');
-      expect(screen.getByTestId('path').textContent).toBe('/v2/login');
+      expect(screen.getByTestId('path').textContent).toBe('/login');
     });
 
     it('validates before calling the server', async () => {
-      const fake = renderApp('/v2/login');
+      const fake = renderApp('/login');
       await screen.findByRole('heading', { name: 'Log in' });
       fill('Email', 'not-an-email');
       click('Log in');
@@ -102,7 +102,7 @@ describe('authentication', () => {
     };
 
     it('logs the user in straight away when no confirmation is needed', async () => {
-      const fake = renderApp('/v2/signup');
+      const fake = renderApp('/signup');
       await screen.findByRole('heading', { name: 'Create your account' });
       fillSignUp();
 
@@ -116,7 +116,7 @@ describe('authentication', () => {
     });
 
     it('asks the user to check their email when confirmation is required', async () => {
-      renderApp('/v2/signup', createFakeServices({ requireEmailConfirmation: true }));
+      renderApp('/signup', createFakeServices({ requireEmailConfirmation: true }));
       await screen.findByRole('heading', { name: 'Create your account' });
       fillSignUp();
 
@@ -125,7 +125,7 @@ describe('authentication', () => {
     });
 
     it('rejects short passwords', async () => {
-      const fake = renderApp('/v2/signup');
+      const fake = renderApp('/signup');
       await screen.findByRole('heading', { name: 'Create your account' });
       fillSignUp('short');
 
@@ -136,7 +136,7 @@ describe('authentication', () => {
 
   describe('logout', () => {
     it('returns to the login page', async () => {
-      renderApp('/v2', createFakeServices({ user: TEST_USER }));
+      renderApp('/', createFakeServices({ user: TEST_USER }));
       await screen.findByRole('heading', { name: 'All projects' });
       click('Log out');
 
@@ -146,22 +146,22 @@ describe('authentication', () => {
 
   describe('password reset', () => {
     it('sends the link back to the reset page, without revealing if the account exists', async () => {
-      const fake = renderApp('/v2/forgot-password');
+      const fake = renderApp('/forgot-password');
       await screen.findByRole('heading', { name: 'Reset your password' });
       fill('Email', 'alice@example.com');
       click('Send reset link');
 
       expect(await screen.findByText(/If an account exists/)).toBeTruthy();
-      expect(fake.calls.sendPasswordReset[0].redirectTo).toMatch(/\/v2\/reset-password$/);
+      expect(fake.calls.sendPasswordReset[0].redirectTo).toMatch(/\/reset-password$/);
     });
 
     it('explains an expired link when there is no session', async () => {
-      renderApp('/v2/reset-password');
+      renderApp('/reset-password');
       expect(await screen.findByRole('heading', { name: "This link isn't valid" })).toBeTruthy();
     });
 
     it('saves the new password and continues into the app', async () => {
-      const fake = renderApp('/v2/reset-password', createFakeServices({ user: TEST_USER }));
+      const fake = renderApp('/reset-password', createFakeServices({ user: TEST_USER }));
       await screen.findByRole('heading', { name: 'Choose a new password' });
       fill('New password', 'brand-new-password');
       click('Save password');
@@ -174,7 +174,7 @@ describe('authentication', () => {
   describe('workspace display', () => {
     it('shows the current workspace and role', async () => {
       renderApp(
-        '/v2',
+        '/',
         createFakeServices({
           user: TEST_USER,
           memberships: [{ organizationId: 'o1', name: 'Alice Co', slug: 'alice-co', plan: 'free', role: 'owner', branding: {} }],

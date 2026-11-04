@@ -2,115 +2,82 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-FlowPilot is a visual builder for in-app experiences (tours, demos, landing pages, banners, menus, FAQs, popups, checklists, surveys, pricing, testimonials, forms). It is a React 19 + TypeScript + Vite + Tailwind 3 single-page app.
-
-## Revamp in progress
-
-A full rebuild is underway on the `revamp` branch, with a Supabase backend. The new app is mounted at `/v2` and grows next to the old one, which is deleted at the end. Everything below "Docs vs. code" and "Architecture" describes the **old** app, which has no backend and keeps all data in `localStorage`.
-
-New code so far:
-
-- `supabase/migrations/`: schema, row-level security and signup triggers. Clients only get the columns granted there, so a new client-writable column needs a `grant`, and privileged writes (publishing, plan changes) go through functions.
-- `src/test/db/`: runs the migrations on PGlite (in-process Postgres, no Docker) with Supabase's `auth`, `storage` and default grants stubbed. Every migration change needs security tests here.
-- `src/data/`: `services.ts` defines the interfaces the app uses; `supabaseServices.ts` implements them. App code must not import the Supabase client directly, and tests inject fakes (`src/test/app/fakeServices.ts`).
-- `src/app/`: the new app. Paths come from `routes.ts`.
-
-Setup is in `docs/SUPABASE_SETUP.md`. The planned new folders are `src/core/` (pure schemas, tree operations, variable engine), `src/renderer/`, `src/templates/`, `src/studio/` (editor), `src/embed/` and `src/docs/`.
+FlowPilot builds websites, pages, tours, forms and other in-app experiences from variable-driven templates. It is a React 19 + TypeScript + Vite + Tailwind 3 app with a Supabase backend, and has no server code of its own.
 
 ## Commands
 
 ```bash
-npm run dev       # Vite dev server on http://localhost:5173
-npm run build     # tsc -b && vite build
-npm run lint      # oxlint
-npm test          # vitest run (jsdom, globals enabled)
-npx tsc -b        # typecheck only
+npm run dev        # builds the embed into public/, then starts Vite on :5173
+npm run build      # tsc -b, app build, embed build, embed size check
+npm run lint       # oxlint
+npm test           # vitest: unit, component and database tests
+npm run test:e2e   # Playwright (first run: npx playwright install chromium)
 
-npx vitest run src/test/editor.test.ts         # one test file
-npx vitest run src/test/editor.test.ts -t "undo"   # tests matching a name
+npx tsc -b                                  # typecheck only
+npx vitest run src/test/core/studio.test.ts # one file
+npx vitest run src/test/db -t "invitations" # by name
+npx playwright test -g "survey"             # one browser test
 ```
 
-`npm run lint` currently exits 1 on existing issues: 3 `rules-of-hooks` errors (`TourSimulationOverlay.tsx`, `Header.tsx`) and about 205 warnings. Compare against this baseline rather than expecting a clean run.
+## Backends
 
-## Docs vs. code
+`src/data/services.ts` defines the interfaces the app uses, and `AppServices` reaches components through `useServices()`. App code must not import the Supabase client directly.
 
-`README.md`, `BUILD_PLAN.md` and `IMPLEMENTATION_STATUS.md` describe more than is built. Trust the code. These are not implemented, even though the docs or `.env.example` imply they are:
+- `supabaseServices.ts`: real backend. `publicApi.ts` is the visitor-facing part, using plain `fetch` so public pages and the embed don't bundle supabase-js.
+- `localServices.ts`: stores everything in `localStorage`. Used for demos and Playwright. `src/data/index.ts` selects it when `VITE_BACKEND=local`, or in dev when Supabase isn't configured, and never otherwise in production. It isn't secure and only approximates the database's rules.
 
-- **Supabase / cloud sync:** the old app has no client and reads no `VITE_*` variables.
-- **Real AI:** `services/aiService.ts` is a rule-based mock that matches keywords in the prompt. `VITE_AI_*` is ignored.
-- **Authentication:** login and signup just navigate to `/dashboard`, and no route is guarded. The user comes from `localStorage`.
-- **Permission enforcement:** `useAuth().can()` and `ROLE_PERMISSIONS` exist, but nothing calls `can()`. `PLAN_LIMITS` is only read by `BillingPage` and tests, so plan limits are not enforced either.
-- **Autosave:** saving is manual (`Ctrl+S` or the TopBar). `isDirty` only drives UI state.
-- **Other unused pieces:** `@tanstack/react-query` has no provider or queries. IndexedDB is not used.
-- **Analytics ingestion:** the dashboard shows events seeded by `storage.ts`. The only `recordAnalyticsEvent` caller in `src/` is the unused TS runtime.
+A new data feature needs changes in the interface, both implementations, and usually a migration.
 
-## Architecture
+## Database and security
 
-### Document model
+Security lives in `supabase/migrations/`, not the UI. `useWorkspace().can()` only hides buttons.
 
-Every experience is a `DocumentModel` (`src/types/document.ts`) whose `rootNode` is a recursive `ComponentNode` tree. A node holds `type`, `props`, `styles`, per-device `responsive` overrides, `children`, and optional `target` (tour anchoring) and `interaction`. Each `Project` points to one document through `documentId`. A node's `type` is a key into `COMPONENT_REGISTRY`.
+- Default grants are revoked and re-granted **per column**. A new client-writable column needs a `grant`, and columns like `plan`, `status` and `published_version_id` are deliberately not writable by clients.
+- Privileged writes go through `SECURITY DEFINER` functions, which must set `search_path = ''` and check roles themselves. New functions need an explicit `revoke`/`grant`: `engagement.sql` re-grants them all, so a later migration must repeat this for its own.
+- Visitors have no login. They only reach functions that require the project to be published. Webhook addresses are stripped from public snapshots, in `public_snapshot` and in the local backend.
+- Plan limits are in both `src/types/auth.ts` and `plan_max_*` in the migrations. Keep them in step.
 
-### Three registries work together
+`src/test/db/` runs the migrations on PGlite (in-process Postgres, no Docker), with Supabase's `auth`, `storage` and default grants stubbed. Every migration change needs tests there. PGlite's `query` takes one statement at a time; use `t.db.exec` for several.
 
-- **`COMPONENT_REGISTRY`** (`editor/registry/componentRegistry.tsx`) defines each block: its `render` component, `defaultProps`, `defaultStyles`, `isContainer`, `supportedModules`, and `propertyFields`. `propertyFields` drives the inspector form in `RightPanel`.
-- **`MODULE_REGISTRY`** (`editor/modules/moduleRegistry.ts`) has one entry per `ExperienceType`: UI metadata, the root type, and the `primaryBlockTypes` / `secondaryBlockTypes` that `LeftPanel` recommends.
-- **Seed factories** (`services/seedData.ts`, `create<Type>Document`, `createBlankDocument`) build starter documents. `CreateExperienceModal` selects one with a `switch` on type.
+## How rendering works
 
-To add a block, add a `COMPONENT_REGISTRY` entry and list it in the relevant modules' block types.
+A document is `{ rootId, nodes }`: a flat map of `DocNode`s, where `children` lists ids (`src/core/schema.ts`). Node ids become CSS class names, so their characters are restricted.
 
-To add an experience type, update all of these:
-- `ExperienceType`
-- `MODULE_REGISTRY`
-- a seed factory and the `CreateExperienceModal` switch
-- the container mapping if it has its own root container (duplicated in `loadDocument` and `insertNode`)
-- a `ModuleListingView` wrapper in `pages/modules/`, plus its route in `App.tsx` and a `Sidebar` link
+`expandContent` (`src/core/variables.ts`) turns a document plus variable values into a `RenderNode` tree: it resolves `{{tokens}}`, repeats nodes over list variables, and applies `showIf`. A repeated node gets a unique `key` per instance, while `sourceId` still points at the stored node.
 
-### Editor state
+There is **one renderer** for the editor, previews, public sites and the embed: `src/renderer/`. Consequences:
 
-`editor/store/useEditorStore.ts` is one Zustand store holding the document, selection, UI state and history.
+- `blocks.tsx` must not use Tailwind or lucide, because it also runs in a Shadow DOM on customers' sites under Preact. Styling is `BASE_CSS` plus generated per-node rules in `css.ts`. Blocks must spread `attrs` on their outer element, which carries the style class and the `data-fp-node` attribute the editor relies on.
+- Device styles become real media queries. The editor and previews draw inside an iframe (`Frame.tsx`) so those queries respond to the simulated width.
+- User data reaches CSS and links, so `safeCssValue` and `safeUrl` must stay in the path. Public sites share an origin with the builder, so there is deliberately no custom HTML or script block, and text is never rendered as HTML.
 
-- Tree changes must go through store actions. They rebuild the tree immutably and end in `setDocument`, which snapshots a deep copy into `history` (capped at 50) and sets `isDirty`. Undo and redo replay those snapshots.
-- Each `updateNode*` call records one history entry, so per-keystroke updates add one undo step per keystroke.
-- `insertNode` redirects drops on non-container nodes to become the next sibling, and auto-wraps a leaf root in a container. `loadDocument` also wraps legacy leaf roots and creates a banner document when the ID is unknown (self-healing), so loading a bad ID writes a new document to storage.
-- `componentRegistry.tsx` and `useEditorStore.ts` import each other. Container renderers call `useEditorStore.getState()` directly. Avoid reading either export at module-evaluation time.
+`src/experience/` is what plays published content: `ExperiencePlayer` for tours, demos, overlays and so on, and `SiteView` for multi-page sites (header + page + footer). Each module's `delivery` in `src/core/modules.ts` (`site`, `overlay`, `inline`) decides how it reaches visitors.
 
-### Canvas and shared rendering
+To add a block, add it to both `blockMeta.ts` and `BLOCK_RENDERERS`; a test checks they match. The properties panel is generated from `fields`.
 
-The canvas is plain DOM with no iframe. `CanvasNodeRenderer` recursively renders nodes through `definition.render` and sets `id={node.id}` on each wrapper, which is what the target picker's `#<node.id>` selectors rely on. Drag and drop uses the HTML5 API with the MIME types in `editor/utils/dragDropUtils.ts`.
+## Templates
 
-`LivePreviewPage` reuses `CanvasNodeRenderer`, so it reads the editor store too. Any change to that renderer affects both the editor and the preview.
+`src/templates/` defines templates with the `el()` helpers. Each declares `variables`, which also generate the wizard form (`VariableForm`). Values are stored per project, and nodes keep their tokens, so a change in **Details** updates everywhere. Typing over a token in the editor detaches only that spot.
 
-Device modes merge `node.responsive[deviceMode]` over `node.styles` at render time; they are not CSS media queries.
+`src/test/core/templates.test.tsx` is a contract test over every template: tokens must be declared and used, defaults must validate, block nesting must be allowed, and nothing may render a leftover `{{`.
 
-### Persistence
+## Editor
 
-`services/storage.ts` exports a `storage` singleton that is synchronous and seeds `flowpilot_*` keys on import. All persistence should go through it, and components call it directly.
+`src/studio/store.ts` is a Zustand store.
 
-- Stored data takes priority over seeds, so changes to `seedData.ts` do not reach a browser that is already seeded. Clear `flowpilot_*` keys in `localStorage` to see them.
-- `getProjects` always merges `SEED_PROJECTS` back in, so deleted seed projects reappear. Templates merge the same way.
-- Publishing (`publishDocument`) stores a full snapshot in `flowpilot_doc_versions`; rollback restores one.
-- `CreateExperienceModal` generates a project ID for the document, then `storage.createProject` generates its own, so `doc.projectId` can differ from the real project's `id`. `saveDocument` and `publishDocument` update the project through `doc.projectId`, so those updates can silently miss it, and the embed snippet uses the same ID.
+- All edits go through `editDocument` or `updateDraft`, which use immer `produceWithPatches` to record undo history. Edits with the same `key` within 1 second merge into one undo step.
+- A website canvas shows header + page + footer together, so actions find the owning document with `documentOfNode`.
+- Autosave is debounced. Each save sends the `revision` it loaded; a stale one matches no rows and returns `conflict`, which the UI resolves through `reloadFromServer` or `overwriteServer`.
+- `Canvas.tsx` attaches native listeners to the iframe's document, and draws the selection overlay inside the iframe with inline styles, since app CSS doesn't reach it. Elements there fail `instanceof` checks because they belong to another document.
 
-### Embed runtime
+## Embed script
 
-There are two separate implementations, so a behavior change must be made in the right one:
+`src/embed/flowpilot.tsx`, built by `vite.embed.config.ts` into one file with Preact replacing React. `npm run build` fails if it exceeds the limit in `scripts/check-embed-size.mjs`. Avoid importing `zod` or `src/core/schema.ts` values into anything it reaches, which is why validation lives in `core/validation.ts`.
 
-- **`public/flowpilot.js`** is the hand-written ES5 script that is actually served and referenced by the snippet in `PublishModal`. It reads `flowpilot_projects` and `flowpilot_documents` from `localStorage`, so it only works on the same origin as the builder, and it requires `project.status === 'published'`.
-- **`src/runtime/flowpilot-runtime.ts`** is a TypeScript class that nothing imports and no build step bundles.
+`public/flowpilot.js` is generated and ignored by git. The script reads Supabase settings at build time. Failures must never break the customer's page.
 
-Both render experiences with their own hard-coded HTML rather than `COMPONENT_REGISTRY`, so runtime output does not match the canvas.
+The docs in `src/docs/content/` are checked by `src/test/core/docs.test.ts` against the JS API, recorded events and script attributes. Update them together.
 
-### AI assistant
+## Browser tests
 
-`AiAssistantPanel` calls `aiService.processRequest`, which returns an `AIChangeProposal`. Apply passes `proposal.modifiedDocumentSnapshot` to `setDocument`; the `commands` list is only displayed. Replacing the mock means producing that same proposal shape.
-
-### Routing and shell
-
-Routes are in `src/App.tsx`. `/editor/:documentId` and `/preview/:documentId` are full-screen, outside `AppLayout`; everything else renders in the sidebar and header shell. `pages/modules/*Page.tsx` are thin wrappers around `ModuleListingView`, and their metric values are hard-coded.
-
-## Conventions
-
-- Dark mode uses Tailwind's `class` strategy, with `dark` set on `<html>` by `ThemeProvider`. Pair light styles with `dark:` variants.
-- Node `styles` are inline CSS objects, so user-editable appearance belongs in `styles`/`defaultStyles`, while renderer Tailwind classes provide the base look.
-- The `@/` alias maps to `src/`, but existing code uses relative imports.
-- Tests live in `src/test/` and exercise the store and pure data directly. There are no component render tests yet.
+`e2e/` runs against the local backend. `host-server.mjs` plays a customer's site on a second origin, with the real embed built to point at `http://supabase.test`, which `embed.spec.ts` intercepts. This means the Supabase client code path isn't covered by automated tests, only the database rules and the local backend separately.

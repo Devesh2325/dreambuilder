@@ -59,7 +59,7 @@ test('full journey: template, details, editor, publish, live site, form response
 
   // The owner sees the response.
   await page.goBack();
-  await page.goto(BASE);
+  await page.goto('/');
   await page.getByRole('link', { name: /Rosa Trattoria/ }).click();
   await expect(page.getByRole('cell', { name: 'A table for two please' })).toBeVisible();
 

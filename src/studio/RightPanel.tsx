@@ -5,7 +5,7 @@ import { MODULES } from '../core/modules';
 import { hasToken, VariableDef } from '../core/variables';
 import { inputClass } from '../app/shared/ui';
 import { ImageInput } from '../app/shared/VariableForm';
-import { ColorGradientPicker } from '../editor/panels/ColorGradientPicker';
+import { ColorGradientPicker } from './pickers/ColorGradientPicker';
 import { BLOCK_META } from '../renderer/blockMeta';
 import { BlockField } from '../renderer/types';
 import { getTemplate } from '../templates';

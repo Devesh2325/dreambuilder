@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { POPULAR_FONTS, loadGoogleFont, FontDefinition } from '../../services/fontService';
+import { POPULAR_FONTS, loadGoogleFont, FontDefinition } from './fontService';
 import { 
   Type, 
   Search, 
