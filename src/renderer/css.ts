@@ -1,0 +1,157 @@
+import { Theme } from '../core/schema';
+import { RenderNode } from '../core/variables';
+
+export const TABLET_MAX = 991;
+export const MOBILE_MAX = 640;
+
+const UNITLESS = new Set(['opacity', 'zIndex', 'fontWeight', 'lineHeight', 'flexGrow', 'flexShrink', 'order']);
+
+/**
+ * Style values are user data placed inside a stylesheet. Anything able to end the
+ * declaration or load outside code is dropped: without this a value like
+ * "red}body{display:none" would restyle the page.
+ */
+export function safeCssValue(value: string | number): string | null {
+  const text = String(value).trim();
+  if (text === '') return null;
+  if (/[;{}<>\\]|\/\*|expression\s*\(|@import/i.test(text)) return null;
+  const urlMatches = text.matchAll(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi);
+  for (const match of urlMatches) {
+    if (!/^https?:\/\//i.test(match[2])) return null;
+  }
+  return text;
+}
+
+function declarations(styles: Record<string, string | number> | undefined): string {
+  if (!styles) return '';
+  let css = '';
+  for (const [property, raw] of Object.entries(styles)) {
+    if (!/^[a-zA-Z]+$/.test(property)) continue;
+    const value = safeCssValue(raw);
+    if (value === null) continue;
+    const kebab = property.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+    const withUnit = typeof raw === 'number' && raw !== 0 && !UNITLESS.has(property) ? `${value}px` : value;
+    css += `${kebab}:${withUnit};`;
+  }
+  return css;
+}
+
+export function nodeClass(key: string): string {
+  return `fp-n-${key}`;
+}
+
+export function generateNodeCss(root: RenderNode | null): string {
+  if (!root) return '';
+  let base = '';
+  let tablet = '';
+  let mobile = '';
+  const visit = (node: RenderNode) => {
+    const selector = `.${nodeClass(node.key)}`;
+    const main = declarations(node.styles);
+    if (main) base += `${selector}{${main}}`;
+    const forTablet = declarations(node.responsive?.tablet);
+    if (forTablet) tablet += `${selector}{${forTablet}}`;
+    const forMobile = declarations(node.responsive?.mobile);
+    if (forMobile) mobile += `${selector}{${forMobile}}`;
+    node.children.forEach(visit);
+  };
+  visit(root);
+  if (tablet) base += `@media (max-width:${TABLET_MAX}px){${tablet}}`;
+  if (mobile) base += `@media (max-width:${MOBILE_MAX}px){${mobile}}`;
+  return base;
+}
+
+const fontStack = (font: string) => `'${font.replace(/['"\\;{}<>]/g, '')}',system-ui,sans-serif`;
+
+export function themeCssVariables(theme: Theme): string {
+  const vars: [string, string][] = [
+    ['primary', theme.primary],
+    ['secondary', theme.secondary],
+    ['background', theme.background],
+    ['surface', theme.surface],
+    ['text', theme.text],
+    ['muted', theme.muted],
+    ['radius', theme.radius],
+    ['font-heading', fontStack(theme.fontHeading)],
+    ['font-body', fontStack(theme.fontBody)],
+  ];
+  return vars
+    .map(([name, value]) => [name, safeCssValue(value)] as const)
+    .filter(([, value]) => value !== null)
+    .map(([name, value]) => `--fp-${name}:${value};`)
+    .join('');
+}
+
+const KNOWN_GOOGLE_FONTS = new Set([
+  'Inter', 'Plus Jakarta Sans', 'Poppins', 'Outfit', 'Roboto', 'DM Sans', 'Manrope', 'Sora', 'Montserrat',
+  'Work Sans', 'Rubik', 'Nunito', 'Space Grotesk', 'Syne', 'Righteous', 'Playfair Display', 'Lora',
+  'Merriweather', 'Cinzel', 'Bodoni Moda', 'JetBrains Mono', 'Fira Code', 'Space Mono', 'IBM Plex Mono',
+]);
+
+export function googleFontsUrl(theme: Theme): string | null {
+  const families = [...new Set([theme.fontHeading, theme.fontBody])].filter((font) => KNOWN_GOOGLE_FONTS.has(font));
+  if (families.length === 0) return null;
+  const query = families.map((family) => `family=${family.replace(/ /g, '+')}:wght@400;500;600;700;800`).join('&');
+  return `https://fonts.googleapis.com/css2?${query}&display=swap`;
+}
+
+// Selectors use :where so their specificity stays at one class, which lets the
+// per-node rules that come later override them.
+export const BASE_CSS = `
+:where(.fp-root),:where(.fp-root) *{box-sizing:border-box}
+:where(.fp-root){font-family:var(--fp-font-body);color:var(--fp-text);background:var(--fp-background);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased}
+:where(.fp-root) :where(h1,h2,h3,h4,p,ul){margin:0;padding:0}
+:where(.fp-root) :where(img,video){max-width:100%;display:block}
+:where(.fp-root) a{color:inherit}
+:where(.fp-root) .fp-heading{font-family:var(--fp-font-heading);font-weight:700;line-height:1.2;color:inherit}
+:where(.fp-root) .fp-h1{font-size:clamp(2.25rem,5vw,3.75rem);font-weight:800;line-height:1.1}
+:where(.fp-root) .fp-h2{font-size:clamp(1.75rem,3.5vw,2.5rem)}
+:where(.fp-root) .fp-h3{font-size:1.375rem}
+:where(.fp-root) .fp-h4{font-size:1.125rem}
+:where(.fp-root) .fp-text{white-space:pre-line}
+:where(.fp-root) .fp-section{padding:72px 24px;width:100%}
+:where(.fp-root) .fp-container{width:100%;max-width:1120px;margin-left:auto;margin-right:auto}
+:where(.fp-root) .fp-box{display:flex;flex-direction:column;gap:12px;min-width:0}
+:where(.fp-root) .fp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:24px}
+:where(.fp-root) .fp-row{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+:where(.fp-root) .fp-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:var(--fp-radius);border:1px solid transparent;font:inherit;font-weight:600;text-decoration:none;cursor:pointer;transition:opacity .15s}
+:where(.fp-root) .fp-btn:hover{opacity:.88}
+:where(.fp-root) .fp-btn-primary{background:var(--fp-primary);color:#fff}
+:where(.fp-root) .fp-btn-secondary{background:transparent;color:var(--fp-text);border-color:currentColor}
+:where(.fp-root) .fp-btn-link{background:transparent;color:var(--fp-primary);padding:0}
+:where(.fp-root) .fp-card{background:var(--fp-surface);border-radius:var(--fp-radius);padding:24px}
+:where(.fp-root) .fp-image{width:100%;object-fit:cover;border-radius:var(--fp-radius)}
+:where(.fp-root) .fp-divider{border:0;border-top:1px solid color-mix(in srgb,var(--fp-text) 15%,transparent);margin:0;width:100%}
+:where(.fp-root) .fp-nav{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:16px 24px}
+:where(.fp-root) .fp-nav-brand{display:flex;align-items:center;gap:10px;font-family:var(--fp-font-heading);font-weight:800;font-size:1.125rem;text-decoration:none}
+:where(.fp-root) .fp-nav-brand img{height:32px;width:auto}
+:where(.fp-root) .fp-nav-links{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
+:where(.fp-root) .fp-nav-links a{text-decoration:none;font-weight:500}
+:where(.fp-root) .fp-nav-links a[aria-current=page]{color:var(--fp-primary)}
+:where(.fp-root) .fp-accordion{border-bottom:1px solid color-mix(in srgb,var(--fp-text) 15%,transparent);padding:14px 0}
+:where(.fp-root) .fp-accordion summary{cursor:pointer;font-weight:600}
+:where(.fp-root) .fp-accordion p{margin-top:8px;color:var(--fp-muted);white-space:pre-line}
+:where(.fp-root) .fp-form{display:flex;flex-direction:column;gap:16px;width:100%}
+:where(.fp-root) .fp-field{display:flex;flex-direction:column;gap:6px;font-weight:500;font-size:.9375rem}
+:where(.fp-root) .fp-field-check{flex-direction:row;align-items:center;gap:8px;font-weight:400}
+:where(.fp-root) .fp-input{width:100%;padding:10px 12px;font:inherit;font-weight:400;color:var(--fp-text);background:var(--fp-background);border:1px solid color-mix(in srgb,var(--fp-text) 25%,transparent);border-radius:var(--fp-radius)}
+:where(.fp-root) .fp-input:focus{outline:2px solid var(--fp-primary);outline-offset:1px}
+:where(.fp-root) .fp-form-actions{display:flex;justify-content:space-between;gap:12px}
+:where(.fp-root) .fp-form-status{padding:12px 14px;border-radius:var(--fp-radius);background:var(--fp-surface)}
+:where(.fp-root) .fp-form-status[data-kind=error]{color:#b91c1c}
+:where(.fp-root) .fp-progress{height:8px;border-radius:99px;background:color-mix(in srgb,var(--fp-text) 12%,transparent);overflow:hidden}
+:where(.fp-root) .fp-progress span{display:block;height:100%;background:var(--fp-primary);transition:width .2s}
+:where(.fp-root) .fp-scale{display:flex;flex-wrap:wrap;gap:6px}
+:where(.fp-root) .fp-scale button{min-width:38px;height:38px;font:inherit;background:var(--fp-surface);color:var(--fp-text);border:1px solid color-mix(in srgb,var(--fp-text) 20%,transparent);border-radius:var(--fp-radius);cursor:pointer}
+:where(.fp-root) .fp-scale button[aria-pressed=true]{background:var(--fp-primary);color:#fff}
+:where(.fp-root) .fp-check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;cursor:pointer}
+:where(.fp-root) .fp-check-item[data-done=true] strong{text-decoration:line-through;opacity:.6}
+:where(.fp-root) .fp-step{background:var(--fp-background);border-radius:var(--fp-radius);padding:20px;width:360px;max-width:100%;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 40px -12px rgba(15,23,42,.35)}
+:where(.fp-root) .fp-screen{position:relative;width:100%;overflow:hidden;border-radius:var(--fp-radius)}
+:where(.fp-root) .fp-screen>img{width:100%}
+:where(.fp-root) .fp-hotspot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:0;padding:0;background:var(--fp-primary);box-shadow:0 0 0 6px color-mix(in srgb,var(--fp-primary) 35%,transparent);cursor:pointer}
+:where(.fp-root) .fp-hotspot-tip{position:absolute;background:var(--fp-secondary);color:#fff;padding:6px 10px;font-size:.8125rem;border-radius:6px;transform:translate(-50%,16px);max-width:220px}
+:where(.fp-root) .fp-banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;padding:10px 44px 10px 16px;background:var(--fp-primary);color:#fff;position:relative}
+:where(.fp-root) .fp-close{position:absolute;top:8px;right:10px;background:none;border:0;color:inherit;font-size:1.125rem;line-height:1;cursor:pointer;padding:4px}
+:where(.fp-root) .fp-popup{position:relative;background:var(--fp-background);border-radius:var(--fp-radius);padding:32px;width:460px;max-width:100%;display:flex;flex-direction:column;gap:14px;box-shadow:0 25px 50px -12px rgba(15,23,42,.45)}
+`;
