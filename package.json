@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "vite build -c vite.embed.config.ts --mode public && vite",
+    "build": "tsc -b && vite build && vite build -c vite.embed.config.ts && node scripts/check-embed-size.mjs",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {

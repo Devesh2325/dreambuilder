@@ -4,8 +4,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { DEFAULT_THEME, DocContent, findTreeProblem, parseContent } from '../../core/schema';
 import { duplicateNode, insertSubtree, moveNode, removeNode } from '../../core/tree';
 import {
-  evaluateShowIf, expandContent, isSafeUrl, RenderNode, resolveString, safeUrl, validateValues, VariableDef,
+  evaluateShowIf, expandContent, isSafeUrl, RenderNode, resolveString, safeUrl, VariableDef,
 } from '../../core/variables';
+import { validateValues } from '../../core/validation';
 import { matchesUrl, passesFrequency, shouldShow } from '../../core/triggers';
 import { generateNodeCss, safeCssValue } from '../../renderer/css';
 import { ExperienceView } from '../../renderer/ExperienceView';
@@ -197,7 +198,7 @@ describe('variables', () => {
 });
 
 describe('content security', () => {
-  it.each(['javascript:alert(1)', 'JAVASCRIPT:alert(1)', 'java\nscript:alert(1)', ' javascript:alert(1)', 'data:text/html,x', 'vbscript:x'])(
+  it.each(['javascript:alert(1)', 'JAVASCRIPT:alert(1)', 'java\nscript:alert(1)', ' javascript:alert(1)', 'data:text/html,x', 'data:image/svg+xml;base64,x', 'vbscript:x'])(
     'blocks the link %j',
     (url) => {
       expect(isSafeUrl(url)).toBe(false);
@@ -205,7 +206,7 @@ describe('content security', () => {
     },
   );
 
-  it.each(['https://a.com', 'http://a.com', 'mailto:a@b.co', 'tel:+15551234', '/about', '#top', 'page.html'])('allows the link %j', (url) => {
+  it.each(['https://a.com', 'http://a.com', 'mailto:a@b.co', 'tel:+15551234', '/about', '#top', 'page.html', 'data:image/png;base64,iVBOR'])('allows the link %j', (url) => {
     expect(isSafeUrl(url)).toBe(true);
   });
 

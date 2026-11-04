@@ -14,7 +14,7 @@ const BUTTON_ACTIONS = [
 // Kept apart from the renderers so the editor can list blocks without importing them.
 export const BLOCK_META: Record<string, BlockMeta> = {
   Root: { type: 'Root', label: 'Page', category: 'layout', icon: 'LayoutTemplate', isContainer: true, defaultProps: {}, fields: [] },
-  Section: { type: 'Section', label: 'Section', category: 'layout', icon: 'RectangleHorizontal', isContainer: true, defaultProps: {}, fields: [] },
+  Section: { type: 'Section', label: 'Section', category: 'layout', icon: 'RectangleHorizontal', isContainer: true, defaultProps: {}, fields: [text('anchor', 'Anchor name', 'Lets links jump here with #name.')] },
   Container: { type: 'Container', label: 'Container', category: 'layout', icon: 'Square', isContainer: true, defaultProps: {}, fields: [] },
   Box: { type: 'Box', label: 'Box', category: 'layout', icon: 'Box', isContainer: true, defaultProps: {}, fields: [] },
   Card: { type: 'Card', label: 'Card', category: 'layout', icon: 'CreditCard', isContainer: true, defaultProps: {}, fields: [] },

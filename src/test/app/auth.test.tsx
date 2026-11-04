@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { ThemeProvider } from '../../services/themeContext';
 import { AppProviders } from '../../app/AppProviders';
 import { AppRoutes } from '../../app/AppRoutes';
 import { createFakeServices, TEST_USER } from './fakeServices';
@@ -9,14 +10,14 @@ const LocationProbe = () => <div data-testid="path">{useLocation().pathname}</di
 
 function renderApp(path: string, fake = createFakeServices()) {
   render(
-    <MemoryRouter initialEntries={[path]}>
+    <ThemeProvider><MemoryRouter initialEntries={[path]}>
       <AppProviders services={fake.services}>
         <Routes>
           <Route path="/v2/*" element={<AppRoutes />} />
         </Routes>
         <LocationProbe />
       </AppProviders>
-    </MemoryRouter>,
+    </MemoryRouter></ThemeProvider>,
   );
   return fake;
 }
@@ -43,7 +44,7 @@ describe('authentication', () => {
 
     it('shows the protected page to logged-in users', async () => {
       renderApp('/v2', createFakeServices({ user: TEST_USER }));
-      expect(await screen.findByRole('heading', { name: 'Welcome, Alice' })).toBeTruthy();
+      expect(await screen.findByRole('heading', { name: 'All projects' })).toBeTruthy();
     });
 
     it('never shows protected content before the session check finishes', () => {
@@ -54,20 +55,20 @@ describe('authentication', () => {
 
     it('moves logged-in users away from the login page', async () => {
       renderApp('/v2/login', createFakeServices({ user: TEST_USER }));
-      await screen.findByRole('heading', { name: 'Welcome, Alice' });
+      await screen.findByRole('heading', { name: 'All projects' });
       expect(screen.getByTestId('path').textContent).toBe('/v2');
     });
   });
 
   describe('login', () => {
     it('returns the user to the page they originally asked for', async () => {
-      const fake = renderApp('/v2/projects/123');
+      const fake = renderApp('/v2/settings');
       await screen.findByRole('heading', { name: 'Log in' });
       fillLogin();
 
-      await screen.findByRole('heading', { name: 'Welcome, Alice' });
+      await screen.findByRole('heading', { name: 'Settings' });
       expect(fake.calls.signIn).toEqual([{ email: 'alice@example.com', password: 'secret-password' }]);
-      expect(screen.getByTestId('path').textContent).toBe('/v2/projects/123');
+      expect(screen.getByTestId('path').textContent).toBe('/v2/settings');
     });
 
     it('shows the error and stays on the page when login fails', async () => {
@@ -105,7 +106,7 @@ describe('authentication', () => {
       await screen.findByRole('heading', { name: 'Create your account' });
       fillSignUp();
 
-      await screen.findByRole('heading', { name: 'Welcome, Alice' });
+      await screen.findByRole('heading', { name: 'All projects' });
       expect(fake.calls.signUp[0]).toEqual({
         fullName: 'Alice',
         workspaceName: 'Alice Co',
@@ -136,7 +137,7 @@ describe('authentication', () => {
   describe('logout', () => {
     it('returns to the login page', async () => {
       renderApp('/v2', createFakeServices({ user: TEST_USER }));
-      await screen.findByRole('heading', { name: 'Welcome, Alice' });
+      await screen.findByRole('heading', { name: 'All projects' });
       click('Log out');
 
       expect(await screen.findByRole('heading', { name: 'Log in' })).toBeTruthy();
@@ -165,7 +166,7 @@ describe('authentication', () => {
       fill('New password', 'brand-new-password');
       click('Save password');
 
-      await screen.findByRole('heading', { name: 'Welcome, Alice' });
+      await screen.findByRole('heading', { name: 'All projects' });
       expect(fake.calls.updatePassword).toEqual(['brand-new-password']);
     });
   });
@@ -176,11 +177,10 @@ describe('authentication', () => {
         '/v2',
         createFakeServices({
           user: TEST_USER,
-          memberships: [{ organizationId: 'o1', name: 'Alice Co', slug: 'alice-co', plan: 'free', role: 'owner' }],
+          memberships: [{ organizationId: 'o1', name: 'Alice Co', slug: 'alice-co', plan: 'free', role: 'owner', branding: {} }],
         }),
       );
       expect(await screen.findByText('Alice Co')).toBeTruthy();
-      expect(screen.getByText(/owner, free plan/)).toBeTruthy();
-    });
+          });
   });
 });

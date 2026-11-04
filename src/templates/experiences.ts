@@ -1,0 +1,538 @@
+import { DEFAULT_TRIGGERS, ProjectSettings, ProjectType } from '../core/schema';
+import { VariableDef } from '../core/variables';
+import {
+  actionButton, buildContent, button, el, El, experience, heading, image, section, TemplateDefinition, TemplatePage, text, ThemePreset,
+} from './dsl';
+import { ALL_THEMES, THEME_CORAL, THEME_EMERALD, THEME_INDIGO, THEME_MIDNIGHT, THEME_MONO, THEME_TERRACOTTA } from './themes';
+
+const pic = (seed: string, width = 1280, height = 800) => `https://picsum.photos/seed/${seed}/${width}/${height}`;
+
+const OVERLAY_SETTINGS: ProjectSettings = { triggers: DEFAULT_TRIGGERS };
+
+function make(
+  type: ProjectType,
+  id: string,
+  title: string,
+  description: string,
+  tags: string[],
+  theme: ThemePreset,
+  variables: VariableDef[],
+  pages: TemplatePage[],
+  extra: { settings?: ProjectSettings; titleVariable?: string } = {},
+): TemplateDefinition {
+  return {
+    id: `${type}-${id}`,
+    type,
+    version: 1,
+    title,
+    description,
+    tags,
+    variables,
+    themes: [theme, ...ALL_THEMES.filter((other) => other !== theme)],
+    pages,
+    ...extra,
+  };
+}
+
+const textVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
+  key, label, type: 'text', required: true, default: value, group,
+});
+const longVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
+  key, label, type: 'longtext', default: value, group,
+});
+const urlVar = (key: string, label: string, value: string, group?: string): VariableDef => ({
+  key, label, type: 'url', default: value, group,
+});
+const listVar = (key: string, label: string, items: Record<string, unknown>[], itemFields: VariableDef[], group?: string): VariableDef => ({
+  key, label, type: 'list', default: items, itemFields, minItems: 1, maxItems: 20, group,
+});
+
+// ---- Landing pages ----------------------------------------------------------
+
+const heroSection = (cta = '{{cta.link}}'): El =>
+  section([
+    el('Box', { styles: { alignItems: 'center', textAlign: 'center', gap: '20px', maxWidth: '760px', marginLeft: 'auto', marginRight: 'auto' } }, [
+      heading('{{headline}}', 'h1'),
+      text('{{subheadline}}', { fontSize: '1.25rem', color: 'var(--fp-muted)' }, 'subheadline'),
+      button('{{cta.label}}', cta),
+    ]),
+  ]);
+
+const landingPage = (children: El[]): TemplatePage => ({
+  kind: 'page',
+  title: 'Home',
+  slug: '',
+  seo: { title: '{{headline}}', description: '{{subheadline}}' },
+  content: buildContent('p', children),
+});
+
+const pageVariables = (headline: string, sub: string, label: string): VariableDef[] => [
+  textVar('headline', 'Headline', headline, 'Main message'),
+  longVar('subheadline', 'Supporting text', sub, 'Main message'),
+  textVar('cta.label', 'Button label', label, 'Main message'),
+  urlVar('cta.link', 'Button link', 'https://example.com', 'Main message'),
+];
+
+const pageTemplates = [
+  make('page', 'launch', 'Product launch', 'Announce something new, with benefits and one clear action.', ['launch', 'product'], THEME_INDIGO, [
+    ...pageVariables('Meet the easiest way to get it done', 'Our newest release saves your team hours every week.', 'Try it free'),
+    listVar('benefits', 'Benefits', [
+      { title: 'Save time', description: 'Automate the busywork.' },
+      { title: 'Stay aligned', description: 'One place for the whole team.' },
+      { title: 'Grow faster', description: 'See what works and do more of it.' },
+    ], [{ key: 'title', label: 'Title', type: 'text', required: true }, { key: 'description', label: 'Description', type: 'longtext' }], 'Benefits'),
+  ], [landingPage([
+    heroSection(),
+    section([el('Grid', {}, [el('Card', { repeat: { list: 'benefits', as: 'benefit' } }, [heading('{{benefit.title}}', 'h3'), text('{{benefit.description}}', { color: 'var(--fp-muted)' })])])], { backgroundColor: 'var(--fp-surface)' }),
+  ])], { titleVariable: 'headline' }),
+
+  make('page', 'event', 'Event sign-up', 'Share the details of your event and collect registrations.', ['event', 'webinar'], THEME_MIDNIGHT, [
+    ...pageVariables('Join us live', 'A one-hour session with practical advice you can use the same day.', 'Save my seat').filter((def) => def.key !== 'cta.link'),
+    textVar('event.date', 'Date and time', 'March 12, 3pm', 'Event details'),
+    textVar('event.place', 'Where', 'Online', 'Event details'),
+  ], [landingPage([
+    section([
+      el('Grid', { styles: { gap: '48px', alignItems: 'center' } }, [
+        el('Box', { styles: { gap: '16px' } }, [
+          heading('{{headline}}', 'h1'),
+          text('{{subheadline}}', { color: 'var(--fp-muted)' }, 'subheadline'),
+          text('{{event.date}} | {{event.place}}', { fontWeight: 700 }),
+        ]),
+        el('Card', {}, [
+          el('Form', { props: { submitText: '{{cta.label}}', successMessage: "You're on the list. See you there!" } }, [
+            el('FormField', { props: { name: 'name', label: 'Name', required: true } }),
+            el('FormField', { props: { name: 'email', label: 'Email', inputType: 'email', required: true } }),
+          ]),
+        ]),
+      ]),
+    ]),
+  ])], { titleVariable: 'headline' }),
+
+  make('page', 'coming-soon', 'Coming soon', 'Build a waitlist before you launch.', ['waitlist', 'launch'], THEME_MONO, [
+    textVar('headline', 'Headline', 'Something new is coming', 'Main message'),
+    longVar('subheadline', 'Supporting text', 'Leave your email and be the first to know.', 'Main message'),
+  ], [landingPage([
+    section([
+      el('Box', { styles: { alignItems: 'center', textAlign: 'center', gap: '20px', maxWidth: '560px', marginLeft: 'auto', marginRight: 'auto' } }, [
+        heading('{{headline}}', 'h1'),
+        text('{{subheadline}}', { color: 'var(--fp-muted)' }),
+        el('Form', { props: { submitText: 'Notify me', successMessage: "Thanks! We'll be in touch." } }, [
+          el('FormField', { props: { name: 'email', label: 'Email', inputType: 'email', required: true } }),
+        ]),
+      ]),
+    ], { minHeight: '80vh', display: 'flex', alignItems: 'center' }),
+  ])], { titleVariable: 'headline' }),
+];
+
+// ---- Tours ------------------------------------------------------------------
+
+const tourStep = (selector: string, placement: string, title: string, body: string, buttons: El[]): El =>
+  el('TourStep', { props: { selector, placement, fallback: 'center', spotlight: true } }, [
+    heading(title, 'h4'),
+    text(body, { color: 'var(--fp-muted)', fontSize: '.9375rem' }),
+    el('Row', { styles: { justifyContent: 'flex-end', gap: '8px' } }, buttons),
+  ]);
+
+const nextBack = [actionButton('Back', 'prev', 'secondary'), actionButton('Next', 'next')];
+
+const tourTemplates = [
+  make('tour', 'welcome', 'Welcome tour', 'Introduce new users to the main parts of your app.', ['onboarding', 'welcome'], THEME_INDIGO, [
+    textVar('product', 'Product name', 'Acme', 'Your product'),
+    textVar('nav.selector', 'Navigation element', 'nav', 'Elements on your site'),
+    textVar('action.selector', 'Main button', 'button', 'Elements on your site'),
+  ], [experience([
+    tourStep('', 'bottom', 'Welcome to {{product}}!', "Here's a quick look around. It takes less than a minute.", [actionButton('Skip', 'close', 'link'), actionButton('Start', 'next')]),
+    tourStep('{{nav.selector}}', 'bottom', 'Find your way', 'Everything you need is in the navigation.', nextBack),
+    tourStep('{{action.selector}}', 'bottom', 'Get started', 'This is where most people begin.', [actionButton('Back', 'prev', 'secondary'), actionButton('Finish', 'next')]),
+  ])], { settings: OVERLAY_SETTINGS }),
+
+  make('tour', 'feature', 'New feature spotlight', 'Point out one new feature in a couple of steps.', ['feature', 'adoption'], THEME_EMERALD, [
+    textVar('feature.name', 'Feature name', 'Reports', 'The feature'),
+    longVar('feature.benefit', 'Why it helps', 'See how your work is going at a glance.', 'The feature'),
+    textVar('feature.selector', 'Feature element', '#reports', 'Elements on your site'),
+  ], [experience([
+    tourStep('{{feature.selector}}', 'right', 'New: {{feature.name}}', '{{feature.benefit}}', [actionButton('Got it', 'next')]),
+  ])], { settings: OVERLAY_SETTINGS }),
+
+  make('tour', 'setup', 'Account setup guide', 'Walk users through the steps to finish setting up.', ['setup', 'activation'], THEME_CORAL, [
+    textVar('profile.selector', 'Profile element', '#profile', 'Elements on your site'),
+    textVar('invite.selector', 'Invite button', '#invite', 'Elements on your site'),
+    textVar('settings.selector', 'Settings link', '#settings', 'Elements on your site'),
+  ], [experience([
+    tourStep('{{profile.selector}}', 'bottom', 'Complete your profile', 'Add your name and photo so your team recognizes you.', [actionButton('Next', 'next')]),
+    tourStep('{{invite.selector}}', 'bottom', 'Invite your team', 'Work goes faster together.', nextBack),
+    tourStep('{{settings.selector}}', 'left', 'Adjust your settings', 'Make it work the way you do.', [actionButton('Back', 'prev', 'secondary'), actionButton('Done', 'next')]),
+  ])], { settings: OVERLAY_SETTINGS }),
+];
+
+// ---- Forms ------------------------------------------------------------------
+
+const formPage = (submitText: string, success: string, children: El[]): TemplatePage =>
+  experience([el('Form', { props: { submitText, successMessage: success } }, children)], { padding: '24px', maxWidth: '640px', marginLeft: 'auto', marginRight: 'auto' });
+
+const field = (name: string, label: string, inputType = 'text', required = true, optionsText = ''): El =>
+  el('FormField', { props: { name, label, inputType, required, optionsText } });
+
+const formTemplates = [
+  make('form', 'contact', 'Contact form', 'The classic: name, email and message.', ['contact', 'support'], THEME_INDIGO, [
+    textVar('form.title', 'Title', 'Contact us', 'Form text'),
+    longVar('form.intro', 'Introduction', "Send us a message and we'll reply soon.", 'Form text'),
+    textVar('form.thanks', 'Thank-you message', "Thanks! We'll be in touch.", 'Form text'),
+  ], [formPage('Send', '{{form.thanks}}', [
+    heading('{{form.title}}', 'h2'),
+    text('{{form.intro}}', { color: 'var(--fp-muted)' }, 'form.intro'),
+    field('name', 'Name'),
+    field('email', 'Email', 'email'),
+    field('message', 'Message', 'textarea'),
+  ])], { titleVariable: 'form.title' }),
+
+  make('form', 'lead', 'Lead capture', 'Qualify enquiries with a short multi-step form.', ['leads', 'sales', 'multi-step'], THEME_EMERALD, [
+    textVar('form.title', 'Title', 'Request a demo', 'Form text'),
+    textVar('form.thanks', 'Thank-you message', 'Thanks! Our team will contact you within one day.', 'Form text'),
+    longVar('form.sizes', 'Company size options', '1-10\n11-50\n51-200\n200+', 'Questions'),
+  ], [formPage('Request demo', '{{form.thanks}}', [
+    heading('{{form.title}}', 'h2'),
+    el('FormStep', { props: { title: 'About you' } }, [field('name', 'Name'), field('email', 'Work email', 'email')]),
+    el('FormStep', { props: { title: 'Your company' } }, [
+      field('company', 'Company'),
+      el('FormField', { props: { name: 'size', label: 'Company size', inputType: 'select', required: true, optionsText: '{{form.sizes}}' } }),
+    ]),
+  ])], { titleVariable: 'form.title' }),
+
+  make('form', 'booking', 'Booking request', 'Let customers ask for a date and service.', ['booking', 'appointments'], THEME_TERRACOTTA, [
+    textVar('form.title', 'Title', 'Book an appointment', 'Form text'),
+    longVar('form.services', 'Services (one per line)', 'Consultation\nFull service\nFollow-up', 'Questions'),
+    textVar('form.thanks', 'Thank-you message', "Thanks! We'll confirm your booking shortly.", 'Form text'),
+  ], [formPage('Request booking', '{{form.thanks}}', [
+    heading('{{form.title}}', 'h2'),
+    field('name', 'Name'),
+    field('phone', 'Phone', 'tel'),
+    el('FormField', { props: { name: 'service', label: 'Service', inputType: 'select', required: true, optionsText: '{{form.services}}' } }),
+    field('date', 'Preferred date', 'date'),
+    field('notes', 'Anything else?', 'textarea', false),
+  ])], { titleVariable: 'form.title' }),
+];
+
+// ---- Demos ------------------------------------------------------------------
+
+const screen = (imageKey: string, x: number, y: number, tip: string): El =>
+  el('DemoScreen', { props: { image: imageKey, alt: 'Product screen' } }, [el('DemoHotspot', { props: { x, y, tip } })]);
+
+const screenVar = (key: string, label: string, seed: string): VariableDef => ({
+  key, label, type: 'image', required: true, default: pic(seed), group: 'Screenshots',
+});
+
+const demoTemplates = [
+  make('demo', 'walkthrough', 'Product walkthrough', 'Three clickable screens showing your main flow.', ['walkthrough', 'sales'], THEME_INDIGO, [
+    screenVar('screen.one', 'First screen', 'demo1'),
+    screenVar('screen.two', 'Second screen', 'demo2'),
+    screenVar('screen.three', 'Last screen', 'demo3'),
+    textVar('tip.one', 'First tip', 'Start here', 'Tips'),
+    textVar('tip.two', 'Second tip', 'Then choose an option', 'Tips'),
+    textVar('tip.three', 'Last tip', 'And see the result', 'Tips'),
+  ], [experience([
+    screen('{{screen.one}}', 30, 40, '{{tip.one}}'),
+    screen('{{screen.two}}', 60, 55, '{{tip.two}}'),
+    screen('{{screen.three}}', 50, 30, '{{tip.three}}'),
+  ])]),
+
+  make('demo', 'feature', 'Single feature demo', 'Two screens to show one feature in action.', ['feature', 'marketing'], THEME_MIDNIGHT, [
+    screenVar('screen.before', 'Before', 'demo4'),
+    screenVar('screen.after', 'After', 'demo5'),
+    textVar('tip.action', 'Tip', 'Click to see the magic', 'Tips'),
+    textVar('tip.done', 'Closing tip', "That's it!", 'Tips'),
+  ], [experience([screen('{{screen.before}}', 50, 50, '{{tip.action}}'), screen('{{screen.after}}', 50, 50, '{{tip.done}}')])]),
+
+  make('demo', 'dashboard', 'Dashboard tour', 'Explore a dashboard with several stops.', ['dashboard', 'analytics'], THEME_EMERALD, [
+    screenVar('screen.overview', 'Overview', 'demo6'),
+    screenVar('screen.report', 'Report', 'demo7'),
+    screenVar('screen.share', 'Share', 'demo8'),
+    textVar('tip.overview', 'Overview tip', 'Open a report', 'Tips'),
+    textVar('tip.report', 'Report tip', 'Share with your team', 'Tips'),
+    textVar('tip.share', 'Share tip', 'All done', 'Tips'),
+  ], [experience([
+    screen('{{screen.overview}}', 25, 30, '{{tip.overview}}'),
+    screen('{{screen.report}}', 75, 20, '{{tip.report}}'),
+    screen('{{screen.share}}', 50, 60, '{{tip.share}}'),
+  ])]),
+];
+
+// ---- Banners ----------------------------------------------------------------
+
+const bannerTemplates = [
+  make('banner', 'announcement', 'Announcement', 'Share news with a link.', ['news'], THEME_INDIGO, [
+    textVar('message', 'Message', 'We just launched something new!', 'Message'),
+    textVar('cta.label', 'Link text', 'Learn more', 'Message'),
+    urlVar('cta.link', 'Link', 'https://example.com', 'Message'),
+  ], [experience([el('Banner', {}, [text('{{message}}'), el('Button', { props: { text: '{{cta.label}}', href: '{{cta.link}}', variant: 'link', action: 'link' }, styles: { color: '#ffffff', textDecoration: 'underline' } })])], { background: 'transparent' })], { settings: { ...OVERLAY_SETTINGS, position: 'top' } }),
+
+  make('banner', 'sale', 'Sale or promotion', 'Promote an offer with a code.', ['sale', 'promotion'], THEME_CORAL, [
+    textVar('message', 'Offer', 'Summer sale: 20% off everything', 'Offer'),
+    textVar('code', 'Discount code', 'SUMMER20', 'Offer'),
+  ], [experience([el('Banner', {}, [text('{{message}} with code {{code}}', { fontWeight: 600 })])], { background: 'transparent' })], { settings: { ...OVERLAY_SETTINGS, position: 'top' } }),
+
+  make('banner', 'maintenance', 'Maintenance notice', 'Warn users about planned downtime.', ['notice', 'status'], THEME_MONO, [
+    textVar('message', 'Notice', 'Scheduled maintenance on Saturday, 2am to 4am UTC.', 'Notice'),
+  ], [experience([el('Banner', { props: { dismissible: true } }, [text('{{message}}')])], { background: 'transparent' })], { settings: { ...OVERLAY_SETTINGS, position: 'bottom' } }),
+];
+
+// ---- Menus ------------------------------------------------------------------
+
+const menuVariables = (brand: string, links: string, cta: string): VariableDef[] => [
+  textVar('brand', 'Brand name', brand, 'Menu'),
+  { key: 'logo', label: 'Logo', type: 'image', group: 'Menu' },
+  { key: 'links', label: 'Links', type: 'longtext', default: links, group: 'Menu', help: 'One per line, as Label | link' },
+  { key: 'cta.label', label: 'Button label', type: 'text', default: cta, group: 'Menu' },
+  urlVar('cta.link', 'Button link', 'https://example.com/signup', 'Menu'),
+];
+
+const menuPage = (styles = {}): TemplatePage =>
+  experience([el('Navbar', { props: { brand: '{{brand}}', logo: '{{logo}}', linksText: '{{links}}', ctaText: '{{cta.label}}', ctaHref: '{{cta.link}}' }, styles })]);
+
+const menuTemplates = [
+  make('menu', 'product', 'Product navigation', 'Links for a software product, with a sign-up button.', ['saas'], THEME_INDIGO, menuVariables('Acme', 'Features | /features\nPricing | /pricing\nDocs | /docs', 'Sign up'), [menuPage()]),
+  make('menu', 'business', 'Business navigation', 'Simple links for a small business site.', ['business'], THEME_EMERALD, menuVariables('Harbor & Co', 'Services | /services\nAbout | /about\nContact | /contact', 'Call us'), [menuPage()]),
+  make('menu', 'dark', 'Dark navigation', 'A bold, dark menu bar.', ['dark'], THEME_MIDNIGHT, menuVariables('Northlight', 'Work | /work\nStudio | /studio\nJournal | /journal', 'Start a project'), [menuPage({ backgroundColor: 'var(--fp-surface)' })]),
+];
+
+// ---- FAQs -------------------------------------------------------------------
+
+const faqPage = (intro: boolean): TemplatePage =>
+  experience([
+    heading('{{title}}', 'h2', { marginBottom: '12px' }),
+    ...(intro ? [text('{{intro}}', { color: 'var(--fp-muted)', marginBottom: '12px' }, 'intro')] : []),
+    el('Accordion', { repeat: { list: 'questions', as: 'item' }, props: { question: '{{item.question}}', answer: '{{item.answer}}' } }),
+  ], { padding: '24px', maxWidth: '760px', marginLeft: 'auto', marginRight: 'auto' });
+
+const questionFields: VariableDef[] = [
+  { key: 'question', label: 'Question', type: 'text', required: true },
+  { key: 'answer', label: 'Answer', type: 'longtext', required: true },
+];
+
+const faqTemplates = [
+  make('faq', 'general', 'General questions', 'A straightforward list of common questions.', ['support'], THEME_INDIGO, [
+    textVar('title', 'Title', 'Frequently asked questions', 'Text'),
+    listVar('questions', 'Questions', [
+      { question: 'How do I get started?', answer: 'Create an account and follow the steps on your dashboard.' },
+      { question: 'Can I cancel any time?', answer: 'Yes. You can cancel from your account settings.' },
+      { question: 'How can I contact support?', answer: 'Email us and we will reply within one working day.' },
+    ], questionFields, 'Questions'),
+  ], [faqPage(false)], { titleVariable: 'title' }),
+  make('faq', 'pricing', 'Pricing questions', 'Handle the questions people ask before buying.', ['pricing', 'sales'], THEME_EMERALD, [
+    textVar('title', 'Title', 'Questions about pricing', 'Text'),
+    longVar('intro', 'Introduction', 'Everything you need to know before choosing a plan.', 'Text'),
+    listVar('questions', 'Questions', [
+      { question: 'Is there a free trial?', answer: 'Yes, every plan includes a 14-day free trial.' },
+      { question: 'Can I change plans later?', answer: 'You can move up or down at any time.' },
+      { question: 'Do you offer refunds?', answer: 'We refund any payment within 30 days.' },
+    ], questionFields, 'Questions'),
+  ], [faqPage(true)], { titleVariable: 'title' }),
+  make('faq', 'shipping', 'Orders and shipping', 'Answers for online shops.', ['shop', 'shipping'], THEME_CORAL, [
+    textVar('title', 'Title', 'Orders and shipping', 'Text'),
+    listVar('questions', 'Questions', [
+      { question: 'How long does delivery take?', answer: 'Most orders arrive within 3 to 5 working days.' },
+      { question: 'Do you ship internationally?', answer: 'Yes, to most countries.' },
+      { question: 'How do returns work?', answer: 'Send items back within 30 days for a full refund.' },
+    ], questionFields, 'Questions'),
+  ], [faqPage(false)], { titleVariable: 'title' }),
+];
+
+// ---- Popups -----------------------------------------------------------------
+
+const popupTemplates = [
+  make('popup', 'newsletter', 'Newsletter sign-up', 'Grow your list with a simple offer.', ['email', 'leads'], THEME_INDIGO, [
+    textVar('headline', 'Headline', 'Get our best tips', 'Text'),
+    longVar('body', 'Text', 'One useful email a week. No spam.', 'Text'),
+    textVar('thanks', 'Thank-you message', 'Thanks for subscribing!', 'Text'),
+  ], [experience([el('Popup', {}, [
+    heading('{{headline}}', 'h3'),
+    text('{{body}}', { color: 'var(--fp-muted)' }),
+    el('Form', { props: { submitText: 'Subscribe', successMessage: '{{thanks}}' } }, [field('email', 'Email', 'email')]),
+  ])], { background: 'transparent' })], { settings: { triggers: { ...DEFAULT_TRIGGERS, delaySeconds: 5 } } }),
+
+  make('popup', 'discount', 'Discount offer', 'Show an offer before visitors leave.', ['sale', 'exit-intent'], THEME_CORAL, [
+    textVar('headline', 'Headline', 'Wait! Take 10% off', 'Text'),
+    textVar('code', 'Code', 'WELCOME10', 'Text'),
+    textVar('cta.label', 'Button label', 'Shop now', 'Text'),
+    urlVar('cta.link', 'Button link', 'https://example.com/shop', 'Text'),
+  ], [experience([el('Popup', { styles: { textAlign: 'center', alignItems: 'center' } }, [
+    heading('{{headline}}', 'h2'),
+    text('Use code {{code}} at checkout.', { color: 'var(--fp-muted)' }),
+    button('{{cta.label}}', '{{cta.link}}'),
+  ])], { background: 'transparent' })], { settings: { triggers: { ...DEFAULT_TRIGGERS, exitIntent: true } } }),
+
+  make('popup', 'announcement', 'Feature announcement', 'Tell users about something new, with an image.', ['news', 'product'], THEME_EMERALD, [
+    textVar('headline', 'Headline', 'Say hello to our new look', 'Text'),
+    longVar('body', 'Text', "We've redesigned everything to help you work faster.", 'Text'),
+    { key: 'image', label: 'Image', type: 'image', default: pic('popup', 900, 500), group: 'Text' },
+    textVar('cta.label', 'Button label', 'Got it', 'Text'),
+  ], [experience([el('Popup', {}, [
+    image('{{image}}', '', { height: '200px' }, 'image'),
+    heading('{{headline}}', 'h3'),
+    text('{{body}}', { color: 'var(--fp-muted)' }),
+    actionButton('{{cta.label}}', 'close'),
+  ])], { background: 'transparent' })], { settings: OVERLAY_SETTINGS }),
+];
+
+// ---- Checklists -------------------------------------------------------------
+
+const taskFields: VariableDef[] = [
+  { key: 'title', label: 'Task', type: 'text', required: true },
+  { key: 'description', label: 'Description', type: 'text' },
+  { key: 'link', label: 'Link', type: 'url' },
+];
+
+const checklistPage = (): TemplatePage => experience([
+  el('Card', { styles: { boxShadow: '0 20px 40px -12px rgba(15,23,42,.35)' } }, [
+    heading('{{title}}', 'h4'),
+    el('ChecklistProgress'),
+    el('ChecklistItem', { repeat: { list: 'tasks', as: 'task' }, props: { title: '{{task.title}}', description: '{{task.description}}', href: '{{task.link}}' } }),
+  ]),
+], { background: 'transparent' });
+
+const checklistTemplates = [
+  make('checklist', 'onboarding', 'New user onboarding', 'The first steps every new user should take.', ['onboarding'], THEME_INDIGO, [
+    textVar('title', 'Title', 'Get started', 'Text'),
+    listVar('tasks', 'Tasks', [
+      { title: 'Complete your profile', description: 'Add your name and photo.', link: '' },
+      { title: 'Create your first project', description: 'It only takes a minute.', link: '' },
+      { title: 'Invite a teammate', description: 'Work better together.', link: '' },
+    ], taskFields, 'Tasks'),
+  ], [checklistPage()], { settings: OVERLAY_SETTINGS, titleVariable: 'title' }),
+  make('checklist', 'store', 'Store setup', 'Help merchants get ready to sell.', ['commerce', 'setup'], THEME_EMERALD, [
+    textVar('title', 'Title', 'Set up your store', 'Text'),
+    listVar('tasks', 'Tasks', [
+      { title: 'Add your first product', description: '', link: '' },
+      { title: 'Set up payments', description: '', link: '' },
+      { title: 'Choose shipping rates', description: '', link: '' },
+      { title: 'Open your store', description: '', link: '' },
+    ], taskFields, 'Tasks'),
+  ], [checklistPage()], { settings: OVERLAY_SETTINGS, titleVariable: 'title' }),
+  make('checklist', 'adoption', 'Feature adoption', 'Encourage users to try key features.', ['adoption', 'engagement'], THEME_CORAL, [
+    textVar('title', 'Title', 'Make the most of your account', 'Text'),
+    listVar('tasks', 'Tasks', [
+      { title: 'Connect an integration', description: 'Bring your tools together.', link: '' },
+      { title: 'Create a report', description: 'See how things are going.', link: '' },
+      { title: 'Set a reminder', description: 'Never miss a deadline.', link: '' },
+    ], taskFields, 'Tasks'),
+  ], [checklistPage()], { settings: OVERLAY_SETTINGS, titleVariable: 'title' }),
+];
+
+// ---- Surveys ----------------------------------------------------------------
+
+const surveyPage = (children: El[], submitText: string): TemplatePage => experience([
+  el('Card', { styles: { boxShadow: '0 20px 40px -12px rgba(15,23,42,.35)' } }, [
+    el('Form', { props: { submitText, successMessage: '{{thanks}}' } }, children),
+  ]),
+], { background: 'transparent' });
+
+const surveyTemplates = [
+  make('survey', 'nps', 'NPS score', 'The standard 0 to 10 recommendation question.', ['nps', 'loyalty'], THEME_INDIGO, [
+    textVar('question', 'Question', 'How likely are you to recommend us to a friend?', 'Questions'),
+    textVar('followup', 'Follow-up', 'What is the main reason for your score?', 'Questions'),
+    textVar('thanks', 'Thank-you message', 'Thanks for your feedback!', 'Questions'),
+  ], [surveyPage([
+    el('ScaleField', { props: { name: 'score', label: '{{question}}', min: 0, max: 10, required: true } }),
+    el('FormField', { props: { name: 'reason', label: '{{followup}}', inputType: 'textarea', required: false } }),
+  ], 'Send')], { settings: OVERLAY_SETTINGS }),
+  make('survey', 'csat', 'Customer satisfaction', 'A quick 1 to 5 rating.', ['csat', 'support'], THEME_EMERALD, [
+    textVar('question', 'Question', 'How satisfied are you with our service?', 'Questions'),
+    textVar('thanks', 'Thank-you message', 'Thank you!', 'Questions'),
+  ], [surveyPage([el('ScaleField', { props: { name: 'rating', label: '{{question}}', min: 1, max: 5, required: true } })], 'Send')], { settings: OVERLAY_SETTINGS }),
+  make('survey', 'feedback', 'Product feedback', 'Ask open questions about your product.', ['feedback', 'research'], THEME_TERRACOTTA, [
+    textVar('question.like', 'First question', 'What do you like most?', 'Questions'),
+    textVar('question.improve', 'Second question', 'What should we improve?', 'Questions'),
+    textVar('thanks', 'Thank-you message', 'Thanks for helping us improve!', 'Questions'),
+  ], [surveyPage([
+    el('FormField', { props: { name: 'like', label: '{{question.like}}', inputType: 'textarea', required: true } }),
+    el('FormField', { props: { name: 'improve', label: '{{question.improve}}', inputType: 'textarea', required: false } }),
+  ], 'Send feedback')], { settings: OVERLAY_SETTINGS }),
+];
+
+// ---- Pricing ----------------------------------------------------------------
+
+const planFields: VariableDef[] = [
+  { key: 'name', label: 'Plan name', type: 'text', required: true },
+  { key: 'price', label: 'Price', type: 'text', required: true },
+  { key: 'details', label: 'What is included', type: 'longtext' },
+  { key: 'link', label: 'Button link', type: 'url' },
+];
+
+const pricingPage = (cardStyles = {}): TemplatePage => experience([
+  el('Box', { styles: { alignItems: 'center', textAlign: 'center', marginBottom: '32px' } }, [heading('{{title}}', 'h2'), text('{{subtitle}}', { color: 'var(--fp-muted)' }, 'subtitle')]),
+  el('Grid', {}, [
+    el('Card', { repeat: { list: 'plans', as: 'plan' }, styles: cardStyles }, [
+      heading('{{plan.name}}', 'h3'),
+      heading('{{plan.price}}', 'h2', { color: 'var(--fp-primary)' }),
+      text('{{plan.details}}', { color: 'var(--fp-muted)' }, 'plan.details'),
+      button('{{cta.label}}', '{{plan.link}}'),
+    ]),
+  ]),
+], { padding: '32px 24px' });
+
+const pricingVariables = (title: string, sub: string, plans: Record<string, unknown>[], cta: string): VariableDef[] => [
+  textVar('title', 'Title', title, 'Text'),
+  longVar('subtitle', 'Subtitle', sub, 'Text'),
+  textVar('cta.label', 'Button label', cta, 'Text'),
+  listVar('plans', 'Plans', plans, planFields, 'Plans'),
+];
+
+const pricingTemplates = [
+  make('pricing', 'saas', 'Software tiers', 'Three plans for a subscription product.', ['saas', 'subscription'], THEME_INDIGO, pricingVariables('Simple, honest pricing', 'Start free. Upgrade when you need to.', [
+    { name: 'Free', price: '$0', details: 'For individuals getting started.', link: 'https://example.com/signup' },
+    { name: 'Pro', price: '$19 / month', details: 'For professionals who need more.', link: 'https://example.com/signup' },
+    { name: 'Team', price: '$49 / month', details: 'For teams working together.', link: 'https://example.com/signup' },
+  ], 'Get started'), [pricingPage()], { titleVariable: 'title' }),
+  make('pricing', 'services', 'Service packages', 'Fixed-price packages for service businesses.', ['services', 'agency'], THEME_TERRACOTTA, pricingVariables('Our packages', 'Clear prices, no surprises.', [
+    { name: 'Essential', price: '$500', details: 'A great starting point.', link: 'https://example.com/contact' },
+    { name: 'Complete', price: '$1,200', details: 'Our most popular choice.', link: 'https://example.com/contact' },
+  ], 'Enquire'), [pricingPage()], { titleVariable: 'title' }),
+  make('pricing', 'membership', 'Membership levels', 'Membership or community tiers.', ['membership', 'community'], THEME_MIDNIGHT, pricingVariables('Become a member', 'Join a community that helps you grow.', [
+    { name: 'Friend', price: '$5 / month', details: 'Support our work.', link: 'https://example.com/join' },
+    { name: 'Member', price: '$15 / month', details: 'All content and events.', link: 'https://example.com/join' },
+    { name: 'Patron', price: '$50 / month', details: 'Everything, plus private sessions.', link: 'https://example.com/join' },
+  ], 'Join'), [pricingPage({ border: '1px solid var(--fp-muted)' })], { titleVariable: 'title' }),
+];
+
+// ---- Testimonials -----------------------------------------------------------
+
+const quoteFields: VariableDef[] = [
+  { key: 'quote', label: 'Quote', type: 'longtext', required: true },
+  { key: 'name', label: 'Name', type: 'text', required: true },
+  { key: 'role', label: 'Role or company', type: 'text' },
+];
+
+const sampleQuotes = [
+  { quote: 'This changed how our whole team works.', name: 'Jordan P.', role: 'Operations lead' },
+  { quote: 'Easy to set up and even easier to love.', name: 'Aisha K.', role: 'Founder' },
+  { quote: 'The best decision we made this year.', name: 'Tom W.', role: 'Marketing director' },
+];
+
+const testimonialPage = (variant: 'cards' | 'large' | 'list'): TemplatePage => {
+  const quoteStyles: Record<string, string> = variant === 'large' ? { fontSize: '1.5rem', textAlign: 'center' } : { fontSize: '1.0625rem' };
+  const item = el(variant === 'cards' ? 'Card' : 'Box', { repeat: { list: 'quotes', as: 'item' }, styles: variant === 'large' ? { alignItems: 'center', marginBottom: '32px' } : variant === 'list' ? { paddingBottom: '20px', borderBottom: '1px solid var(--fp-surface)' } : {} }, [
+    text('"{{item.quote}}"', quoteStyles),
+    text('{{item.name}}', { fontWeight: 700 }),
+    text('{{item.role}}', { color: 'var(--fp-muted)' }, 'item.role'),
+  ]);
+  return experience([
+    heading('{{title}}', 'h2', { textAlign: 'center', marginBottom: '32px' }),
+    variant === 'cards' ? el('Grid', {}, [item]) : item,
+  ], { padding: '32px 24px' });
+};
+
+const testimonialVariables = (title: string): VariableDef[] => [
+  textVar('title', 'Title', title, 'Text'),
+  listVar('quotes', 'Customer quotes', sampleQuotes, quoteFields, 'Quotes'),
+];
+
+const testimonialTemplates = [
+  make('testimonials', 'cards', 'Quote cards', 'A tidy grid of customer quotes.', ['grid'], THEME_INDIGO, testimonialVariables('Loved by our customers'), [testimonialPage('cards')], { titleVariable: 'title' }),
+  make('testimonials', 'spotlight', 'Large quotes', 'Big, centered quotes with lots of room.', ['large', 'editorial'], THEME_TERRACOTTA, testimonialVariables('In their words'), [testimonialPage('large')], { titleVariable: 'title' }),
+  make('testimonials', 'list', 'Simple list', 'A quiet list that fits anywhere.', ['minimal'], THEME_MONO, testimonialVariables('What people say'), [testimonialPage('list')], { titleVariable: 'title' }),
+];
+
+export const EXPERIENCE_TEMPLATES: TemplateDefinition[] = [
+  ...pageTemplates, ...tourTemplates, ...formTemplates, ...demoTemplates, ...bannerTemplates, ...menuTemplates,
+  ...faqTemplates, ...popupTemplates, ...checklistTemplates, ...surveyTemplates, ...pricingTemplates, ...testimonialTemplates,
+];

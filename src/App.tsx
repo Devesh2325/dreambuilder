@@ -37,6 +37,7 @@ import { ThemeProvider } from './services/themeContext';
 
 // The rebuilt app, loaded separately so the old app doesn't pay for it.
 const NewApp = React.lazy(() => import('./app/AppRoot'));
+const PublicSitePage = React.lazy(() => import('./app/public/PublicSitePage'));
 
 export function App() {
   return (
@@ -49,6 +50,15 @@ export function App() {
             element={
               <React.Suspense fallback={null}>
                 <NewApp />
+              </React.Suspense>
+            }
+          />
+
+          <Route
+            path="/s/:slug/*"
+            element={
+              <React.Suspense fallback={null}>
+                <PublicSitePage />
               </React.Suspense>
             }
           />

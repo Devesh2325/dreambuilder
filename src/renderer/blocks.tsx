@@ -13,6 +13,15 @@ const withClass = (attrs: BlockRenderProps['attrs'], className: string) => ({
 
 const container = (className: string): Block => ({ attrs, children }) => <div {...withClass(attrs, className)}>{children}</div>;
 
+const Section: Block = ({ node, attrs, children }) => {
+  const anchor = asText(node.props.anchor);
+  return (
+    <section {...withClass(attrs, 'fp-section')} id={/^[a-zA-Z][\w-]*$/.test(anchor) ? anchor : undefined}>
+      {children}
+    </section>
+  );
+};
+
 const Heading: Block = ({ node, attrs }) => {
   const level = ['h1', 'h2', 'h3', 'h4'].includes(asText(node.props.level)) ? asText(node.props.level) : 'h2';
   return React.createElement(level, withClass(attrs, `fp-heading fp-${level}`), asText(node.props.text));
@@ -139,7 +148,11 @@ const Form: Block = ({ node, attrs, children, ctx }) => {
   const isLastStep = !isMultiStep || stepIndex === steps.length - 1;
 
   const visibleChildren = isMultiStep
-    ? children.map((child, index) => (node.children[index].type !== 'FormStep' || index === steps[stepIndex].index ? child : hideStep(child)))
+    ? children.map((child, index) => (
+        node.children[index].type === 'FormStep'
+          ? stepWrapper(child, index === steps[stepIndex].index, node.children[index].key)
+          : child
+      ))
     : children;
 
   const stepIsValid = () => {
@@ -208,9 +221,12 @@ const Form: Block = ({ node, attrs, children, ctx }) => {
   );
 };
 
-/** Steps stay mounted while hidden so typed answers are kept and submitted together. */
-function hideStep(child: React.ReactNode) {
-  return <div style={{ display: 'none' }} key={(child as React.ReactElement).key}>{child}</div>;
+/**
+ * Every step keeps the same wrapper, visible or not. Adding a wrapper only when hidden
+ * would make React rebuild the step and lose what the visitor typed.
+ */
+function stepWrapper(child: React.ReactNode, visible: boolean, key: string) {
+  return <div key={key} style={{ display: visible ? 'contents' : 'none' }}>{child}</div>;
 }
 
 const FormStep: Block = ({ node, attrs, children }) => (
@@ -290,11 +306,14 @@ const ScaleField: Block = ({ node, attrs, ctx }) => {
           </button>
         ))}
       </div>
-      {/* Visually hidden rather than type=hidden, so required is enforced by the browser. */}
+      {/*
+        Visually hidden rather than type=hidden or readOnly, because browsers skip
+        required checks on both of those. Its value only changes through the buttons.
+      */}
       <input
         name={name}
         value={value ?? ''}
-        readOnly
+        onChange={() => undefined}
         required={Boolean(node.props.required) && ctx.mode !== 'edit'}
         tabIndex={-1}
         aria-hidden="true"
@@ -391,7 +410,7 @@ const ChecklistProgress: Block = ({ attrs, ctx }) => {
 
 export const BLOCK_RENDERERS: Record<string, Block> = {
   Root: container('fp-page'),
-  Section: container('fp-section'),
+  Section,
   Container: container('fp-container'),
   Box: container('fp-box'),
   Card: container('fp-box fp-card'),

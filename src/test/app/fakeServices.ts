@@ -1,3 +1,4 @@
+import { createLocalServices } from '../../data/localServices';
 import { AppServices, AuthUser, SignUpInput, SignUpResult, WorkspaceMembership } from '../../data/services';
 
 export const TEST_USER: AuthUser = { id: 'user-1', email: 'alice@example.com', fullName: 'Alice' };
@@ -24,7 +25,9 @@ export function createFakeServices(options: FakeOptions = {}) {
     updatePassword: [] as string[],
   };
 
+  const local = createLocalServices();
   const services: AppServices = {
+    ...local,
     auth: {
       getUser: async () => currentUser,
       onChange(listener) {
@@ -57,6 +60,7 @@ export function createFakeServices(options: FakeOptions = {}) {
       },
     },
     workspaces: {
+      ...local.workspaces,
       listMemberships: async () => options.memberships ?? [],
     },
   };
