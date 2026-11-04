@@ -211,6 +211,16 @@ const formTemplates = [
     field('date', 'Preferred date', 'date'),
     field('notes', 'Anything else?', 'textarea', false),
   ])], { titleVariable: 'form.title' }),
+
+  make('form', 'feedback', 'Customer feedback', 'A rating scale with a follow-up question.', ['feedback', 'nps', 'rating'], THEME_INDIGO, [
+    textVar('form.title', 'Title', 'How did we do?', 'Form text'),
+    textVar('form.question', 'Rating question', 'How likely are you to recommend us?', 'Form text'),
+    textVar('form.thanks', 'Thank-you message', 'Thanks for your feedback!', 'Form text'),
+  ], [formPage('Send', '{{form.thanks}}', [
+    heading('{{form.title}}', 'h2'),
+    el('ScaleField', { props: { name: 'score', label: '{{form.question}}', min: 0, max: 10, required: true } }),
+    field('reason', 'What is the main reason for your score?', 'textarea', false),
+  ])], { titleVariable: 'form.title' }),
 ];
 
 // ---- Demos ------------------------------------------------------------------
@@ -278,16 +288,24 @@ const bannerTemplates = [
 
 // ---- Menus ------------------------------------------------------------------
 
+const parseMenu = (items: string) => items.split('\n').map((line) => {
+  const [label, href] = line.split(' | ');
+  return { label, href };
+});
+
 const menuVariables = (brand: string, links: string, cta: string): VariableDef[] => [
   textVar('brand', 'Brand name', brand, 'Menu'),
   { key: 'logo', label: 'Logo', type: 'image', group: 'Menu' },
-  { key: 'links', label: 'Links', type: 'longtext', default: links, group: 'Menu', help: 'One per line, as Label | link' },
+  listVar('links', 'Menu items', parseMenu(links), [
+    { key: 'label', label: 'Label', type: 'text', required: true },
+    { key: 'href', label: 'Link', type: 'url', required: true },
+  ], 'Menu'),
   { key: 'cta.label', label: 'Button label', type: 'text', default: cta, group: 'Menu' },
   urlVar('cta.link', 'Button link', 'https://example.com/signup', 'Menu'),
 ];
 
 const menuPage = (styles = {}): TemplatePage =>
-  experience([el('Navbar', { props: { brand: '{{brand}}', logo: '{{logo}}', linksText: '{{links}}', ctaText: '{{cta.label}}', ctaHref: '{{cta.link}}' }, styles })]);
+  experience([el('Navbar', { props: { brand: '{{brand}}', logo: '{{logo}}', links: '{{links}}', ctaText: '{{cta.label}}', ctaHref: '{{cta.link}}' }, styles })]);
 
 const menuTemplates = [
   make('menu', 'product', 'Product navigation', 'Links for a software product, with a sign-up button.', ['saas'], THEME_INDIGO, menuVariables('Acme', 'Features | /features\nPricing | /pricing\nDocs | /docs', 'Sign up'), [menuPage()]),
@@ -374,165 +392,7 @@ const popupTemplates = [
   ])], { background: 'transparent' })], { settings: OVERLAY_SETTINGS }),
 ];
 
-// ---- Checklists -------------------------------------------------------------
-
-const taskFields: VariableDef[] = [
-  { key: 'title', label: 'Task', type: 'text', required: true },
-  { key: 'description', label: 'Description', type: 'text' },
-  { key: 'link', label: 'Link', type: 'url' },
-];
-
-const checklistPage = (): TemplatePage => experience([
-  el('Card', { styles: { boxShadow: '0 20px 40px -12px rgba(15,23,42,.35)' } }, [
-    heading('{{title}}', 'h4'),
-    el('ChecklistProgress'),
-    el('ChecklistItem', { repeat: { list: 'tasks', as: 'task' }, props: { title: '{{task.title}}', description: '{{task.description}}', href: '{{task.link}}' } }),
-  ]),
-], { background: 'transparent' });
-
-const checklistTemplates = [
-  make('checklist', 'onboarding', 'New user onboarding', 'The first steps every new user should take.', ['onboarding'], THEME_INDIGO, [
-    textVar('title', 'Title', 'Get started', 'Text'),
-    listVar('tasks', 'Tasks', [
-      { title: 'Complete your profile', description: 'Add your name and photo.', link: '' },
-      { title: 'Create your first project', description: 'It only takes a minute.', link: '' },
-      { title: 'Invite a teammate', description: 'Work better together.', link: '' },
-    ], taskFields, 'Tasks'),
-  ], [checklistPage()], { settings: OVERLAY_SETTINGS, titleVariable: 'title' }),
-  make('checklist', 'store', 'Store setup', 'Help merchants get ready to sell.', ['commerce', 'setup'], THEME_EMERALD, [
-    textVar('title', 'Title', 'Set up your store', 'Text'),
-    listVar('tasks', 'Tasks', [
-      { title: 'Add your first product', description: '', link: '' },
-      { title: 'Set up payments', description: '', link: '' },
-      { title: 'Choose shipping rates', description: '', link: '' },
-      { title: 'Open your store', description: '', link: '' },
-    ], taskFields, 'Tasks'),
-  ], [checklistPage()], { settings: OVERLAY_SETTINGS, titleVariable: 'title' }),
-  make('checklist', 'adoption', 'Feature adoption', 'Encourage users to try key features.', ['adoption', 'engagement'], THEME_CORAL, [
-    textVar('title', 'Title', 'Make the most of your account', 'Text'),
-    listVar('tasks', 'Tasks', [
-      { title: 'Connect an integration', description: 'Bring your tools together.', link: '' },
-      { title: 'Create a report', description: 'See how things are going.', link: '' },
-      { title: 'Set a reminder', description: 'Never miss a deadline.', link: '' },
-    ], taskFields, 'Tasks'),
-  ], [checklistPage()], { settings: OVERLAY_SETTINGS, titleVariable: 'title' }),
-];
-
-// ---- Surveys ----------------------------------------------------------------
-
-const surveyPage = (children: El[], submitText: string): TemplatePage => experience([
-  el('Card', { styles: { boxShadow: '0 20px 40px -12px rgba(15,23,42,.35)' } }, [
-    el('Form', { props: { submitText, successMessage: '{{thanks}}' } }, children),
-  ]),
-], { background: 'transparent' });
-
-const surveyTemplates = [
-  make('survey', 'nps', 'NPS score', 'The standard 0 to 10 recommendation question.', ['nps', 'loyalty'], THEME_INDIGO, [
-    textVar('question', 'Question', 'How likely are you to recommend us to a friend?', 'Questions'),
-    textVar('followup', 'Follow-up', 'What is the main reason for your score?', 'Questions'),
-    textVar('thanks', 'Thank-you message', 'Thanks for your feedback!', 'Questions'),
-  ], [surveyPage([
-    el('ScaleField', { props: { name: 'score', label: '{{question}}', min: 0, max: 10, required: true } }),
-    el('FormField', { props: { name: 'reason', label: '{{followup}}', inputType: 'textarea', required: false } }),
-  ], 'Send')], { settings: OVERLAY_SETTINGS }),
-  make('survey', 'csat', 'Customer satisfaction', 'A quick 1 to 5 rating.', ['csat', 'support'], THEME_EMERALD, [
-    textVar('question', 'Question', 'How satisfied are you with our service?', 'Questions'),
-    textVar('thanks', 'Thank-you message', 'Thank you!', 'Questions'),
-  ], [surveyPage([el('ScaleField', { props: { name: 'rating', label: '{{question}}', min: 1, max: 5, required: true } })], 'Send')], { settings: OVERLAY_SETTINGS }),
-  make('survey', 'feedback', 'Product feedback', 'Ask open questions about your product.', ['feedback', 'research'], THEME_TERRACOTTA, [
-    textVar('question.like', 'First question', 'What do you like most?', 'Questions'),
-    textVar('question.improve', 'Second question', 'What should we improve?', 'Questions'),
-    textVar('thanks', 'Thank-you message', 'Thanks for helping us improve!', 'Questions'),
-  ], [surveyPage([
-    el('FormField', { props: { name: 'like', label: '{{question.like}}', inputType: 'textarea', required: true } }),
-    el('FormField', { props: { name: 'improve', label: '{{question.improve}}', inputType: 'textarea', required: false } }),
-  ], 'Send feedback')], { settings: OVERLAY_SETTINGS }),
-];
-
-// ---- Pricing ----------------------------------------------------------------
-
-const planFields: VariableDef[] = [
-  { key: 'name', label: 'Plan name', type: 'text', required: true },
-  { key: 'price', label: 'Price', type: 'text', required: true },
-  { key: 'details', label: 'What is included', type: 'longtext' },
-  { key: 'link', label: 'Button link', type: 'url' },
-];
-
-const pricingPage = (cardStyles = {}): TemplatePage => experience([
-  el('Box', { styles: { alignItems: 'center', textAlign: 'center', marginBottom: '32px' } }, [heading('{{title}}', 'h2'), text('{{subtitle}}', { color: 'var(--fp-muted)' }, 'subtitle')]),
-  el('Grid', {}, [
-    el('Card', { repeat: { list: 'plans', as: 'plan' }, styles: cardStyles }, [
-      heading('{{plan.name}}', 'h3'),
-      heading('{{plan.price}}', 'h2', { color: 'var(--fp-primary)' }),
-      text('{{plan.details}}', { color: 'var(--fp-muted)' }, 'plan.details'),
-      button('{{cta.label}}', '{{plan.link}}'),
-    ]),
-  ]),
-], { padding: '32px 24px' });
-
-const pricingVariables = (title: string, sub: string, plans: Record<string, unknown>[], cta: string): VariableDef[] => [
-  textVar('title', 'Title', title, 'Text'),
-  longVar('subtitle', 'Subtitle', sub, 'Text'),
-  textVar('cta.label', 'Button label', cta, 'Text'),
-  listVar('plans', 'Plans', plans, planFields, 'Plans'),
-];
-
-const pricingTemplates = [
-  make('pricing', 'saas', 'Software tiers', 'Three plans for a subscription product.', ['saas', 'subscription'], THEME_INDIGO, pricingVariables('Simple, honest pricing', 'Start free. Upgrade when you need to.', [
-    { name: 'Free', price: '$0', details: 'For individuals getting started.', link: 'https://example.com/signup' },
-    { name: 'Pro', price: '$19 / month', details: 'For professionals who need more.', link: 'https://example.com/signup' },
-    { name: 'Team', price: '$49 / month', details: 'For teams working together.', link: 'https://example.com/signup' },
-  ], 'Get started'), [pricingPage()], { titleVariable: 'title' }),
-  make('pricing', 'services', 'Service packages', 'Fixed-price packages for service businesses.', ['services', 'agency'], THEME_TERRACOTTA, pricingVariables('Our packages', 'Clear prices, no surprises.', [
-    { name: 'Essential', price: '$500', details: 'A great starting point.', link: 'https://example.com/contact' },
-    { name: 'Complete', price: '$1,200', details: 'Our most popular choice.', link: 'https://example.com/contact' },
-  ], 'Enquire'), [pricingPage()], { titleVariable: 'title' }),
-  make('pricing', 'membership', 'Membership levels', 'Membership or community tiers.', ['membership', 'community'], THEME_MIDNIGHT, pricingVariables('Become a member', 'Join a community that helps you grow.', [
-    { name: 'Friend', price: '$5 / month', details: 'Support our work.', link: 'https://example.com/join' },
-    { name: 'Member', price: '$15 / month', details: 'All content and events.', link: 'https://example.com/join' },
-    { name: 'Patron', price: '$50 / month', details: 'Everything, plus private sessions.', link: 'https://example.com/join' },
-  ], 'Join'), [pricingPage({ border: '1px solid var(--fp-muted)' })], { titleVariable: 'title' }),
-];
-
-// ---- Testimonials -----------------------------------------------------------
-
-const quoteFields: VariableDef[] = [
-  { key: 'quote', label: 'Quote', type: 'longtext', required: true },
-  { key: 'name', label: 'Name', type: 'text', required: true },
-  { key: 'role', label: 'Role or company', type: 'text' },
-];
-
-const sampleQuotes = [
-  { quote: 'This changed how our whole team works.', name: 'Jordan P.', role: 'Operations lead' },
-  { quote: 'Easy to set up and even easier to love.', name: 'Aisha K.', role: 'Founder' },
-  { quote: 'The best decision we made this year.', name: 'Tom W.', role: 'Marketing director' },
-];
-
-const testimonialPage = (variant: 'cards' | 'large' | 'list'): TemplatePage => {
-  const quoteStyles: Record<string, string> = variant === 'large' ? { fontSize: '1.5rem', textAlign: 'center' } : { fontSize: '1.0625rem' };
-  const item = el(variant === 'cards' ? 'Card' : 'Box', { repeat: { list: 'quotes', as: 'item' }, styles: variant === 'large' ? { alignItems: 'center', marginBottom: '32px' } : variant === 'list' ? { paddingBottom: '20px', borderBottom: '1px solid var(--fp-surface)' } : {} }, [
-    text('"{{item.quote}}"', quoteStyles),
-    text('{{item.name}}', { fontWeight: 700 }),
-    text('{{item.role}}', { color: 'var(--fp-muted)' }, 'item.role'),
-  ]);
-  return experience([
-    heading('{{title}}', 'h2', { textAlign: 'center', marginBottom: '32px' }),
-    variant === 'cards' ? el('Grid', {}, [item]) : item,
-  ], { padding: '32px 24px' });
-};
-
-const testimonialVariables = (title: string): VariableDef[] => [
-  textVar('title', 'Title', title, 'Text'),
-  listVar('quotes', 'Customer quotes', sampleQuotes, quoteFields, 'Quotes'),
-];
-
-const testimonialTemplates = [
-  make('testimonials', 'cards', 'Quote cards', 'A tidy grid of customer quotes.', ['grid'], THEME_INDIGO, testimonialVariables('Loved by our customers'), [testimonialPage('cards')], { titleVariable: 'title' }),
-  make('testimonials', 'spotlight', 'Large quotes', 'Big, centered quotes with lots of room.', ['large', 'editorial'], THEME_TERRACOTTA, testimonialVariables('In their words'), [testimonialPage('large')], { titleVariable: 'title' }),
-  make('testimonials', 'list', 'Simple list', 'A quiet list that fits anywhere.', ['minimal'], THEME_MONO, testimonialVariables('What people say'), [testimonialPage('list')], { titleVariable: 'title' }),
-];
-
 export const EXPERIENCE_TEMPLATES: TemplateDefinition[] = [
   ...pageTemplates, ...tourTemplates, ...formTemplates, ...demoTemplates, ...bannerTemplates, ...menuTemplates,
-  ...faqTemplates, ...popupTemplates, ...checklistTemplates, ...surveyTemplates, ...pricingTemplates, ...testimonialTemplates,
+  ...faqTemplates, ...popupTemplates,
 ];

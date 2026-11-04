@@ -4,7 +4,7 @@ After the script loads, `window.FlowPilot` is available. Check that it exists fi
 
 ## `FlowPilot.identify(userId)`
 
-Links activity to your own user ID, so checklist progress follows a person across devices.
+Links activity to your own user ID, so analytics can follow a person across devices.
 
 ```js
 window.FlowPilot?.identify('user_123');
@@ -48,9 +48,7 @@ window.FlowPilot?.track('{{PROJECT_ID}}', 'upgrade_clicked', { plan: 'pro' });
 | `demo_step_viewed` | A demo screen appeared |
 | `demo_completed` | The last demo screen was finished |
 | `faq_expanded` | An FAQ question was opened |
-| `checklist_item_completed` | A checklist item was ticked |
-| `checklist_completed` | Every checklist item was ticked |
-| `banner_dismissed`, `popup_dismissed`, `survey_dismissed`, `checklist_dismissed` | The experience was closed |
+| `banner_dismissed`, `popup_dismissed` | The experience was closed |
 
 Events are sent in batches every few seconds, so they take a moment to reach your dashboard.
 

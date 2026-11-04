@@ -11,8 +11,8 @@ FlowPilot lets you build websites, forms, product tours and other experiences fr
 | Type | How visitors see it |
 |---|---|
 | Website, Page | Hosted by FlowPilot at its own web address |
-| Tour, Banner, Popup, Checklist, Survey | Floats over your site, after you add one script |
-| Form, Demo, Menu, FAQ, Pricing, Testimonials | Sits inside your page, where you place a `<div>` |
+| Tour, Banner, Popup | Floats over your site, after you add one script |
+| Form, Demo, Menu, FAQ | Sits inside your page, where you place a `<div>` |
 
 Every type can also be opened directly at its web address, which is useful for sharing a form or demo as a link.
 

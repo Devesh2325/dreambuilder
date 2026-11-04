@@ -177,30 +177,6 @@ describe('experience player', () => {
     });
   });
 
-  describe('checklists', () => {
-    const content = buildContent('n', [
-      el('ChecklistProgress'),
-      el('ChecklistItem', { props: { title: 'Task A' } }),
-      el('ChecklistItem', { props: { title: 'Task B' } }),
-    ]);
-
-    it('loads saved progress, saves changes, and reports completion', async () => {
-      const key = Object.values(content.nodes).find((node) => node.props.title === 'Task A')!.id;
-      const saveChecklist = vi.fn();
-      const track = vi.fn();
-      render(
-        <ExperiencePlayer type="checklist" content={content} theme={DEFAULT_THEME} variables={{}} settings={{}}
-          host={host({ loadChecklist: async () => [key], saveChecklist, track })} />,
-      );
-      await waitFor(() => expect((screen.getByLabelText(/Task A/) as HTMLInputElement).checked).toBe(true));
-      expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('50');
-
-      fireEvent.click(screen.getByLabelText(/Task B/));
-      await waitFor(() => expect(saveChecklist).toHaveBeenCalled());
-      expect(track).toHaveBeenCalledWith('checklist_completed');
-    });
-  });
-
   describe('overlays', () => {
     it('closes a popup from its close button and backdrop', async () => {
       const content = buildContent('n', [el('Popup', {}, [el('Heading', { props: { text: 'Offer' } })])]);

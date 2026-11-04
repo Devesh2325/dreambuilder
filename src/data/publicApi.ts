@@ -25,11 +25,6 @@ export function createPublicApi(url: string, anonKey: string): PublicApi {
     submitForm: async (projectId, data, visitorId) => {
       await rpc('submit_form', { p_project: projectId, p_data: data, p_visitor: visitorId ?? null });
     },
-    getChecklistProgress: (projectId, visitorId) =>
-      rpc<string[]>('get_checklist_progress', { p_project: projectId, p_visitor: visitorId }),
-    saveChecklistProgress: async (projectId, visitorId, completed) => {
-      await rpc('save_checklist_progress', { p_project: projectId, p_visitor: visitorId, p_completed: completed });
-    },
     trackEvents: async (projectId, events) => {
       await rpc('track_events', { p_project: projectId, p_events: events });
     },

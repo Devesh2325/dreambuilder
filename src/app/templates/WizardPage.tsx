@@ -12,7 +12,7 @@ import { applyBranding, getTemplate, initialValues, projectFromTemplate } from '
 import { ROUTES } from '../routes';
 import { useServices } from '../session';
 import { VariableForm } from '../shared/VariableForm';
-import { EmptyState, ErrorNote, errorMessage, primaryButton } from '../shared/ui';
+import { EmptyState, ErrorNote, errorMessage, inputClass, primaryButton } from '../shared/ui';
 import { useWorkspace } from '../workspace';
 
 const DEVICE_BUTTONS = [
@@ -51,6 +51,7 @@ const Wizard: React.FC<{ templateId: string }> = ({ templateId }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [device, setDevice] = useState<keyof typeof DEVICE_WIDTHS>('desktop');
   const [slug, setSlug] = useState('');
+  const [projectName, setProjectName] = useState('');
 
   const theme: Theme = useMemo(() => applyBranding(template.themes[themeIndex].theme, branding), [template, themeIndex, branding]);
   const documents = useMemo(() => template.pages.map((page, position) => ({ ...page, position })), [template]);
@@ -64,18 +65,19 @@ const Wizard: React.FC<{ templateId: string }> = ({ templateId }) => {
         throw new Error('Please fix the highlighted fields.');
       }
       setErrors({});
-      return projects.create(projectFromTemplate(template, workspace!.organizationId, result.values, theme));
+      return projects.create(projectFromTemplate(template, workspace!.organizationId, result.values, theme, projectName));
     },
     onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project-details'] });
       navigate(ROUTES.project(id), { state: { justCreated: true } });
     },
   });
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+    <div className="app-scroll h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
       <header className="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <Link to={`${ROUTES.templates}?type=${template.type}`} aria-label="Back to templates" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+        <Link to={ROUTES.module(template.type)} aria-label={`Back to ${MODULES[template.type].plural}`} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="min-w-0">
@@ -107,10 +109,16 @@ const Wizard: React.FC<{ templateId: string }> = ({ templateId }) => {
           }}
           noValidate
         >
-          <div className="flex-1 overflow-y-auto p-5 space-y-8">
+          <div className="relative flex-1 overflow-y-auto p-5 space-y-8">
             <div>
               <h2 className="text-lg font-bold">Add your details</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">The preview updates as you type. You can change everything later.</p>
+            </div>
+
+            <div>
+              <label htmlFor="project-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Project name (optional)</label>
+              <input id="project-name" maxLength={200} className={inputClass} placeholder={template.title} value={projectName} onChange={(event) => setProjectName(event.target.value)} />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Only you see this, in your project list.</p>
             </div>
 
             <VariableForm defs={template.variables} values={values} errors={errors} onChange={setValues} />

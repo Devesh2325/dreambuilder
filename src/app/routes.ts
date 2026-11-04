@@ -1,3 +1,6 @@
+import { MODULES } from '../core/modules';
+import { ProjectType } from '../core/schema';
+
 export const ROUTES = {
   home: '/',
   login: '/login',
@@ -5,6 +8,7 @@ export const ROUTES = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   templates: '/templates',
+  module: (type: ProjectType) => MODULES[type].path,
   newFromTemplate: (id: string) => `/new/${id}`,
   project: (id: string) => `/projects/${id}`,
   studio: (id: string) => `/studio/${id}`,

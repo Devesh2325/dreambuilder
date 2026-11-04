@@ -99,7 +99,6 @@ function createHost(parent: HTMLElement): { host: HTMLElement; mount: HTMLElemen
 
 function playerHost(projectId: string, frequencyFinish?: (reason: 'closed' | 'completed') => void): PlayerHost {
   const stepKey = `fp_step_${projectId}`;
-  const progressVisitor = visitorId();
   return {
     targetDocument: document,
     track: (type, metadata) => track(projectId, type, metadata),
@@ -117,10 +116,6 @@ function playerHost(projectId: string, frequencyFinish?: (reason: 'closed' | 'co
     onFinish: (reason) => {
       safeStorage('session')?.removeItem(stepKey);
       frequencyFinish?.(reason);
-    },
-    loadChecklist: () => api.getChecklistProgress(projectId, progressVisitor),
-    saveChecklist: (completed) => {
-      api.saveChecklistProgress(projectId, progressVisitor, completed).catch(() => undefined);
     },
   };
 }
@@ -346,7 +341,7 @@ function checkPickerMode(): boolean {
 // --- Public API ----------------------------------------------------------------
 
 export interface FlowPilotApi {
-  /** Links activity to your own user id, so progress follows them across devices. */
+  /** Links activity to your own user id, so analytics can follow a person across devices. */
   identify: (userId: string) => void;
   /** Shows an experience now, ignoring its trigger rules. */
   start: (projectId: string) => Promise<void>;

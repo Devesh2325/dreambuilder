@@ -117,6 +117,8 @@ export interface ProjectRepository {
   update(id: string, patch: ProjectPatch): Promise<void>;
   remove(id: string): Promise<void>;
   listDocuments(projectId: string): Promise<DocumentRecord[]>;
+  /** Every document in a workspace, for the details shown in project tables. */
+  listAllDocuments(organizationId: string): Promise<DocumentRecord[]>;
   createDocument(project: ProjectRecord, doc: NewDocument, position: number): Promise<DocumentRecord>;
   saveDocument(id: string, patch: DocumentPatch, expectedRevision: number): Promise<SaveResult>;
   removeDocument(id: string): Promise<void>;
@@ -161,6 +163,8 @@ export interface SubmissionRecord {
 
 export interface FormRepository {
   listSubmissions(projectId: string): Promise<SubmissionRecord[]>;
+  /** Number of responses per project id. */
+  countByProject(organizationId: string): Promise<Record<string, number>>;
   removeSubmission(id: string): Promise<void>;
 }
 
@@ -237,8 +241,6 @@ export interface PublicApi {
   getPublishedSite(slug: string): Promise<PublishedSnapshot | null>;
   getPublishedExperience(projectId: string): Promise<PublishedSnapshot | null>;
   submitForm(projectId: string, data: Record<string, unknown>, visitorId?: string): Promise<void>;
-  getChecklistProgress(projectId: string, visitorId: string): Promise<string[]>;
-  saveChecklistProgress(projectId: string, visitorId: string, completed: string[]): Promise<void>;
   trackEvents(projectId: string, events: TrackedEvent[]): Promise<void>;
 }
 

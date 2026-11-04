@@ -16,8 +16,6 @@ export interface PlayerHost {
   /** Step to continue from, for tours and demos resumed later. */
   initialStep?: number;
   onStepChange?: (step: number) => void;
-  loadChecklist?: () => Promise<string[]>;
-  saveChecklist?: (completed: string[]) => void;
   navigate?: RenderContext['navigate'];
 }
 
@@ -232,68 +230,6 @@ const DemoPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
   );
 };
 
-const useChecklist = (tree: RenderNode, host: PlayerHost) => {
-  const allIds = useMemo(() => {
-    const ids: string[] = [];
-    const visit = (node: RenderNode) => {
-      if (node.type === 'ChecklistItem') ids.push(node.key);
-      node.children.forEach(visit);
-    };
-    visit(tree);
-    return ids;
-  }, [tree]);
-  const [completed, setCompleted] = useState<string[]>([]);
-
-  useEffect(() => {
-    let active = true;
-    host.loadChecklist?.().then((saved) => {
-      if (active) setCompleted(saved);
-    }).catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, [host]);
-
-  const toggle = (id: string) => {
-    setCompleted((current) => {
-      const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-      host.saveChecklist?.(next);
-      if (!current.includes(id)) host.track?.('checklist_item_completed');
-      if (allIds.length > 0 && allIds.every((item) => next.includes(item)) && !current.includes(id)) {
-        host.track?.('checklist_completed');
-      }
-      return next;
-    });
-  };
-
-  return {
-    isChecklistItemDone: (id: string) => completed.includes(id),
-    toggleChecklistItem: toggle,
-    checklistDone: allIds.filter((id) => completed.includes(id)).length,
-    checklistTotal: allIds.length,
-  };
-};
-
-const FloatingPanel: React.FC<{ children: React.ReactNode; label: string }> = ({ children, label }) => {
-  const [isOpen, setIsOpen] = useState(true);
-  return (
-    <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 2147483000, width: 360, maxWidth: 'calc(100vw - 40px)' }}>
-      {isOpen && <div style={{ maxHeight: '70vh', overflow: 'auto', marginBottom: 8 }}>{children}</div>}
-      <div style={{ textAlign: 'right' }}>
-        <button type="button" className="fp-btn fp-btn-primary" onClick={() => setIsOpen(!isOpen)} aria-expanded={isOpen}>
-          {isOpen ? 'Hide' : label}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const ChecklistPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: PlayerHost; floating: boolean }> = ({ tree, ctxBase, host, floating }) => {
-  const checklist = useChecklist(tree, host);
-  const body = <RenderedNode node={tree} ctx={{ ...ctxBase, ...checklist }} />;
-  return floating ? <FloatingPanel label="Checklist">{body}</FloatingPanel> : body;
-};
-
 /** Plays any published experience. The embed, hosted links and previews all use this. */
 export const ExperiencePlayer: React.FC<ExperiencePlayerProps> = ({ type, content, theme, variables, settings, host, mode = 'live' }) => {
   const [isClosed, setIsClosed] = useState(false);
@@ -328,8 +264,6 @@ export const ExperiencePlayer: React.FC<ExperiencePlayerProps> = ({ type, conten
     body = <TourPlayer tree={tree} ctxBase={ctxBase} host={closingHost} />;
   } else if (type === 'demo') {
     body = <DemoPlayer tree={tree} ctxBase={ctxBase} host={host} />;
-  } else if (type === 'checklist') {
-    body = <ChecklistPlayer tree={tree} ctxBase={ctxBase} host={host} floating={delivery === 'overlay'} />;
   } else if (type === 'banner') {
     const edge = settings.position === 'bottom' ? { bottom: 0 } : { top: 0 };
     body = (
@@ -348,8 +282,6 @@ export const ExperiencePlayer: React.FC<ExperiencePlayerProps> = ({ type, conten
         <RenderedNode node={tree} ctx={ctxBase} />
       </div>
     );
-  } else if (type === 'survey') {
-    body = <FloatingPanel label="Feedback"><RenderedNode node={tree} ctx={ctxBase} /></FloatingPanel>;
   } else {
     body = <RenderedNode node={tree} ctx={ctxBase} />;
   }

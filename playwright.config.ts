@@ -8,6 +8,7 @@ const HOST_PORT = 5198;
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
+  expect: { timeout: 10_000 },
   fullyParallel: true,
   reporter: 'list',
   outputDir: 'test-results',

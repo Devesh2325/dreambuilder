@@ -11,6 +11,7 @@ import { ProjectPreview } from '../experience/ProjectPreview';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
 import { RightPanel } from './RightPanel';
+import { handleStudioShortcut } from './shortcuts';
 import { useStudio } from './store';
 
 const DEVICE_BUTTONS = [
@@ -77,48 +78,10 @@ const Editor: React.FC = () => {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const navigate = useNavigate();
 
-  // The canvas lives in an iframe, so shortcuts must listen to both documents.
   useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName;
-      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable;
-      const mod = event.ctrlKey || event.metaKey;
-      const state = useStudio.getState();
-
-      if (mod && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        void state.saveNow();
-        return;
-      }
-      if (isTyping) return;
-
-      if (mod && event.key.toLowerCase() === 'z') {
-        event.preventDefault();
-        if (event.shiftKey) state.redo();
-        else state.undo();
-      } else if (mod && event.key.toLowerCase() === 'y') {
-        event.preventDefault();
-        state.redo();
-      } else if (mod && event.key.toLowerCase() === 'd' && state.selectedId) {
-        event.preventDefault();
-        state.duplicateBlock(state.selectedId);
-      } else if ((event.key === 'Delete' || event.key === 'Backspace') && state.selectedId) {
-        event.preventDefault();
-        state.removeBlock(state.selectedId);
-      } else if (event.key === 'Escape') {
-        state.select(null);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    const frame = document.querySelector<HTMLIFrameElement>('iframe[title="Design canvas"]');
-    const frameDoc = frame?.contentDocument;
-    frameDoc?.addEventListener('keydown', handler);
-    return () => {
-      window.removeEventListener('keydown', handler);
-      frameDoc?.removeEventListener('keydown', handler);
-    };
-  }, [isPreviewing]);
+    window.addEventListener('keydown', handleStudioShortcut);
+    return () => window.removeEventListener('keydown', handleStudioShortcut);
+  }, []);
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
@@ -135,8 +98,9 @@ const Editor: React.FC = () => {
   if (!project || !draft) return null;
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
-      <header className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+    <div className="app-scroll h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+      <header className="h-12 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-2 min-w-0">
         <button
           type="button"
           aria-label="Back to project"
@@ -150,8 +114,9 @@ const Editor: React.FC = () => {
         </button>
         <h1 className="text-sm font-semibold truncate max-w-[220px]">{draft.title}</h1>
         {readOnly ? <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">View only</span> : <SaveIndicator />}
+        </div>
 
-        <div className="mx-auto flex items-center gap-1">
+        <div className="flex items-center gap-1">
           <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} className={iconButton} onClick={undo}><Undo2 className="w-4 h-4" /></button>
           <button type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} className={iconButton} onClick={redo}><Redo2 className="w-4 h-4" /></button>
           <span className="w-px h-5 mx-1 bg-slate-200 dark:bg-slate-700" />
@@ -169,11 +134,13 @@ const Editor: React.FC = () => {
           <button type="button" aria-label="Zoom in" className={iconButton} onClick={() => setZoom(zoom + 10)}><ZoomIn className="w-4 h-4" /></button>
         </div>
 
-        <button type="button" className={secondaryButton} onClick={() => setIsPreviewing(true)}>
-          <Eye className="w-4 h-4" aria-hidden="true" />
-          Preview
-        </button>
-        {!readOnly && <button type="button" className={primaryButton} onClick={() => setIsPublishing(true)}>Publish</button>}
+        <div className="flex items-center justify-end gap-2">
+          <button type="button" className={`${secondaryButton} !py-1.5`} onClick={() => setIsPreviewing(true)}>
+            <Eye className="w-4 h-4" aria-hidden="true" />
+            Preview
+          </button>
+          {!readOnly && <button type="button" className={`${primaryButton} !py-1.5`} onClick={() => setIsPublishing(true)}>Publish</button>}
+        </div>
       </header>
 
       <ConflictBanner />
@@ -196,7 +163,7 @@ const Editor: React.FC = () => {
           />
         </div>
       ) : (
-        <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-h-0 flex overflow-hidden">
           <LeftPanel />
           <Canvas />
           <RightPanel />

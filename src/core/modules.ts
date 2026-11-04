@@ -19,11 +19,18 @@ export interface ModuleInfo {
   delivery: DeliveryKind;
   /** Shown first in navigation. */
   primary: boolean;
+  /** Address of this module's own list page. */
+  path: string;
 }
+
+const PATHS: Record<ProjectType, string> = {
+  website: 'websites', page: 'pages', tour: 'tours', form: 'forms', demo: 'demos',
+  banner: 'banners', menu: 'menus', faq: 'faqs', popup: 'popups',
+};
 
 const info = (
   type: ProjectType, label: string, plural: string, description: string, icon: string, delivery: DeliveryKind, primary = false,
-): ModuleInfo => ({ type, label, plural, description, icon, delivery, primary });
+): ModuleInfo => ({ type, label, plural, description, icon, delivery, primary, path: `/${PATHS[type]}` });
 
 export const MODULES: Record<ProjectType, ModuleInfo> = {
   website: info('website', 'Website', 'Websites', 'A complete multi-page website with shared navigation.', 'Globe', 'site', true),
@@ -35,10 +42,6 @@ export const MODULES: Record<ProjectType, ModuleInfo> = {
   menu: info('menu', 'Menu', 'Menus', 'A navigation bar you can drop into any site.', 'Menu', 'inline'),
   faq: info('faq', 'FAQ', 'FAQs', 'Answer common questions with an accordion.', 'HelpCircle', 'inline'),
   popup: info('popup', 'Popup', 'Popups', 'Offers and messages shown at the right moment.', 'AppWindow', 'overlay'),
-  checklist: info('checklist', 'Checklist', 'Checklists', 'Onboarding tasks that remember each visitor\'s progress.', 'CheckSquare', 'overlay'),
-  survey: info('survey', 'Survey', 'Surveys', 'NPS and feedback questions inside your product.', 'Star', 'overlay'),
-  pricing: info('pricing', 'Pricing table', 'Pricing tables', 'Plans and prices to place on any page.', 'DollarSign', 'inline'),
-  testimonials: info('testimonials', 'Testimonials', 'Testimonials', 'Customer quotes that build trust.', 'MessageSquareQuote', 'inline'),
 };
 
 export const MODULE_LIST = Object.values(MODULES);

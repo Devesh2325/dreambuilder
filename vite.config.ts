@@ -8,6 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Docs load on demand. Prebundling stops Vite reloading the page on first visit.
+  optimizeDeps: { include: ['react-markdown'] },
   // An explicit IPv4 address makes both localhost and 127.0.0.1 work on Windows, where
   // the default listens on IPv6 only. strictPort reports a busy port instead of
   // silently moving to another one.

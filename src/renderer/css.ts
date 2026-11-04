@@ -82,11 +82,12 @@ export function themeCssVariables(theme: Theme): string {
     .join('');
 }
 
-const KNOWN_GOOGLE_FONTS = new Set([
+export const GOOGLE_FONTS = [
   'Inter', 'Plus Jakarta Sans', 'Poppins', 'Outfit', 'Roboto', 'DM Sans', 'Manrope', 'Sora', 'Montserrat',
   'Work Sans', 'Rubik', 'Nunito', 'Space Grotesk', 'Syne', 'Righteous', 'Playfair Display', 'Lora',
   'Merriweather', 'Cinzel', 'Bodoni Moda', 'JetBrains Mono', 'Fira Code', 'Space Mono', 'IBM Plex Mono',
-]);
+];
+const KNOWN_GOOGLE_FONTS = new Set(GOOGLE_FONTS);
 
 export function googleFontsUrl(theme: Theme): string | null {
   const families = [...new Set([theme.fontHeading, theme.fontBody])].filter((font) => KNOWN_GOOGLE_FONTS.has(font));
@@ -128,6 +129,8 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-nav-links{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
 :where(.fp-root) .fp-nav-links a{text-decoration:none;font-weight:500}
 :where(.fp-root) .fp-nav-links a[aria-current=page]{color:var(--fp-primary)}
+:where(.fp-root) .fp-nav-toggle{display:none;background:none;border:0;font-size:1.5rem;line-height:1;padding:4px 8px;color:inherit;cursor:pointer}
+@media (max-width:640px){:where(.fp-root) .fp-nav-toggle{display:block}:where(.fp-root) .fp-nav-links{display:none;flex-direction:column;align-items:flex-start;width:100%}:where(.fp-root) .fp-nav-links[data-open=true]{display:flex}}
 :where(.fp-root) .fp-accordion{border-bottom:1px solid color-mix(in srgb,var(--fp-text) 15%,transparent);padding:14px 0}
 :where(.fp-root) .fp-accordion summary{cursor:pointer;font-weight:600}
 :where(.fp-root) .fp-accordion p{margin-top:8px;color:var(--fp-muted);white-space:pre-line}
@@ -144,8 +147,6 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-scale{display:flex;flex-wrap:wrap;gap:6px}
 :where(.fp-root) .fp-scale button{min-width:38px;height:38px;font:inherit;background:var(--fp-surface);color:var(--fp-text);border:1px solid color-mix(in srgb,var(--fp-text) 20%,transparent);border-radius:var(--fp-radius);cursor:pointer}
 :where(.fp-root) .fp-scale button[aria-pressed=true]{background:var(--fp-primary);color:#fff}
-:where(.fp-root) .fp-check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;cursor:pointer}
-:where(.fp-root) .fp-check-item[data-done=true] strong{text-decoration:line-through;opacity:.6}
 :where(.fp-root) .fp-step{background:var(--fp-background);border-radius:var(--fp-radius);padding:20px;width:360px;max-width:100%;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 40px -12px rgba(15,23,42,.35)}
 :where(.fp-root) .fp-screen{position:relative;width:100%;overflow:hidden;border-radius:var(--fp-radius)}
 :where(.fp-root) .fp-screen>img{width:100%}

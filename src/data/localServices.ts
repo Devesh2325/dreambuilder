@@ -1,4 +1,4 @@
-import { DEFAULT_THEME } from '../core/schema';
+import { DEFAULT_THEME, PROJECT_TYPES } from '../core/schema';
 import { PLAN_LIMITS } from '../types/auth';
 import {
   AnalyticsRow, AppServices, AssetRecord, AuthUser, DocumentRecord, InvitationRecord, MemberRecord, ProjectRecord,
@@ -37,7 +37,6 @@ interface LocalState {
   versions: StoredVersion[];
   assets: (AssetRecord & { organizationId: string })[];
   submissions: (SubmissionRecord & { projectId: string })[];
-  checklists: Record<string, string[]>;
   events: LocalEvent[];
   invitations: (InvitationRecord & { organizationId: string; token: string; accepted: boolean })[];
 }
@@ -54,7 +53,6 @@ const emptyState = (): LocalState => ({
   versions: [],
   assets: [],
   submissions: [],
-  checklists: {},
   events: [],
   invitations: [],
 });
@@ -62,7 +60,11 @@ const emptyState = (): LocalState => ({
 function load(): LocalState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? { ...emptyState(), ...JSON.parse(raw) } : emptyState();
+    if (!raw) return emptyState();
+    const state: LocalState = { ...emptyState(), ...JSON.parse(raw) };
+    // Saved demo data can include modules that no longer exist.
+    state.projects = state.projects.filter((project) => PROJECT_TYPES.includes(project.type));
+    return state;
   } catch {
     return emptyState();
   }
@@ -260,6 +262,11 @@ export function createLocalServices(): AppServices {
       async listDocuments(projectId) {
         return load().documents.filter((d) => d.projectId === projectId).sort((a, b) => a.position - b.position);
       },
+      async listAllDocuments(organizationId) {
+        const state = load();
+        const ids = new Set(state.projects.filter((p) => p.organizationId === organizationId).map((p) => p.id));
+        return state.documents.filter((d) => ids.has(d.projectId));
+      },
       async createDocument(project, doc, position) {
         return update((state) => {
           if (state.documents.some((d) => d.projectId === project.id && d.slug === doc.slug)) {
@@ -393,6 +400,15 @@ export function createLocalServices(): AppServices {
       async listSubmissions(projectId) {
         return load().submissions.filter((s) => s.projectId === projectId);
       },
+      async countByProject(organizationId) {
+        const state = load();
+        const ids = new Set(state.projects.filter((p) => p.organizationId === organizationId).map((p) => p.id));
+        const counts: Record<string, number> = {};
+        for (const row of state.submissions) {
+          if (ids.has(row.projectId)) counts[row.projectId] = (counts[row.projectId] ?? 0) + 1;
+        }
+        return counts;
+      },
       async removeSubmission(id) {
         update((state) => {
           state.submissions = state.submissions.filter((s) => s.id !== id);
@@ -495,14 +511,6 @@ export function createLocalServices(): AppServices {
           if (data._hp) return;
           const { _hp, ...answers } = data;
           state.submissions.unshift({ id: uuid(), projectId, data: answers, createdAt: now() });
-        });
-      },
-      async getChecklistProgress(projectId, visitorId) {
-        return load().checklists[`${projectId}:${visitorId}`] ?? [];
-      },
-      async saveChecklistProgress(projectId, visitorId, completed) {
-        update((state) => {
-          state.checklists[`${projectId}:${visitorId}`] = completed;
         });
       },
       async trackEvents(projectId, events) {

@@ -78,42 +78,61 @@ const Divider: Block = ({ attrs }) => <hr {...withClass(attrs, 'fp-divider')} />
 
 const Spacer: Block = ({ node, attrs }) => <div {...attrs} style={{ height: Number(node.props.height) || 0 }} />;
 
-/** Parses "Label | link" lines. */
-export function parseLinks(text: string): NavLink[] {
-  return text
-    .split('\n')
-    .map((line) => line.split('|').map((part) => part.trim()))
-    .filter(([label]) => label)
-    .map(([label, href]) => ({ label, href: safeUrl(href) }));
+interface MenuLink {
+  label?: unknown;
+  href?: unknown;
 }
 
 const Navbar: Block = ({ node, attrs, ctx }) => {
-  const custom = asText(node.props.linksText);
-  const links = custom.trim() ? parseLinks(custom) : (ctx.navLinks ?? []);
+  const [isOpen, setIsOpen] = useState(false);
+  const custom = Array.isArray(node.props.links) ? (node.props.links as MenuLink[]) : [];
+  // With no links of its own, the menu lists the website's pages.
+  const links: NavLink[] = custom.length > 0
+    ? custom
+        .filter((link) => asText(link.label))
+        .map((link) => {
+          const href = safeUrl(link.href);
+          return { label: asText(link.label), href, current: ctx.navLinks?.some((page) => page.current && page.href === href) };
+        })
+    : (ctx.navLinks ?? []);
   const logo = safeUrl(node.props.logo, '');
+  const brand = asText(node.props.brand);
   const ctaText = asText(node.props.ctaText);
   const ctaHref = safeUrl(node.props.ctaHref);
   const homeHref = ctx.navLinks?.[0]?.href ?? '#';
+  const go = (event: React.MouseEvent, href: string) => {
+    setIsOpen(false);
+    handleLinkClick(event, href, ctx);
+  };
 
   return (
     <nav {...withClass(attrs, 'fp-nav')} aria-label="Main">
-      <a className="fp-nav-brand" href={homeHref} onClick={(event) => handleLinkClick(event, homeHref, ctx)}>
-        {logo && <img src={logo} alt="" />}
-        <span>{asText(node.props.brand)}</span>
+      <a className="fp-nav-brand" href={homeHref} onClick={(event) => go(event, homeHref)}>
+        {logo && <img src={logo} alt={node.props.showBrand === false ? brand : ''} />}
+        {node.props.showBrand !== false && <span>{brand}</span>}
       </a>
-      <div className="fp-nav-links">
+      <button
+        type="button"
+        className="fp-nav-toggle"
+        aria-label={isOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={isOpen}
+        onClick={() => ctx.mode !== 'edit' && setIsOpen(!isOpen)}
+      >
+        {isOpen ? '×' : '☰'}
+      </button>
+      <div className="fp-nav-links" data-open={isOpen}>
         {links.map((link) => (
           <a
             key={`${link.label}${link.href}`}
             href={link.href}
             aria-current={link.current ? 'page' : undefined}
-            onClick={(event) => handleLinkClick(event, link.href, ctx)}
+            onClick={(event) => go(event, link.href)}
           >
             {link.label}
           </a>
         ))}
         {ctaText && (
-          <a className="fp-btn fp-btn-primary" href={ctaHref} onClick={(event) => handleLinkClick(event, ctaHref, ctx)}>
+          <a className="fp-btn fp-btn-primary" href={ctaHref} onClick={(event) => go(event, ctaHref)}>
             {ctaText}
           </a>
         )}
@@ -376,38 +395,6 @@ const Popup: Block = ({ node, attrs, children, ctx }) => (
   </div>
 );
 
-const ChecklistItem: Block = ({ node, attrs, ctx }) => {
-  const done = ctx.isChecklistItemDone?.(node.key) ?? false;
-  const href = safeUrl(node.props.href, '');
-  const title = asText(node.props.title);
-  return (
-    <label {...withClass(attrs, 'fp-check-item')} data-done={done}>
-      <input
-        type="checkbox"
-        data-fp-checklist-item
-        checked={done}
-        disabled={ctx.mode === 'edit'}
-        onChange={() => ctx.toggleChecklistItem?.(node.key)}
-      />
-      <span>
-        <strong>{href ? <a href={href}>{title}</a> : title}</strong>
-        {asText(node.props.description) && <span style={{ display: 'block', opacity: 0.75 }}>{asText(node.props.description)}</span>}
-      </span>
-    </label>
-  );
-};
-
-const ChecklistProgress: Block = ({ attrs, ctx }) => {
-  const total = ctx.checklistTotal ?? 0;
-  const done = ctx.checklistDone ?? 0;
-  const percent = total ? Math.round((done / total) * 100) : 0;
-  return (
-    <div {...withClass(attrs, 'fp-progress')} role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
-      <span style={{ width: `${percent}%` }} />
-    </div>
-  );
-};
-
 export const BLOCK_RENDERERS: Record<string, Block> = {
   Root: container('fp-page'),
   Section,
@@ -433,6 +420,4 @@ export const BLOCK_RENDERERS: Record<string, Block> = {
   DemoHotspot,
   Banner,
   Popup,
-  ChecklistItem,
-  ChecklistProgress,
 };

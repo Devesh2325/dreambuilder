@@ -79,7 +79,8 @@ interface StudioState {
   updateDraft: (change: (draft: Draft<ProjectDraft>) => void, key?: string) => void;
 
   setActiveDocument: (id: string) => void;
-  addPage: (title: string, slug: string) => Promise<void>;
+  /** Opens the new page, unless the caller is working elsewhere and asks it not to. */
+  addPage: (title: string, slug: string, options?: { open?: boolean }) => Promise<void>;
   deletePage: (id: string) => Promise<void>;
   updatePage: (id: string, patch: { title?: string; slug?: string; seo?: SeoSettings }) => void;
 
@@ -346,7 +347,8 @@ export const useStudio = create<StudioState>((set, get) => {
       if (!doc) return;
       editDocument(doc.id, (content) => {
         Object.assign(content.nodes[id], patch);
-      }, `node:${id}:${Object.keys(patch).join(',')}`);
+      // Only typing a name merges into one undo step. Each toggle is its own.
+      }, 'name' in patch ? `node:${id}:name` : undefined);
     },
 
     updateDraft: (change, key) => {
@@ -361,7 +363,7 @@ export const useStudio = create<StudioState>((set, get) => {
 
     setActiveDocument: (id) => set({ activeDocumentId: id, selectedId: null, hoveredId: null }),
 
-    addPage: async (title, slug) => {
+    addPage: async (title, slug, options = {}) => {
       const { services, project, documents } = get();
       if (!services || !project) throw new Error('Editor is not ready');
       await get().saveNow();
@@ -378,7 +380,8 @@ export const useStudio = create<StudioState>((set, get) => {
       };
       const position = Math.max(0, ...documents.map((d) => d.position)) + 1;
       const record = await services.projects.createDocument(project, { kind: 'page', title, slug, content }, position);
-      set((state) => ({ documents: [...state.documents, record], activeDocumentId: record.id, selectedId: null }));
+      if (options.open === false) set((state) => ({ documents: [...state.documents, record] }));
+      else set((state) => ({ documents: [...state.documents, record], activeDocumentId: record.id, selectedId: null }));
     },
 
     deletePage: async (id) => {

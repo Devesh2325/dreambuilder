@@ -114,22 +114,15 @@ export interface RenderNode {
   children: RenderNode[];
 }
 
-export interface ExpandOptions {
-  /** The editor keeps hidden and conditional nodes visible so they can be selected. */
-  includeHidden?: boolean;
-}
-
 /** Turns a stored document into the tree to draw: resolves tokens, repeats and conditions. */
 export function expandContent(
   content: DocContent,
   values: VariableValues,
-  options: ExpandOptions = {},
 ): RenderNode | null {
   const expandOne = (id: string, scope: VariableValues, suffix: string): RenderNode[] => {
     const node = content.nodes[id];
     if (!node) return [];
-    if (node.hidden && !options.includeHidden) return [];
-    if (!options.includeHidden && !evaluateShowIf(node.showIf, scope)) return [];
+    if (node.hidden || !evaluateShowIf(node.showIf, scope)) return [];
 
     const build = (nodeScope: VariableValues, instanceSuffix: string): RenderNode => ({
       key: `${id}${instanceSuffix}`,

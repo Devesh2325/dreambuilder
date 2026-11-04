@@ -67,16 +67,14 @@ export const BLOCK_META: Record<string, BlockMeta> = {
   },
   Navbar: {
     type: 'Navbar', label: 'Navigation', category: 'content', icon: 'Menu',
-    defaultProps: { brand: 'Brand', logo: '', ctaText: '', ctaHref: '#', linksText: '' },
+    defaultProps: { brand: 'Brand', showBrand: true, logo: '', links: [], ctaText: '', ctaHref: '#' },
     fields: [
+      { key: 'links', label: 'Menu items', type: 'menu' },
       text('brand', 'Brand name'),
+      { key: 'showBrand', label: 'Show the brand name', type: 'boolean' },
       { key: 'logo', label: 'Logo', type: 'image' },
       text('ctaText', 'Button label'),
       url('ctaHref', 'Button link'),
-      {
-        key: 'linksText', label: 'Links', type: 'longtext',
-        help: 'One per line, as Label | link. Leave empty to list the website pages.',
-      },
     ],
   },
   Accordion: {
@@ -168,15 +166,6 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     type: 'Popup', label: 'Popup', category: 'interactive', icon: 'AppWindow', isContainer: true,
     defaultProps: { dismissible: true },
     fields: [{ key: 'dismissible', label: 'Can be closed', type: 'boolean' }],
-  },
-  ChecklistItem: {
-    type: 'ChecklistItem', label: 'Checklist item', category: 'interactive', icon: 'CheckSquare',
-    defaultProps: { title: 'Do this first', description: '', href: '' },
-    fields: [text('title', 'Title'), text('description', 'Description'), url('href', 'Link')],
-  },
-  ChecklistProgress: {
-    type: 'ChecklistProgress', label: 'Progress bar', category: 'interactive', icon: 'LoaderCircle',
-    defaultProps: {}, fields: [],
   },
 };
 

@@ -42,7 +42,7 @@ export const ImageInput: React.FC<{
           aria-describedby={describedBy}
           onChange={(event) => onChange(event.target.value)}
         />
-        <label className="shrink-0 inline-flex items-center gap-1 px-3 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">
+        <label className="relative shrink-0 inline-flex items-center gap-1 px-3 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">
           <Upload className="w-3.5 h-3.5" aria-hidden="true" />
           {isUploading ? 'Uploading...' : 'Upload'}
           <input

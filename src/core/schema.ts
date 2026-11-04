@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
 export const PROJECT_TYPES = [
-  'website', 'page', 'tour', 'form', 'demo', 'banner', 'menu',
-  'faq', 'popup', 'checklist', 'survey', 'pricing', 'testimonials',
+  'website', 'page', 'tour', 'form', 'demo', 'banner', 'menu', 'faq', 'popup',
 ] as const;
 export type ProjectType = (typeof PROJECT_TYPES)[number];
 

@@ -44,8 +44,9 @@ export function projectFromTemplate(
   organizationId: string,
   values: VariableValues,
   theme: Theme,
+  name?: string,
 ): NewProject {
-  const titleValue = template.titleVariable ? values[template.titleVariable] : undefined;
+  const titleValue = name?.trim() || (template.titleVariable ? values[template.titleVariable] : undefined);
   return {
     organizationId,
     type: template.type,
@@ -67,8 +68,6 @@ const STARTING_BLOCK: Partial<Record<ProjectType, ReturnType<typeof el>[]>> = {
   banner: [el('Banner', {}, [el('Text', { props: { text: 'Your announcement' } })])],
   popup: [el('Popup', {}, [el('Heading', { props: { text: 'Your message', level: 'h3' } })])],
   menu: [el('Navbar')],
-  checklist: [el('Card', {}, [el('ChecklistProgress'), el('ChecklistItem')])],
-  survey: [el('Card', {}, [el('Form', {}, [el('ScaleField')])])],
   faq: [el('Accordion')],
 };
 

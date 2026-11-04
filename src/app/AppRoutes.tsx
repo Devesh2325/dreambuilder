@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import { Outlet, Route, Routes } from 'react-router-dom';
+import { MODULE_LIST } from '../core/modules';
 import { StudioPage } from '../studio/StudioPage';
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SignUpPage } from './auth/AuthPages';
 import { FullPageSpinner, RedirectIfAuthenticated, RequireAuth } from './auth/RequireAuth';
@@ -48,6 +49,9 @@ export const AppRoutes: React.FC = () => (
         <Route path="invite/:token" element={<AcceptInvitePage />} />
         <Route element={<Shell />}>
           <Route index element={<ProjectsPage />} />
+          {MODULE_LIST.map((module) => (
+            <Route key={module.type} path={module.path.slice(1)} element={<ProjectsPage key={module.type} type={module.type} />} />
+          ))}
           <Route path="templates" element={<TemplatesPage />} />
           <Route path="projects/:projectId" element={<ProjectPage />} />
           <Route path="assets" element={<AssetsPage />} />

@@ -180,21 +180,6 @@ describe('publishing and visitor functions', () => {
     });
   });
 
-  describe('checklist progress', () => {
-    it('saves per visitor', async () => {
-      await t.asAnon(`select public.save_checklist_progress($1, 'visitor-aaa', '["a","b"]'::jsonb)`, [projectId]);
-      await t.asAnon(`select public.save_checklist_progress($1, 'visitor-aaa', '["a"]'::jsonb)`, [projectId]);
-      const [mine] = await t.asAnon<{ c: string[] }>(`select public.get_checklist_progress($1, 'visitor-aaa') as c`, [projectId]);
-      expect(mine.c).toEqual(['a']);
-      const [other] = await t.asAnon<{ c: string[] }>(`select public.get_checklist_progress($1, 'visitor-bbb') as c`, [projectId]);
-      expect(other.c).toEqual([]);
-    });
-
-    it('cannot be read directly', async () => {
-      await expect(t.asUser(alice.id, `select * from public.checklist_progress`)).rejects.toThrow(/permission denied/);
-    });
-  });
-
   describe('analytics', () => {
     it('records valid events, skips malformed ones, and summarizes for the workspace only', async () => {
       const events = [

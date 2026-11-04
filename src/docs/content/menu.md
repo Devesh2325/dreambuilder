@@ -11,13 +11,8 @@ Place it where the bar should appear, usually first in the `<body>`:
 <script src="{{ORIGIN}}/flowpilot.js" data-project-id="{{PROJECT_ID}}" defer></script>
 ```
 
-## Links
+## Menu items
 
-Enter one link per line, as `Label | link`:
+Add, rename, reorder and remove items under **Details** in the editor, or select the menu block and click **Edit them here instead**. A link can be a full address or a path on your site, such as `/pricing`.
 
-```
-Pricing | /pricing
-Docs | https://docs.example.com
-```
-
-The bar wraps onto several lines on small screens. There's no collapsed mobile menu yet.
+On small screens, the items collapse behind a menu button.

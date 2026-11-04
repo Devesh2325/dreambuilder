@@ -41,12 +41,11 @@ export interface ExperienceViewProps {
   theme: Theme;
   variables: VariableValues;
   ctx: RenderContext;
-  includeHidden?: boolean;
 }
 
 /** The one renderer used by the editor, previews, public sites and the embed. */
-export const ExperienceView: React.FC<ExperienceViewProps> = ({ documents, theme, variables, ctx, includeHidden }) => {
-  const trees = documents.map((content) => expandContent(content, variables, { includeHidden }));
+export const ExperienceView: React.FC<ExperienceViewProps> = ({ documents, theme, variables, ctx }) => {
+  const trees = documents.map((content) => expandContent(content, variables));
   return (
     <div className="fp-root">
       <StyleTag theme={theme} trees={trees} />

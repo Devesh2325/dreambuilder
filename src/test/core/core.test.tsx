@@ -147,7 +147,7 @@ describe('variables', () => {
     expect(tree.children[0].sourceId).toBe('card');
   });
 
-  it('hides conditional and hidden nodes, except for the editor', () => {
+  it('hides conditional and hidden nodes', () => {
     const content: DocContent = {
       rootId: 'root',
       nodes: {
@@ -158,7 +158,6 @@ describe('variables', () => {
     };
     expect(expandContent(content, { flag: false })!.children).toEqual([]);
     expect(expandContent(content, { flag: true })!.children).toHaveLength(1);
-    expect(expandContent(content, { flag: false }, { includeHidden: true })!.children).toHaveLength(2);
   });
 
   describe('validation', () => {

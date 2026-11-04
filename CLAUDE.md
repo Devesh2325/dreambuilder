@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-FlowPilot builds websites, pages, tours, forms and other in-app experiences from variable-driven templates. It is a React 19 + TypeScript + Vite + Tailwind 3 app with a Supabase backend, and has no server code of its own.
+FlowPilot builds websites, pages, tours, forms, demos, banners, menus, FAQs and popups from variable-driven templates. It is a React 19 + TypeScript + Vite + Tailwind 3 app with a Supabase backend, and has no server code of its own.
 
 ## Commands
 
@@ -53,7 +53,9 @@ There is **one renderer** for the editor, previews, public sites and the embed: 
 
 `src/experience/` is what plays published content: `ExperiencePlayer` for tours, demos, overlays and so on, and `SiteView` for multi-page sites (header + page + footer). Each module's `delivery` in `src/core/modules.ts` (`site`, `overlay`, `inline`) decides how it reaches visitors.
 
-To add a block, add it to both `blockMeta.ts` and `BLOCK_RENDERERS`; a test checks they match. The properties panel is generated from `fields`.
+To add a block, add it to both `blockMeta.ts` and `BLOCK_RENDERERS`; a test checks they match. The properties panel is generated from `fields`. It only appears in a module's Add panel if listed in `BLOCK_GROUPS` in `src/studio/LeftPanel.tsx`.
+
+To add a module, update `PROJECT_TYPES`, `MODULES` and `PATHS` (`src/core/modules.ts`), the `projects.type` check in the migrations, `MODULE_COLUMNS` (`ProjectsPage.tsx`), `BLOCK_GROUPS`, templates, and a docs guide. Each module has its own list page at `MODULES[type].path`, with table columns from `MODULE_COLUMNS`.
 
 ## Templates
 
@@ -69,6 +71,9 @@ To add a block, add it to both `blockMeta.ts` and `BLOCK_RENDERERS`; a test chec
 - A website canvas shows header + page + footer together, so actions find the owning document with `documentOfNode`.
 - Autosave is debounced. Each save sends the `revision` it loaded; a stale one matches no rows and returns `conflict`, which the UI resolves through `reloadFromServer` or `overwriteServer`.
 - `Canvas.tsx` attaches native listeners to the iframe's document, and draws the selection overlay inside the iframe with inline styles, since app CSS doesn't reach it. Elements there fail `instanceof` checks because they belong to another document.
+- The canvas shows exactly what visitors see: hidden blocks and unmet `showIf` conditions aren't drawn, and stay reachable from Layers.
+- The frame is sized to fit the stage at every zoom, so the stage never scrolls and pages scroll only inside the frame. Desktop renders at least `DESKTOP_MIN_WIDTH` wide and scales down, so small screens don't trigger tablet styles.
+- `sr-only` elements are absolutely positioned. Keep a `relative` ancestor inside any scrolling panel, or they extend the whole page's scroll height. `e2e/studio.spec.ts` checks this.
 
 ## Embed script
 

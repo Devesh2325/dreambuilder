@@ -29,7 +29,6 @@ async function mockBackend(page: Page, type: ProjectType, options: { settings?: 
   };
 
   const calls: Rpc[] = [];
-  let checklist: unknown = [];
   await page.route('http://supabase.test/rest/v1/rpc/**', async (route) => {
     const name = route.request().url().split('/').pop()!;
     if (route.request().method() === 'OPTIONS') {
@@ -42,8 +41,6 @@ async function mockBackend(page: Page, type: ProjectType, options: { settings?: 
     if (name === 'get_published_experience') result = body.p_project === 'project-1' ? snapshot : null;
     if (name === 'submit_form') result = true;
     if (name === 'track_events') result = body.p_events.length;
-    if (name === 'get_checklist_progress') result = checklist;
-    if (name === 'save_checklist_progress') checklist = body.p_completed;
     await route.fulfill({ status: 200, contentType: 'application/json', headers: corsHeaders, body: JSON.stringify(result) });
   });
   return { calls, snapshot };
@@ -169,30 +166,6 @@ test.describe('embed script on another origin', () => {
     const submission = calls.find((call) => call.name === 'submit_form')!;
     expect(submission.body.p_project).toBe('project-1');
     expect(submission.body.p_data).toMatchObject({ name: 'Vera', email: 'vera@example.com', message: 'Hello' });
-  });
-
-  test('checklist: saves progress and restores it after reload', async ({ page }) => {
-    await mockBackend(page, 'checklist', { settings: noRules });
-    await page.goto(`${HOST}/`);
-    const item = page.getByRole('checkbox', { name: /Complete your profile/ });
-    await item.check();
-    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '33');
-
-    await page.reload();
-    await expect(page.getByRole('checkbox', { name: /Complete your profile/ })).toBeChecked();
-  });
-
-  test('survey: rating is required, then sent', async ({ page }) => {
-    const { calls } = await mockBackend(page, 'survey', { settings: noRules });
-    await page.goto(`${HOST}/`);
-    await page.getByRole('button', { name: 'Send' }).click();
-    await page.waitForTimeout(200);
-    expect(calls.some((call) => call.name === 'submit_form')).toBe(false);
-
-    await page.getByRole('button', { name: '9', exact: true }).click();
-    await page.getByRole('button', { name: 'Send' }).click();
-    await expect(page.getByText('Thanks for your feedback!')).toBeVisible();
-    expect(calls.find((call) => call.name === 'submit_form')!.body.p_data.score).toBe('9');
   });
 
   test('demo: hotspots move between screens', async ({ page }) => {

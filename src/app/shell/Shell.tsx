@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { BarChart3, BookOpen, ChevronDown, Image, LayoutDashboard, LayoutTemplate, LogOut, Moon, Palette, Plus, Settings, Sun, Users } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
@@ -8,6 +8,7 @@ import { isLocalBackend } from '../../data';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
 import { Icon } from '../shared/Icon';
+import { CreateButton } from '../templates/CreateDialog';
 import { useWorkspace } from '../workspace';
 
 const linkClass = (active: boolean) =>
@@ -23,18 +24,6 @@ const SideLink: React.FC<{ to: string; icon: React.ReactNode; children: React.Re
     {children}
   </NavLink>
 );
-
-const ModuleLink: React.FC<{ type: string; icon: string; children: React.ReactNode }> = ({ type, icon, children }) => {
-  const [params] = useSearchParams();
-  const location = useLocation();
-  const active = location.pathname === ROUTES.home && params.get('type') === type;
-  return (
-    <NavLink to={`${ROUTES.home}?type=${type}`} className={linkClass(active)}>
-      <Icon name={icon} />
-      {children}
-    </NavLink>
-  );
-};
 
 export const Shell: React.FC = () => {
   const { auth } = useServices();
@@ -52,7 +41,7 @@ export const Shell: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+    <div className="app-scroll h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
       <aside className="w-60 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="p-3 border-b border-slate-200 dark:border-slate-800">
           <p className="px-1 pb-2 font-extrabold text-indigo-600 dark:text-indigo-400">FlowPilot</p>
@@ -75,12 +64,9 @@ export const Shell: React.FC = () => {
         </div>
 
         <nav aria-label="Main" className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          <NavLink to={ROUTES.templates} className="flex items-center justify-center gap-1.5 mb-3 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700">
-            <Plus className="w-4 h-4" aria-hidden="true" />
-            Create new
-          </NavLink>
+          <CreateButton className="w-full flex items-center justify-center gap-1.5 mb-3 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors" />
           <SideLink to={ROUTES.home} end icon={<LayoutDashboard className="w-4 h-4" aria-hidden="true" />}>All projects</SideLink>
-          {MODULE_LIST.filter((m) => m.primary).map((m) => <ModuleLink key={m.type} type={m.type} icon={m.icon}>{m.plural}</ModuleLink>)}
+          {MODULE_LIST.filter((m) => m.primary).map((m) => <SideLink key={m.type} to={m.path} icon={<Icon name={m.icon} />}>{m.plural}</SideLink>)}
 
           <button
             type="button"
@@ -91,7 +77,7 @@ export const Shell: React.FC = () => {
             More modules
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMore ? '' : '-rotate-90'}`} aria-hidden="true" />
           </button>
-          {showMore && MODULE_LIST.filter((m) => !m.primary).map((m) => <ModuleLink key={m.type} type={m.type} icon={m.icon}>{m.plural}</ModuleLink>)}
+          {showMore && MODULE_LIST.filter((m) => !m.primary).map((m) => <SideLink key={m.type} to={m.path} icon={<Icon name={m.icon} />}>{m.plural}</SideLink>)}
 
           <p className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Workspace</p>
           <SideLink to={ROUTES.templates} icon={<LayoutTemplate className="w-4 h-4" aria-hidden="true" />}>Templates</SideLink>
@@ -123,7 +109,7 @@ export const Shell: React.FC = () => {
             Demo mode: everything is saved only in this browser. Connect Supabase to go live.
           </p>
         )}
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="relative flex-1 overflow-y-auto p-8">
           <div className="max-w-6xl mx-auto">
             <Outlet />
           </div>

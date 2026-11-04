@@ -12,7 +12,7 @@ Paste before the closing `</body>` tag:
 <script src="{{ORIGIN}}/flowpilot.js" data-project-id="{{PROJECT_ID}}" defer></script>
 ```
 
-For a form, demo, menu, FAQ, pricing table or testimonials, also place this where it should appear:
+For a form, demo, menu or FAQ, also place this where it should appear:
 
 ```html
 <div data-flowpilot="{{PROJECT_ID}}"></div>

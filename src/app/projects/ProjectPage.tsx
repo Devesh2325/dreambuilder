@@ -215,7 +215,8 @@ export const ProjectPage: React.FC = () => {
     mutationFn: () => projects.remove(projectId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      navigate(ROUTES.home);
+      queryClient.invalidateQueries({ queryKey: ['project-details'] });
+      navigate(query.data?.project ? ROUTES.module(query.data.project.type) : ROUTES.home);
     },
   });
 
@@ -242,9 +243,9 @@ export const ProjectPage: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <Link to={ROUTES.home} className="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:underline">
+      <Link to={ROUTES.module(project.type)} className="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:underline">
         <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-        All projects
+        {module.plural}
       </Link>
 
       {notice?.justCreated && (

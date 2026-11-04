@@ -7,9 +7,10 @@ test('full journey: template, details, editor, publish, live site, form response
   await signUp(page);
 
   // Choose a template.
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Create new' }).click();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Create new' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /^Website/ }).click();
   await page.getByRole('searchbox', { name: 'Search templates' }).fill('restaurant');
-  await page.getByRole('link', { name: /Restaurant or cafe/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /Restaurant or cafe/ }).click();
 
   // Details appear in the preview as they're typed.
   const preview = page.frameLocator('iframe[title="Preview"]');
@@ -60,7 +61,7 @@ test('full journey: template, details, editor, publish, live site, form response
   // The owner sees the response.
   await page.goBack();
   await page.goto('/');
-  await page.getByRole('link', { name: /Rosa Trattoria/ }).click();
+  await page.getByRole('rowheader', { name: 'Rosa Trattoria' }).getByRole('link').click();
   await expect(page.getByRole('cell', { name: 'A table for two please' })).toBeVisible();
 
   // Publishing again updates the live site.
@@ -99,7 +100,7 @@ test('editor: changes survive reload, undo works, and shared sections edit in pl
 
   // Add a block by clicking, with the selection deciding where it goes.
   await page.getByRole('tab', { name: 'Add' }).click();
-  await page.getByRole('button', { name: 'Divider' }).click();
+  await page.getByRole('tabpanel', { name: 'Add' }).getByRole('button', { name: 'Divider' }).click();
   await expect(frame.getByRole('separator')).toHaveCount(2);
 
   await waitForSaved(page);
@@ -108,7 +109,6 @@ test('editor: changes survive reload, undo works, and shared sections edit in pl
   await expect(frame.getByRole('separator')).toHaveCount(2);
 
   // The shared header is editable in place, and its change appears on another page.
-  await frame.getByRole('navigation', { name: 'Main' }).click({ position: { x: 300, y: 5 } });
   await page.getByRole('tab', { name: 'Pages' }).click();
   await page.getByRole('button', { name: 'About /about' }).click();
   await expect(frame.getByRole('heading', { name: 'About us' })).toBeVisible();
@@ -128,7 +128,7 @@ test('editor: drag and drop onto the canvas', async ({ page }) => {
   const frame = canvas(page);
   await expect(frame.getByRole('heading', { name: 'What we do' })).toBeVisible();
   const before = await frame.locator('hr').count();
-  await page.getByRole('button', { name: 'Divider' }).dragTo(frame.getByRole('heading', { name: 'What we do' }));
+  await page.getByRole('tabpanel', { name: 'Add' }).getByRole('button', { name: 'Divider' }).dragTo(frame.getByRole('heading', { name: 'What we do' }));
   await expect(frame.locator('hr')).toHaveCount(before + 1);
 });
 

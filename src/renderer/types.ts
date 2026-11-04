@@ -22,10 +22,6 @@ export interface RenderContext {
   submitForm?: (data: Record<string, unknown>) => Promise<FormSubmitResult>;
   /** Experience controls: next, prev, close, goto. */
   onAction?: (action: string, value?: unknown) => void;
-  isChecklistItemDone?: (id: string) => boolean;
-  toggleChecklistItem?: (id: string) => void;
-  checklistDone?: number;
-  checklistTotal?: number;
   track?: (eventType: string, metadata?: Record<string, unknown>) => void;
 }
 
@@ -37,7 +33,7 @@ export interface BlockRenderProps {
   ctx: RenderContext;
 }
 
-export type FieldType = 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'color' | 'image' | 'url';
+export type FieldType = 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'color' | 'image' | 'url' | 'menu';
 
 export interface BlockField {
   key: string;

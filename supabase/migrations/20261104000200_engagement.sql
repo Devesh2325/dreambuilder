@@ -1,4 +1,4 @@
--- Visitor data (form answers, checklist progress, analytics), invitations and plan limits.
+-- Visitor data (form answers, analytics), invitations and plan limits.
 --
 -- Visitors have no login, so they only write through functions that require the
 -- project to be published and limit what can be stored.
@@ -18,14 +18,6 @@ create table public.form_submissions (
 create index form_submissions_project_idx on public.form_submissions (project_id, created_at desc);
 create index form_submissions_org_idx on public.form_submissions (organization_id);
 create index form_submissions_rate_idx on public.form_submissions (project_id, source_hash, created_at desc);
-
-create table public.checklist_progress (
-  project_id uuid not null references public.projects (id) on delete cascade,
-  visitor_id text not null,
-  completed jsonb not null default '[]'::jsonb,
-  updated_at timestamptz not null default now(),
-  primary key (project_id, visitor_id)
-);
 
 create table public.analytics_events (
   id uuid primary key default gen_random_uuid(),
@@ -58,11 +50,10 @@ create table public.invitations (
 );
 create index invitations_org_idx on public.invitations (organization_id);
 
-revoke all on public.form_submissions, public.checklist_progress, public.analytics_events, public.invitations
+revoke all on public.form_submissions, public.analytics_events, public.invitations
   from anon, authenticated;
 
 alter table public.form_submissions enable row level security;
-alter table public.checklist_progress enable row level security;
 alter table public.analytics_events enable row level security;
 alter table public.invitations enable row level security;
 
@@ -70,7 +61,6 @@ grant select, delete on public.form_submissions to authenticated;
 grant select on public.analytics_events to authenticated;
 grant select (id, organization_id, email, role, expires_at, accepted_at, created_at) on public.invitations to authenticated;
 grant delete on public.invitations to authenticated;
--- checklist_progress has no client access: only the functions below touch it.
 
 create policy form_submissions_select on public.form_submissions for select to authenticated
   using (public.is_org_member(organization_id));
@@ -151,39 +141,6 @@ begin
   insert into public.form_submissions (project_id, organization_id, data, visitor_id, source_hash)
   values (p_project, org, p_data - '_hp', left(p_visitor, 64), source);
   return true;
-end;
-$$;
-
-create function public.get_checklist_progress(p_project uuid, p_visitor text)
-returns jsonb
-language sql stable security definer set search_path = ''
-as $$
-  select coalesce(
-    (
-      select c.completed from public.checklist_progress c
-      join public.projects p on p.id = c.project_id and p.status = 'published'
-      where c.project_id = p_project and c.visitor_id = p_visitor
-    ),
-    '[]'::jsonb
-  );
-$$;
-
-create function public.save_checklist_progress(p_project uuid, p_visitor text, p_completed jsonb)
-returns void
-language plpgsql security definer set search_path = ''
-as $$
-begin
-  if public.published_project_org(p_project) is null then
-    raise exception 'This checklist is not available' using errcode = 'P0001';
-  end if;
-  if jsonb_typeof(p_completed) <> 'array' or pg_column_size(p_completed) > 16384
-    or coalesce(char_length(p_visitor), 0) not between 8 and 64 then
-    raise exception 'Invalid checklist data' using errcode = 'P0001';
-  end if;
-  insert into public.checklist_progress (project_id, visitor_id, completed)
-  values (p_project, p_visitor, p_completed)
-  on conflict (project_id, visitor_id)
-  do update set completed = excluded.completed, updated_at = now();
 end;
 $$;
 
@@ -423,6 +380,4 @@ grant execute on function public.accept_invitation(text) to authenticated;
 grant execute on function public.get_published_site(text) to anon, authenticated;
 grant execute on function public.get_published_experience(uuid) to anon, authenticated;
 grant execute on function public.submit_form(uuid, jsonb, text) to anon, authenticated;
-grant execute on function public.get_checklist_progress(uuid, text) to anon, authenticated;
-grant execute on function public.save_checklist_progress(uuid, text, jsonb) to anon, authenticated;
 grant execute on function public.track_events(uuid, jsonb) to anon, authenticated;

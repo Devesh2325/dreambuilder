@@ -47,8 +47,7 @@ create table public.projects (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations (id) on delete cascade,
   type text not null check (type in (
-    'website', 'page', 'tour', 'form', 'demo', 'banner', 'menu',
-    'faq', 'popup', 'checklist', 'survey', 'pricing', 'testimonials'
+    'website', 'page', 'tour', 'form', 'demo', 'banner', 'menu', 'faq', 'popup'
   )),
   title text not null check (char_length(title) between 1 and 200),
   description text not null default '' check (char_length(description) <= 2000),

@@ -166,6 +166,13 @@ describe('editor store', () => {
       expect(state().selectedId).toBeNull();
     });
 
+    it('keeps toggling hidden as separate undo steps', () => {
+      state().updateNode(heading, { hidden: true });
+      state().updateNode(heading, { hidden: false });
+      state().undo();
+      expect(page().content.nodes[heading].hidden).toBe(true);
+    });
+
     it('undoes project-level changes in the same history', () => {
       state().updateDraft((draft) => { draft.variables = { name: 'New' }; }, 'variables');
       state().updateProps(heading, { text: 'Changed' });
@@ -278,6 +285,15 @@ describe('editor store', () => {
     it('adds and switches to a new page', async () => {
       await state().addPage('About', 'about');
       expect(state().documents.find((doc) => doc.id === state().activeDocumentId)!.slug).toBe('about');
+    });
+
+    it('can add a page without leaving the current one', async () => {
+      const before = state().activeDocumentId;
+      state().select(heading);
+      await state().addPage('Blog', 'blog', { open: false });
+      expect(state().activeDocumentId).toBe(before);
+      expect(state().selectedId).toBe(heading);
+      expect(state().documents.some((doc) => doc.slug === 'blog')).toBe(true);
     });
 
     it('reports a duplicate address', async () => {

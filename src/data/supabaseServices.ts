@@ -202,6 +202,15 @@ const projects: ProjectRepository = {
     return (data as Row[]).map(toDocument);
   },
 
+  async listAllDocuments(organizationId) {
+    const { data, error } = await db()
+      .from('documents')
+      .select(`, organization_id`)
+      .eq('organization_id', organizationId);
+    check(error);
+    return (data as unknown as Row[]).map(toDocument);
+  },
+
   async createDocument(project, doc, position) {
     const { data, error } = await db()
       .from('documents')
@@ -412,6 +421,17 @@ export const supabaseServices: AppServices = {
         data: row.data as Record<string, unknown>,
         createdAt: row.created_at as string,
       }));
+    },
+    async countByProject(organizationId) {
+      const { data, error } = await db()
+        .from('form_submissions')
+        .select('project_id')
+        .eq('organization_id', organizationId)
+        .limit(10000);
+      check(error);
+      const counts: Record<string, number> = {};
+      for (const row of data as { project_id: string }[]) counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
+      return counts;
     },
     async removeSubmission(id) {
       const { error } = await db().from('form_submissions').delete().eq('id', id);

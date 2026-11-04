@@ -7,3 +7,10 @@
     @apply font-sans antialiased;
   }
 }
+
+/* Thin scrollbars in the app. Published sites keep the browser's default. */
+.app-scroll,
+.app-scroll * {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184 / 0.5) transparent;
+}
