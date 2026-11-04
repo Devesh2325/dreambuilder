@@ -35,12 +35,24 @@ import { SettingsPage } from './pages/settings/SettingsPage';
 import { BrandPage } from './pages/brand/BrandPage';
 import { ThemeProvider } from './services/themeContext';
 
+// The rebuilt app, loaded separately so the old app doesn't pay for it.
+const NewApp = React.lazy(() => import('./app/AppRoot'));
+
 export function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
         <BrowserRouter>
         <Routes>
+          <Route
+            path="/v2/*"
+            element={
+              <React.Suspense fallback={null}>
+                <NewApp />
+              </React.Suspense>
+            }
+          />
+
           {/* Public Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
