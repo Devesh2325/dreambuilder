@@ -126,6 +126,11 @@ const pageTemplates = [
 
 // ---- Tours ------------------------------------------------------------------
 
+const selectorVar = (key: string, label: string, value: string): VariableDef => ({
+  key, label, type: 'text', required: true, default: value, group: 'Elements on your site',
+  help: 'Which part of your site this step points at. Select the step and use Pick on my site, and this is filled in for you.',
+});
+
 const tourStep = (selector: string, placement: string, title: string, body: string, buttons: El[]): El =>
   el('TourStep', { props: { selector, placement, fallback: 'center', spotlight: true } }, [
     heading(title, 'h4'),
@@ -138,8 +143,8 @@ const nextBack = [actionButton('Back', 'prev', 'secondary'), actionButton('Next'
 const tourTemplates = [
   make('tour', 'welcome', 'Welcome tour', 'Introduce new users to the main parts of your app.', ['onboarding', 'welcome'], THEME_INDIGO, [
     textVar('product', 'Product name', 'Acme', 'Your product'),
-    textVar('nav.selector', 'Navigation element', 'nav', 'Elements on your site'),
-    textVar('action.selector', 'Main button', 'button', 'Elements on your site'),
+    selectorVar('nav.selector', 'Navigation element', 'nav'),
+    selectorVar('action.selector', 'Main button', 'button'),
   ], [experience([
     tourStep('', 'bottom', 'Welcome to {{product}}!', "Here's a quick look around. It takes less than a minute.", [actionButton('Skip', 'close', 'link'), actionButton('Start', 'next')]),
     tourStep('{{nav.selector}}', 'bottom', 'Find your way', 'Everything you need is in the navigation.', nextBack),
@@ -149,15 +154,15 @@ const tourTemplates = [
   make('tour', 'feature', 'New feature spotlight', 'Point out one new feature in a couple of steps.', ['feature', 'adoption'], THEME_EMERALD, [
     textVar('feature.name', 'Feature name', 'Reports', 'The feature'),
     longVar('feature.benefit', 'Why it helps', 'See how your work is going at a glance.', 'The feature'),
-    textVar('feature.selector', 'Feature element', '#reports', 'Elements on your site'),
+    selectorVar('feature.selector', 'Feature element', '#reports'),
   ], [experience([
     tourStep('{{feature.selector}}', 'right', 'New: {{feature.name}}', '{{feature.benefit}}', [actionButton('Got it', 'next')]),
   ])], { settings: OVERLAY_SETTINGS }),
 
   make('tour', 'setup', 'Account setup guide', 'Walk users through the steps to finish setting up.', ['setup', 'activation'], THEME_CORAL, [
-    textVar('profile.selector', 'Profile element', '#profile', 'Elements on your site'),
-    textVar('invite.selector', 'Invite button', '#invite', 'Elements on your site'),
-    textVar('settings.selector', 'Settings link', '#settings', 'Elements on your site'),
+    selectorVar('profile.selector', 'Profile element', '#profile'),
+    selectorVar('invite.selector', 'Invite button', '#invite'),
+    selectorVar('settings.selector', 'Settings link', '#settings'),
   ], [experience([
     tourStep('{{profile.selector}}', 'bottom', 'Complete your profile', 'Add your name and photo so your team recognizes you.', [actionButton('Next', 'next')]),
     tourStep('{{invite.selector}}', 'bottom', 'Invite your team', 'Work goes faster together.', nextBack),
@@ -166,7 +171,7 @@ const tourTemplates = [
   make('tour', 'upgrade', 'Upgrade prompt', 'Show free users what they get by upgrading.', ['upsell', 'revenue'], THEME_MIDNIGHT, [
     textVar('plan', 'Plan name', 'Pro', 'The offer'),
     longVar('benefit', 'Main benefit', 'Unlimited reports, more seats and priority support.', 'The offer'),
-    textVar('upgrade.selector', 'Upgrade button', '#upgrade', 'Elements on your site'),
+    selectorVar('upgrade.selector', 'Upgrade button', '#upgrade'),
   ], [experience([
     tourStep('{{upgrade.selector}}', 'bottom', 'Ready for {{plan}}?', '{{benefit}}', [actionButton('Not now', 'close', 'link'), actionButton('Show me', 'next')]),
   ])], { settings: OVERLAY_SETTINGS }),
@@ -257,7 +262,7 @@ const formTemplates = [
 // ---- Demos ------------------------------------------------------------------
 
 const screen = (imageKey: string, x: number, y: number, tip: string): El =>
-  el('DemoScreen', { props: { image: imageKey, alt: 'Product screen' } }, [el('DemoHotspot', { props: { x, y, tip } })]);
+  el('DemoScreen', { props: { image: imageKey, alt: 'Product screen' } }, [el('DemoHotspot', { props: { x, y, tip, placement: y > 70 ? 'top' : 'bottom', align: x < 25 ? 'start' : x > 75 ? 'end' : 'center' } })]);
 
 const screenVar = (key: string, label: string, kind: Parameters<typeof mockScreen>[0], accent?: string): VariableDef => ({
   key, label, type: 'image', required: true, default: mockScreen(kind, accent), group: 'Screenshots', help: 'Replace with a screenshot of your product.',

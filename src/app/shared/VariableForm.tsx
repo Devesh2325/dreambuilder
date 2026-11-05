@@ -58,6 +58,13 @@ export const ImageInput: React.FC<{
   );
 };
 
+/** Items are named by their first bit of text, which says more than a number. */
+const itemTitle = (def: VariableDef, item: Record<string, unknown>, index: number) => {
+  const first = def.itemFields?.find((field) => field.type === 'text' || field.type === 'longtext');
+  const text = first ? item[first.key] : undefined;
+  return typeof text === 'string' && text.trim() ? text : `Item ${index + 1}`;
+};
+
 interface FieldProps {
   def: VariableDef;
   fieldId: string;
@@ -65,10 +72,12 @@ interface FieldProps {
   error?: string;
   errors: Record<string, string>;
   errorPrefix: string;
+  /** A short note, such as how many places use this. */
+  hint?: string;
   onChange: (value: unknown) => void;
 }
 
-export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error, errors, errorPrefix, onChange }) => {
+export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error, errors, errorPrefix, hint, onChange }) => {
   const describedBy = error ? `${fieldId}-error` : def.help ? `${fieldId}-help` : undefined;
   const text = value === undefined || value === null ? '' : String(value);
   const common = { id: fieldId, 'aria-invalid': Boolean(error), 'aria-describedby': describedBy };
@@ -81,6 +90,7 @@ export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error
   const notes = (
     <>
       {def.help && !error && <p id={`${fieldId}-help`} className="mt-1 text-xs text-slate-500 dark:text-slate-400">{def.help}</p>}
+      {hint && !error && <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{hint}</p>}
       {error && <p id={`${fieldId}-error`} className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</p>}
     </>
   );
@@ -97,7 +107,7 @@ export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error
           {items.map((item, index) => (
             <div key={index} className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Item {index + 1}</span>
+                <span className="min-w-0 truncate text-xs font-semibold text-slate-500 dark:text-slate-400">{itemTitle(def, item, index)}</span>
                 <div className="flex gap-1 text-slate-500 dark:text-slate-400">
                   <button type="button" aria-label={`Move item ${index + 1} up`} disabled={index === 0} className="p-1 disabled:opacity-30"
                     onClick={() => {
@@ -199,11 +209,12 @@ interface VariableFormProps {
   defs: VariableDef[];
   values: VariableValues;
   errors?: Record<string, string>;
+  hints?: Record<string, string>;
   onChange: (values: VariableValues) => void;
 }
 
 /** Generated from a template's variables. Used by the wizard and the editor. */
-export const VariableForm: React.FC<VariableFormProps> = ({ defs, values, errors = {}, onChange }) => {
+export const VariableForm: React.FC<VariableFormProps> = ({ defs, values, errors = {}, hints, onChange }) => {
   const groups = new Map<string, VariableDef[]>();
   for (const def of defs) {
     const group = def.group ?? 'Details';
@@ -225,6 +236,7 @@ export const VariableForm: React.FC<VariableFormProps> = ({ defs, values, errors
                 error={errors[def.key]}
                 errors={errors}
                 errorPrefix={def.key}
+                hint={hints?.[def.key]}
                 onChange={(next) => onChange({ ...values, [def.key]: next })}
               />
             ))}

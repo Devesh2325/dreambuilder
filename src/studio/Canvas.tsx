@@ -30,6 +30,10 @@ const CANVAS_CSS = `
 html{scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.45) transparent}
 .fp-root{min-height:100vh}
 .fp-page:has(>.fp-step),.fp-page:has(>.fp-popup){min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px;background:color-mix(in srgb,var(--fp-text) 8%,var(--fp-background))}
+.fp-page:has(>.fp-step[data-layout=slideout]){align-items:flex-end;justify-content:flex-end;padding:16px}
+.fp-page:has(>.fp-step[data-layout=sidebar]){align-items:stretch;justify-content:flex-end;padding:0}
+.fp-video iframe,.fp-video video{pointer-events:none}
+.fp-hotspot-tip{cursor:move}
 *{user-select:none}
 a:not([draggable=true]),img:not([draggable=true]){-webkit-user-drag:none}
 [draggable=true]{cursor:grab}
@@ -329,7 +333,8 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
   const toolbarButton: React.CSSProperties = { background: 'none', border: 0, color: '#fff', padding: 3, cursor: 'pointer', display: 'flex', borderRadius: 3 };
   // Sits above the block, or below it when there's no room above, so it never covers
   // the block's own content or leaves the canvas.
-  const toolbarTop = selectedBox ? (selectedBox.top >= TOOLBAR_HEIGHT + 2 ? selectedBox.top - TOOLBAR_HEIGHT - 2 : selectedBox.top + selectedBox.height + 2) : 0;
+  const tooltipAbove = selected?.type === 'DemoHotspot' && selected.props.placement === 'top';
+  const toolbarTop = selectedBox ? (selectedBox.top >= TOOLBAR_HEIGHT + 2 && !tooltipAbove ? selectedBox.top - TOOLBAR_HEIGHT - 2 : selectedBox.top + selectedBox.height + 2) : 0;
 
   // Inline styles because the iframe deliberately has none of the app's CSS.
   return (
@@ -464,13 +469,19 @@ export const Canvas: React.FC = () => {
   const stepSet = useMemo(() => (active && variables ? findSteps(active.content, variables) : null), [active, variables]);
   const activeStep = stepSet ? (stepSet.steps.find((step) => step.key === activeStepKey) ?? stepSet.steps[0] ?? null) : null;
   const visibleStepKey = activeStep?.key;
+  const tourSettings = draft?.settings.tour;
+  const tourLabel = [
+    tourSettings?.showProgress && stepSet && activeStep ? `Step ${stepSet.steps.indexOf(activeStep) + 1} of ${stepSet.steps.length}` : '',
+    tourSettings?.estimatedTime?.trim() ?? '',
+  ].filter(Boolean).join('  ·  ') || undefined;
   const ctx = useMemo<RenderContext>(
     () => ({
       mode: 'edit',
       navLinks: buildNavLinks(documents, active?.slug ?? ''),
       visibleStep: stepSet && visibleStepKey ? { parentKey: stepSet.parentKey, stepType: stepSet.stepType, key: visibleStepKey } : undefined,
+      tourChrome: tourLabel || tourSettings?.showClose ? { label: tourLabel, canClose: tourSettings?.showClose } : undefined,
     }),
-    [documents, active?.slug, stepSet, visibleStepKey],
+    [documents, active?.slug, stepSet, visibleStepKey, tourLabel, tourSettings?.showClose],
   );
 
   // Choosing a block in another step, from Layers for example, shows that step.
@@ -526,8 +537,9 @@ export const Canvas: React.FC = () => {
           </div>
         )}
       </div>
-      <div className="h-9 shrink-0 flex items-center px-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+      <div className="h-9 shrink-0 flex items-center justify-between gap-3 px-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
         <Breadcrumbs />
+        {logicalDeviceWidth && <p className="shrink-0 text-[13px] font-medium text-indigo-700 dark:text-indigo-300">{device === 'mobile' ? 'Mobile' : 'Tablet'}: {logicalDeviceWidth} px wide</p>}
       </div>
     </div>
   );

@@ -169,9 +169,6 @@ test('sidebar collapses to icons, and remembers', async ({ page }) => {
 
   await page.reload();
   await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
-  await page.getByRole('complementary').getByRole('button', { name: 'Create new' }).click();
-  await expect(page).toHaveURL(/\/create$/);
-  await page.goBack();
   await page.getByRole('button', { name: 'Expand sidebar' }).click();
   await expect(page.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
 });
@@ -184,6 +181,7 @@ test('dashboard guides a new user, and updates as they progress', async ({ page 
   await expect(guide.getByText('0 of 4 done')).toBeVisible();
 
   await guide.getByRole('button', { name: 'Choose a template' }).click();
+  await page.getByRole('list', { name: 'What to create' }).getByRole('button', { name: /^Website/ }).click();
   await page.getByRole('button', { name: /^Use Local business/ }).click();
   await page.getByRole('button', { name: 'Create website' }).click();
   await expect(page.getByText(/is ready/)).toBeVisible();

@@ -52,6 +52,7 @@ export function generateNodeCss(root: RenderNode | null): string {
   let base = '';
   let tablet = '';
   let mobile = '';
+  const hidden = { desktop: '', tablet: '', mobile: '' };
   const visit = (node: RenderNode) => {
     const selector = `.${nodeClass(node.key)}`;
     const main = declarations(node.styles);
@@ -60,11 +61,16 @@ export function generateNodeCss(root: RenderNode | null): string {
     if (forTablet) tablet += `${selector}{${forTablet}}`;
     const forMobile = declarations(node.responsive?.mobile);
     if (forMobile) mobile += `${selector}{${forMobile}}`;
+    for (const device of node.hideOn ?? []) hidden[device] += `${selector}{display:none!important}`;
     node.children.forEach(visit);
   };
   visit(root);
   if (tablet) base += `@media (max-width:${TABLET_MAX}px){${tablet}}`;
   if (mobile) base += `@media (max-width:${MOBILE_MAX}px){${mobile}}`;
+  // Exact ranges, unlike the styles above, where a tablet change also carries to phones.
+  if (hidden.desktop) base += `@media (min-width:${TABLET_MAX + 1}px){${hidden.desktop}}`;
+  if (hidden.tablet) base += `@media (min-width:${MOBILE_MAX + 1}px) and (max-width:${TABLET_MAX}px){${hidden.tablet}}`;
+  if (hidden.mobile) base += `@media (max-width:${MOBILE_MAX}px){${hidden.mobile}}`;
   return base;
 }
 
@@ -112,6 +118,12 @@ export function nodeFonts(root: RenderNode | null): string[] {
 
 export function googleFontsUrl(theme: Theme): string | null {
   return fontsUrl([theme.fontHeading, theme.fontBody]);
+}
+
+/** Just enough of every font to show its own name in a list. */
+export function fontPreviewUrl(): string {
+  const families = GOOGLE_FONTS.map((family) => `family=${family.replace(/ /g, '+')}`).join('&');
+  return `https://fonts.googleapis.com/css2?${families}&text=${encodeURIComponent('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ')}&display=swap`;
 }
 
 export function fontsUrl(fonts: string[]): string | null {
@@ -177,14 +189,40 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-scale{display:flex;flex-wrap:wrap;gap:6px}
 :where(.fp-root) .fp-scale button{min-width:38px;height:38px;font:inherit;background:var(--fp-surface);color:var(--fp-text);border:1px solid color-mix(in srgb,var(--fp-text) 20%,transparent);border-radius:var(--fp-radius);cursor:pointer}
 :where(.fp-root) .fp-scale button[aria-pressed=true]{background:var(--fp-primary);color:#fff}
-:where(.fp-root) .fp-step{background:var(--fp-background);border-radius:var(--fp-radius);padding:20px;width:360px;max-width:100%;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 40px -12px rgba(15,23,42,.35)}
-:where(.fp-root) .fp-screen{position:relative;width:100%;overflow:hidden;border-radius:var(--fp-radius)}
-:where(.fp-root) .fp-screen>img{width:100%}
+:where(.fp-root) .fp-video{position:relative;width:100%;aspect-ratio:16/9;border-radius:var(--fp-radius);overflow:hidden;background:#0f172a}
+:where(.fp-root) .fp-video iframe,:where(.fp-root) .fp-video video{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+:where(.fp-root) .fp-video[data-empty]{display:flex;align-items:center;justify-content:center;padding:16px;text-align:center;font-size:.875rem;color:#cbd5e1}
+:where(.fp-root) .fp-step{position:relative;background:var(--fp-background);border-radius:var(--fp-radius);padding:20px;width:360px;max-width:100%;display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 40px -12px rgba(15,23,42,.35)}
+:where(.fp-root) .fp-step:where([data-size=small]){width:280px}
+:where(.fp-root) .fp-step:where([data-size=large]){width:520px}
+:where(.fp-root) .fp-step:where([data-size=xlarge]){width:760px}
+:where(.fp-root) .fp-step-body{display:flex;flex-direction:column;gap:inherit;min-height:0;overflow-y:auto;max-height:calc(100vh - 72px)}
+:where(.fp-root) .fp-step-progress{font-size:.8125rem;font-weight:600;color:var(--fp-muted)}
+:where(.fp-root) .fp-step:where([data-layout=sidebar]){height:100vh;border-radius:0}
+:where(.fp-root) .fp-step[data-side]::after,:where(.fp-root) .fp-hotspot-tip::after{content:'';position:absolute;width:12px;height:12px;background:inherit;transform:rotate(45deg);--fp-along:var(--fp-caret,calc(50% - 6px))}
+:where(.fp-root) [data-caret=start]{--fp-caret:24px}
+:where(.fp-root) [data-caret=end]{--fp-caret:calc(100% - 36px)}
+:where(.fp-root) .fp-step[data-side=bottom]::after,:where(.fp-root) .fp-hotspot-tip[data-side=bottom]::after{top:-5px;left:var(--fp-along)}
+:where(.fp-root) .fp-step[data-side=top]::after,:where(.fp-root) .fp-hotspot-tip[data-side=top]::after{bottom:-5px;left:var(--fp-along)}
+:where(.fp-root) .fp-step[data-side=right]::after,:where(.fp-root) .fp-hotspot-tip[data-side=right]::after{left:-5px;top:var(--fp-along)}
+:where(.fp-root) .fp-step[data-side=left]::after,:where(.fp-root) .fp-hotspot-tip[data-side=left]::after{right:-5px;top:var(--fp-along)}
+:where(.fp-root) .fp-screen{position:relative;width:min(100%,calc((100vh - 76px)*1.6));min-height:160px;margin-left:auto;margin-right:auto;border-radius:var(--fp-radius);background:var(--fp-surface)}
+:where(.fp-root) .fp-screen>img{width:100%;height:auto;border-radius:var(--fp-radius)}
 :where(.fp-root) .fp-hotspot{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid #fff;padding:0;background:var(--fp-primary);box-shadow:0 2px 8px rgba(15,23,42,.4);cursor:pointer;animation:fp-pulse 1.8s infinite}
+:where(.fp-root) .fp-hotspot[data-beacon=false]{opacity:0;animation:none}
 @keyframes fp-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--fp-primary) 55%,transparent)}70%{box-shadow:0 0 0 16px transparent}100%{box-shadow:0 0 0 0 transparent}}
 @media (prefers-reduced-motion:reduce){:where(.fp-root) .fp-hotspot{animation:none}}
-:where(.fp-root) .fp-hotspot-tip{position:absolute;background:#0f172a;color:#fff;padding:7px 12px;font-size:.8125rem;font-weight:500;border-radius:8px;transform:translate(-50%,22px);max-width:240px;box-shadow:0 8px 20px rgba(15,23,42,.35);pointer-events:none;white-space:nowrap}
-:where(.fp-root) .fp-demo-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px 10px;font-size:.875rem;color:var(--fp-muted)}
+:where(.fp-root) .fp-hotspot-tip{position:absolute;display:flex;flex-direction:column;align-items:flex-start;gap:6px;background:#fff;color:#0f172a;padding:10px 14px;font-size:.8125rem;font-weight:500;line-height:1.4;border-radius:8px;width:max-content;max-width:280px;box-shadow:0 0 0 1px rgba(15,23,42,.08),0 12px 28px rgba(15,23,42,.4);z-index:1;transform:translate(var(--fp-tx,-50%),var(--fp-ty,22px))}
+:where(.fp-root) .fp-hotspot-tip strong{font-size:.875rem;font-weight:700}
+:where(.fp-root) .fp-hotspot-tip .fp-btn{padding:5px 12px;font-size:.8125rem}
+:where(.fp-root) .fp-hotspot-tip[data-caret=start]{--fp-tx:-34px}
+:where(.fp-root) .fp-hotspot-tip[data-caret=end]{--fp-tx:calc(-100% + 34px)}
+:where(.fp-root) .fp-hotspot-tip[data-side=top]{--fp-ty:calc(-100% - 22px)}
+:where(.fp-root) .fp-hotspot-tip[data-side=left],:where(.fp-root) .fp-hotspot-tip[data-side=right]{--fp-tx:22px;--fp-ty:-50%}
+:where(.fp-root) .fp-hotspot-tip[data-side=left]{--fp-tx:calc(-100% - 22px)}
+:where(.fp-root) .fp-hotspot-tip[data-side=left][data-caret=start],:where(.fp-root) .fp-hotspot-tip[data-side=right][data-caret=start]{--fp-ty:-34px}
+:where(.fp-root) .fp-hotspot-tip[data-side=left][data-caret=end],:where(.fp-root) .fp-hotspot-tip[data-side=right][data-caret=end]{--fp-ty:calc(-100% + 34px)}
+:where(.fp-root) .fp-demo-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 4px 10px;font-size:.875rem;color:var(--fp-muted)}
 :where(.fp-root) .fp-demo-bar .fp-btn{padding:6px 14px;font-size:.875rem}
 :where(.fp-root) .fp-demo-dots{display:flex;gap:6px}
 :where(.fp-root) .fp-demo-dots span{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--fp-text) 18%,transparent)}

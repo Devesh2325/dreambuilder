@@ -134,12 +134,9 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">{firstName ? `Welcome, ${firstName}` : 'Welcome'}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Here's what's happening in {workspace?.name ?? 'your workspace'}.</p>
-        </div>
-        <CreateButton />
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold">{firstName ? `Welcome, ${firstName}` : 'Welcome'}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Here's what's happening in {workspace?.name ?? 'your workspace'}.</p>
       </header>
 
       {list.isLoading && <DashboardSkeleton />}

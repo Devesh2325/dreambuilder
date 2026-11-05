@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, Braces, ChevronLeft, ChevronRight, Eye, EyeOff, FileText, GripVertical, Layers, LucideIcon, Palette, Pencil, Plus, SlidersHorizontal, SquarePlus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Braces, ChevronRight, Eye, EyeOff, FileText, GripVertical, Layers, LucideIcon, PanelLeft, Palette, Pencil, Plus, SlidersHorizontal, SquarePlus, Trash2 } from 'lucide-react';
 import { DocContent, GLOBAL_FOOTER_SLUG, GLOBAL_HEADER_SLUG, ProjectType } from '../core/schema';
 import { Icon } from '../app/shared/Icon';
 import { BusyIcon, errorMessage } from '../app/shared/ui';
@@ -14,18 +14,18 @@ import { VariablesPanel } from './VariablesPanel';
 
 // Each module only offers the blocks that make sense in it.
 const LAYOUT = ['Section', 'Container', 'Box', 'Card', 'Grid', 'Row'];
-const CONTENT = ['Heading', 'Text', 'Button', 'Image', 'Divider', 'Spacer'];
+const CONTENT = ['Heading', 'Text', 'Button', 'Image', 'Video', 'Divider', 'Spacer'];
 const FORM = ['Form', 'FormStep', 'FormField', 'ScaleField'];
 
 const BLOCK_GROUPS: Record<ProjectType, { title: string; types: string[] }[]> = {
   website: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion'] }, { title: 'Forms', types: FORM }],
   page: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion'] }, { title: 'Forms', types: FORM }],
-  tour: [{ title: 'Tour', types: ['TourStep'] }, { title: 'Inside a step', types: ['Heading', 'Text', 'Button', 'Image', 'Row'] }],
+  tour: [{ title: 'Tour', types: ['TourStep'] }, { title: 'Inside a step', types: ['Heading', 'Text', 'Button', 'Image', 'Video', 'Row'] }],
   form: [{ title: 'Form', types: FORM }, { title: 'Content', types: ['Heading', 'Text', 'Image', 'Divider', 'Spacer'] }],
   demo: [{ title: 'Demo', types: ['DemoScreen', 'DemoHotspot'] }],
   banner: [
     { title: 'Banner styles', types: ['Banner', 'Popup', 'Carousel', 'Slide'] },
-    { title: 'Content', types: ['Heading', 'Text', 'Button', 'Image'] },
+    { title: 'Content', types: ['Heading', 'Text', 'Button', 'Image', 'Video'] },
     { title: 'Forms', types: FORM },
   ],
   menu: [{ title: 'Menu', types: ['Navbar'] }],
@@ -190,6 +190,7 @@ const LayerRow: React.FC<{ content: DocContent; id: string; depth: number; paren
         <button type="button" className="flex-1 flex items-center gap-1.5 h-full min-w-0 text-left" aria-current={selectedId === id || undefined} onClick={() => select(id)}>
           <Icon name={meta?.icon ?? 'Square'} className="w-3.5 h-3.5 shrink-0 opacity-70" />
           <span className={`truncate ${node.hidden ? 'opacity-50 line-through' : ''}`}>{label}</span>
+          {Boolean(node.hideOn?.length) && <span title={`Hidden on ${node.hideOn!.join(', ')}`} className="shrink-0 text-[11px] px-1 rounded capitalize bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">not on {node.hideOn![0]}{node.hideOn!.length > 1 ? '+' : ''}</span>}
           {node.repeat && <span className="shrink-0 text-[11px] px-1 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">repeats</span>}
         </button>
         {canMove && (
@@ -400,9 +401,10 @@ export const LeftPanel: React.FC = () => {
   const usesPages = project?.type === 'website' || project?.type === 'page';
 
   const tools: { id: StudioTool; label: string; icon: LucideIcon }[] = [
+    // Most used first.
     { id: 'edit', label: 'Edit', icon: SlidersHorizontal },
-    { id: 'variables', label: 'Variables', icon: Braces },
     { id: 'add', label: 'Add', icon: SquarePlus },
+    { id: 'variables', label: 'Variables', icon: Braces },
     { id: 'layers', label: 'Layers', icon: Layers },
     ...(usesPages ? [{ id: 'pages' as StudioTool, label: 'Pages', icon: FileText }] : []),
     { id: 'theme', label: 'Theme', icon: Palette },
@@ -411,7 +413,7 @@ export const LeftPanel: React.FC = () => {
 
   return (
     <aside aria-label="Tools" className="relative z-10 shrink-0 flex bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-      <div role="tablist" aria-label="Tools" aria-orientation="vertical" className="w-[68px] shrink-0 flex flex-col items-center gap-1 py-2 border-r border-slate-100 dark:border-slate-800">
+      <div role="tablist" aria-label="Tools" aria-orientation="vertical" className="no-scrollbar w-[68px] shrink-0 flex flex-col items-center gap-1 py-2 overflow-y-auto border-r border-slate-100 dark:border-slate-800">
         {tools.map(({ id, label, icon: ToolIcon }) => (
           <button
             key={id}
@@ -434,6 +436,15 @@ export const LeftPanel: React.FC = () => {
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          aria-label={tool ? 'Hide panel' : 'Show panel'}
+          title={tool ? 'Hide panel' : 'Show panel'}
+          onClick={() => setTool(tool ? null : lastTool)}
+          className="mt-auto w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors"
+        >
+          <PanelLeft className="w-[18px] h-[18px]" aria-hidden="true" />
+        </button>
       </div>
       {tool && active && (
         <div role="tabpanel" aria-label={active.label} className="w-[320px] flex flex-col min-h-0">
@@ -448,15 +459,6 @@ export const LeftPanel: React.FC = () => {
           </div>
         </div>
       )}
-      <button
-        type="button"
-        aria-label={tool ? 'Hide panel' : 'Show panel'}
-        title={tool ? 'Hide panel' : 'Show panel'}
-        onClick={() => setTool(tool ? null : lastTool)}
-        className="absolute -right-3 top-3 w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md text-slate-500 hover:text-indigo-600 hover:border-indigo-400 transition-colors"
-      >
-        {tool ? <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />}
-      </button>
     </aside>
   );
 };

@@ -12,14 +12,15 @@ export const FullPageSpinner: React.FC = () => (
 
 
 export const RequireAuth: React.FC = () => {
-  const { user, isLoading } = useSession();
+  const { user, isLoading, endedThisVisit } = useSession();
   const location = useLocation();
 
   if (isLoading) return <ShellSkeleton />;
   if (!user) {
     // The return path is kept in router state rather than the URL, so a crafted
-    // link can't send someone to another site after they log in.
-    return <Navigate to={ROUTES.login} replace state={{ from: location.pathname + location.search }} />;
+    // link can't send someone to another site after they log in. It's only for people
+    // arriving by a link: after signing out, the next person starts at the dashboard.
+    return <Navigate to={ROUTES.login} replace state={endedThisVisit ? undefined : { from: location.pathname + location.search }} />;
   }
   return <Outlet />;
 };

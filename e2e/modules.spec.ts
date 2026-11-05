@@ -28,7 +28,7 @@ for (const module of MODULE_LIST) {
 
     await page.getByRole('button', { name: `New ${module.label.toLowerCase()}` }).first().click();
     await expect(page).toHaveURL(new RegExp(`/create\\?type=${module.type}$`));
-    await expect(page.getByRole('heading', { name: module.plural, level: 2 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: module.plural, level: 1 })).toBeVisible();
 
     // Only this module's templates are offered, plus starting blank.
     const templates = templatesFor(module.type);
@@ -156,21 +156,20 @@ test('responses are counted in the form table', async ({ page }) => {
   await expect(row.getByRole('cell', { name: '1', exact: true })).toBeVisible();
 });
 
-test('the create page switches type, searches, and can start blank with a name', async ({ page }) => {
+test('the create page asks what to make, searches, and can start blank with a name', async ({ page }) => {
   await signUp(page);
-  await page.getByRole('complementary').getByRole('button', { name: 'Create new' }).click();
+  await page.getByRole('region', { name: /Get started/ }).getByRole('button', { name: 'Choose a template' }).click();
   await expect(page).toHaveURL(/\/create$/);
   await expect(page.getByRole('list', { name: 'Steps' }).getByRole('listitem')).toHaveCount(3);
-  const types = page.getByRole('navigation', { name: 'What to create' });
+  const types = page.getByRole('list', { name: 'What to create' });
   await expect(types.getByRole('button')).toHaveCount(MODULE_LIST.length);
-  const list = page.getByRole('list', { name: 'Templates' });
 
-  await types.getByRole('button', { name: 'Product tour' }).click();
+  await types.getByRole('button', { name: /^Product tour/ }).click();
+  const list = page.getByRole('list', { name: 'Templates' });
   await page.getByLabel('Search templates').fill('feature');
   await expect(list.getByRole('listitem')).toHaveCount(1);
 
-  await types.getByRole('button', { name: 'Form', exact: true }).click();
-  await expect(page.getByLabel('Search templates')).toHaveValue('');
+  await page.goto('/create?type=form');
   await page.getByRole('button', { name: /Start blank/ }).click();
   await page.getByRole('dialog').getByLabel('Name').fill('My signup form');
   await page.getByRole('button', { name: 'Create and open editor' }).click();

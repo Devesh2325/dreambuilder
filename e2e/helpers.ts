@@ -34,6 +34,26 @@ export async function createFromTemplate(page: Page, templateId: string) {
   await expect(page.getByRole('tablist', { name: 'Project sections' })).toBeVisible();
 }
 
+/** Changes the demo backend's stored data directly, for setting up a situation. */
+export async function changeLocalData(page: Page, change: string) {
+  await page.evaluate((body) => new Promise<void>((resolve, reject) => {
+    const open = indexedDB.open('flowpilot_local', 1);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const transaction = open.result.transaction('state', 'readwrite');
+      const store = transaction.objectStore('state');
+      const request = store.get('backend');
+      request.onsuccess = () => {
+        const state = request.result;
+        new Function('state', body)(state);
+        store.put(state, 'backend');
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    };
+  }), change);
+}
+
 export async function publish(page: Page, slug: string) {
   await page.locator('header').getByRole('button', { name: /^Publish/ }).click();
   await page.getByLabel('Web address').fill(slug);

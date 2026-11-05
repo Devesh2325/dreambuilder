@@ -24,7 +24,7 @@ npx playwright test -g "survey"             # one browser test
 `src/data/services.ts` defines the interfaces the app uses, and `AppServices` reaches components through `useServices()`. App code must not import the Supabase client directly.
 
 - `supabaseServices.ts`: real backend. `publicApi.ts` is the visitor-facing part, using plain `fetch` so public pages and the embed don't bundle supabase-js.
-- `localServices.ts`: stores everything in `localStorage`. Used for demos and Playwright. `src/data/index.ts` selects it when `VITE_BACKEND=local`, or in dev when Supabase isn't configured, and never otherwise in production. It isn't secure and only approximates the database's rules.
+- `localServices.ts`: keeps everything in this browser, in IndexedDB through `localStore.ts` (localStorage holds only about 5 MB, and tests without IndexedDB fall back to it). Used for demos and Playwright. `src/data/index.ts` selects it when `VITE_BACKEND=local`, or in dev when Supabase isn't configured, and never otherwise in production. It isn't secure and only approximates the database's rules.
 
 A new data feature needs changes in the interface, both implementations, and usually a migration.
 
@@ -34,7 +34,7 @@ Security lives in `supabase/migrations/`, not the UI. `useWorkspace().can()` onl
 
 - Default grants are revoked and re-granted **per column**. A new client-writable column needs a `grant`, and columns like `plan`, `status` and `published_version_id` are deliberately not writable by clients.
 - Privileged writes go through `SECURITY DEFINER` functions, which must set `search_path = ''` and check roles themselves. New functions need an explicit `revoke`/`grant`: `engagement.sql` re-grants them all, so a later migration must repeat this for its own.
-- Visitors have no login. They only reach functions that require the project to be published. Webhook addresses are stripped from public snapshots, in `public_snapshot` and in the local backend.
+- Visitors have no login. They only reach functions that require the project to be published. Webhook addresses, the address a tour is built on and the variable list are stripped from public snapshots, in `public_snapshot` and in the local backend.
 - Plan limits are in both `src/types/auth.ts` and `plan_max_*` in the migrations. Keep them in step.
 
 `src/test/db/` runs the migrations on PGlite (in-process Postgres, no Docker), with Supabase's `auth`, `storage` and default grants stubbed. Every migration change needs tests there. PGlite's `query` takes one statement at a time; use `t.db.exec` for several.
@@ -89,6 +89,10 @@ Team templates and sections live in `workspace_library` (`LibraryRepository`). T
 `src/embed/flowpilot.tsx`, built by `vite.embed.config.ts` into one file with Preact replacing React. `npm run build` fails if it exceeds the limit in `scripts/check-embed-size.mjs`. Avoid importing `zod` or `src/core/schema.ts` values into anything it reaches, which is why validation lives in `core/validation.ts`.
 
 `public/flowpilot.js` is generated and ignored by git. The script reads Supabase settings at build time. Failures must never break the customer's page.
+
+The editor can drive the script on a customer's site, to pick an element, build a tour or test a draft (`#fp-pick`, `#fp-build`, `#fp-test`). This needs `window.opener`, and the opener's origin must be the script's own origin or `data-builder-origin`, so no other site can read clicks or show content there.
+
+Video iframes only ever point at YouTube or Vimeo: `parseVideoUrl` in `core/video.ts` rebuilds the address from a checked id.
 
 The docs in `src/docs/content/` are checked by `src/test/core/docs.test.ts` against the JS API, recorded events and script attributes. Update them together.
 

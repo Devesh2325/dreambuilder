@@ -1,5 +1,6 @@
 import { DEFAULT_THEME, PROJECT_TYPES } from '../core/schema';
 import { PLAN_LIMITS } from '../types/auth';
+import { LocalStore, openLocalStore } from './localStore';
 import {
   AnalyticsRow, AppServices, AssetRecord, AuthUser, DocumentRecord, InvitationRecord, LibraryItem, MemberRecord, ProjectRecord,
   PublishedSnapshot, SubmissionRecord, VersionRecord, WorkspaceMembership,
@@ -42,7 +43,6 @@ interface LocalState {
   library: (LibraryItem & { organizationId: string })[];
 }
 
-const STORAGE_KEY = 'flowpilot_local_backend';
 
 const emptyState = (): LocalState => ({
   users: [],
@@ -59,33 +59,35 @@ const emptyState = (): LocalState => ({
   library: [],
 });
 
-function load(): LocalState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyState();
-    const state: LocalState = { ...emptyState(), ...JSON.parse(raw) };
-    // Saved demo data can include modules that no longer exist.
-    for (const project of state.projects as { type: string }[]) {
-      // Popups became a kind of banner.
-      if (project.type === 'popup') project.type = 'banner';
-    }
-    state.projects = state.projects.filter((project) => PROJECT_TYPES.includes(project.type));
-    return state;
-  } catch {
-    return emptyState();
+function normalize(stored: Partial<LocalState> | undefined): LocalState {
+  const state: LocalState = { ...emptyState(), ...stored };
+  // Saved demo data can include modules that no longer exist.
+  for (const project of state.projects as { type: string }[]) {
+    // Popups became a kind of banner.
+    if (project.type === 'popup') project.type = 'banner';
   }
+  state.projects = state.projects.filter((project) => PROJECT_TYPES.includes(project.type));
+  return state;
 }
 
-function save(state: LocalState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+let storePromise: Promise<LocalStore<LocalState>> | null = null;
+const store = () => (storePromise ??= openLocalStore<LocalState>());
+
+async function load(): Promise<LocalState> {
+  return normalize(await (await store()).read());
 }
 
-function update<T>(change: (state: LocalState) => T): T {
-  const state = load();
-  const result = change(state);
-  save(state);
-  return result;
+async function update<T>(change: (state: LocalState) => T): Promise<T> {
+  return (await store()).update((stored) => {
+    const state = normalize(stored);
+    const result = change(state);
+    return { state, result };
+  });
 }
+
+/** Whoever is signed in can only open projects in their own workspaces. */
+const canOpen = (state: LocalState, project: ProjectRecord | undefined) =>
+  Boolean(project) && (!state.currentUserId || state.members.some((m) => m.userId === state.currentUserId && m.organizationId === project!.organizationId));
 
 const now = () => new Date().toISOString();
 const uuid = () => crypto.randomUUID();
@@ -103,6 +105,8 @@ function publishedSnapshot(state: LocalState, project: ProjectRecord | undefined
   if (!version) return null;
   const snapshot = structuredClone(version.snapshot);
   delete snapshot.project.settings.webhookUrl;
+  delete snapshot.project.settings.builderUrl;
+  delete snapshot.project.settings.variableDefs;
   return snapshot;
 }
 
@@ -112,8 +116,8 @@ export function createLocalServices(): AppServices {
   const toPublicUser = (user: LocalUser | undefined): AuthUser | null =>
     user ? { id: user.id, email: user.email, fullName: user.fullName } : null;
 
-  const notify = () => {
-    const state = load();
+  const notify = async () => {
+    const state = await load();
     const user = toPublicUser(state.users.find((u) => u.id === state.currentUserId));
     listeners.forEach((listener) => listener(user));
   };
@@ -121,7 +125,7 @@ export function createLocalServices(): AppServices {
   return {
     auth: {
       getUser: async () => {
-        const state = load();
+        const state = await load();
         return toPublicUser(state.users.find((u) => u.id === state.currentUserId));
       },
       onChange(listener) {
@@ -129,16 +133,17 @@ export function createLocalServices(): AppServices {
         return () => listeners.delete(listener);
       },
       async signIn(email, password) {
-        const state = load();
-        const user = state.users.find((u) => u.email === email.toLowerCase() && u.password === password);
-        if (!user) return { error: 'Invalid login credentials' };
-        state.currentUserId = user.id;
-        save(state);
-        notify();
+        const found = await update((state) => {
+          const user = state.users.find((u) => u.email === email.toLowerCase() && u.password === password);
+          if (user) state.currentUserId = user.id;
+          return Boolean(user);
+        });
+        if (!found) return { error: 'Invalid login credentials' };
+        await notify();
         return { error: null };
       },
       async signUp({ email, password, fullName, workspaceName }) {
-        const result = update((state) => {
+        const result = await update((state) => {
           const lower = email.toLowerCase();
           if (state.users.some((u) => u.email === lower)) return 'User already registered';
           const user: LocalUser = { id: uuid(), email: lower, fullName, password };
@@ -150,19 +155,19 @@ export function createLocalServices(): AppServices {
           return null;
         });
         if (result) return { error: result, needsEmailConfirmation: false };
-        notify();
+        await notify();
         return { error: null, needsEmailConfirmation: false };
       },
       async signOut() {
-        update((state) => {
+        await update((state) => {
           state.currentUserId = null;
         });
-        notify();
+        await notify();
         return { error: null };
       },
       sendPasswordReset: async () => ({ error: null }),
       async updatePassword(password) {
-        update((state) => {
+        await update((state) => {
           const user = state.users.find((u) => u.id === state.currentUserId);
           if (user) user.password = password;
         });
@@ -172,7 +177,7 @@ export function createLocalServices(): AppServices {
 
     workspaces: {
       async listMemberships(userId) {
-        const state = load();
+        const state = await load();
         return state.members
           .filter((m) => m.userId === userId)
           .flatMap((m) => {
@@ -191,7 +196,7 @@ export function createLocalServices(): AppServices {
         });
       },
       async updateWorkspace(id, patch) {
-        update((state) => {
+        await update((state) => {
           const workspace = state.workspaces.find((w) => w.id === id);
           if (workspace) Object.assign(workspace, patch);
         });
@@ -200,12 +205,14 @@ export function createLocalServices(): AppServices {
 
     projects: {
       async list(organizationId) {
-        return load().projects
+        return (await load()).projects
           .filter((p) => p.organizationId === organizationId)
           .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
       },
       async get(id) {
-        return load().projects.find((p) => p.id === id) ?? null;
+        const state = await load();
+        const project = state.projects.find((p) => p.id === id);
+        return canOpen(state, project) ? project! : null;
       },
       async create(input) {
         return update((state) => {
@@ -251,14 +258,14 @@ export function createLocalServices(): AppServices {
         });
       },
       async update(id, patch) {
-        update((state) => {
+        await update((state) => {
           const taken = patch.slug && state.projects.some((p) => p.slug === patch.slug && p.id !== id);
           if (taken) throw new Error('That web address is already taken.');
           Object.assign(requireProject(state, id), patch, { updatedAt: now() });
         });
       },
       async remove(id) {
-        update((state) => {
+        await update((state) => {
           state.projects = state.projects.filter((p) => p.id !== id);
           state.documents = state.documents.filter((d) => d.projectId !== id);
           state.versions = state.versions.filter((v) => v.projectId !== id);
@@ -266,10 +273,12 @@ export function createLocalServices(): AppServices {
         });
       },
       async listDocuments(projectId) {
-        return load().documents.filter((d) => d.projectId === projectId).sort((a, b) => a.position - b.position);
+        const state = await load();
+        if (!canOpen(state, state.projects.find((p) => p.id === projectId))) return [];
+        return state.documents.filter((d) => d.projectId === projectId).sort((a, b) => a.position - b.position);
       },
       async listAllDocuments(organizationId) {
-        const state = load();
+        const state = await load();
         const ids = new Set(state.projects.filter((p) => p.organizationId === organizationId).map((p) => p.id));
         return state.documents.filter((d) => ids.has(d.projectId));
       },
@@ -306,7 +315,7 @@ export function createLocalServices(): AppServices {
         });
       },
       async removeDocument(id) {
-        update((state) => {
+        await update((state) => {
           state.documents = state.documents.filter((d) => d.id !== id);
         });
       },
@@ -314,7 +323,7 @@ export function createLocalServices(): AppServices {
 
     publishing: {
       async publish(projectId, summary, slug) {
-        update((state) => {
+        await update((state) => {
           const project = requireProject(state, projectId);
           const documents = state.documents.filter((d) => d.projectId === projectId).sort((a, b) => a.position - b.position);
           if (documents.length === 0) throw new Error('Project has nothing to publish');
@@ -352,18 +361,18 @@ export function createLocalServices(): AppServices {
         });
       },
       async unpublish(projectId) {
-        update((state) => {
+        await update((state) => {
           Object.assign(requireProject(state, projectId), { status: 'draft', publishedVersionId: null });
         });
       },
       async listVersions(projectId) {
-        return load().versions
+        return (await load()).versions
           .filter((v) => v.projectId === projectId)
           .sort((a, b) => b.versionNumber - a.versionNumber)
           .map(({ id, versionNumber, changeSummary, createdAt }) => ({ id, versionNumber, changeSummary, createdAt }));
       },
       async restoreVersion(versionId) {
-        update((state) => {
+        await update((state) => {
           const version = state.versions.find((v) => v.id === versionId);
           if (!version) throw new Error('Version not found');
           const { title, variables, theme, settings } = version.snapshot.project;
@@ -380,7 +389,7 @@ export function createLocalServices(): AppServices {
 
     assets: {
       async list(organizationId) {
-        return load().assets.filter((a) => a.organizationId === organizationId);
+        return (await load()).assets.filter((a) => a.organizationId === organizationId);
       },
       async upload(organizationId, file) {
         const url = await new Promise<string>((resolve, reject) => {
@@ -396,7 +405,7 @@ export function createLocalServices(): AppServices {
         });
       },
       async remove(asset) {
-        update((state) => {
+        await update((state) => {
           state.assets = state.assets.filter((a) => a.id !== asset.id);
         });
       },
@@ -404,10 +413,10 @@ export function createLocalServices(): AppServices {
 
     forms: {
       async listSubmissions(projectId) {
-        return load().submissions.filter((s) => s.projectId === projectId);
+        return (await load()).submissions.filter((s) => s.projectId === projectId);
       },
       async countByProject(organizationId) {
-        const state = load();
+        const state = await load();
         const ids = new Set(state.projects.filter((p) => p.organizationId === organizationId).map((p) => p.id));
         const counts: Record<string, number> = {};
         for (const row of state.submissions) {
@@ -416,7 +425,7 @@ export function createLocalServices(): AppServices {
         return counts;
       },
       async removeSubmission(id) {
-        update((state) => {
+        await update((state) => {
           state.submissions = state.submissions.filter((s) => s.id !== id);
         });
       },
@@ -424,7 +433,7 @@ export function createLocalServices(): AppServices {
 
     analytics: {
       async summary(organizationId) {
-        const state = load();
+        const state = await load();
         const ids = new Set(state.projects.filter((p) => p.organizationId === organizationId).map((p) => p.id));
         const rows = new Map<string, AnalyticsRow & { seen: Set<string> }>();
         for (const event of state.events.filter((e) => ids.has(e.projectId))) {
@@ -441,7 +450,7 @@ export function createLocalServices(): AppServices {
 
     team: {
       async listMembers(organizationId) {
-        const state = load();
+        const state = await load();
         return state.members
           .filter((m) => m.organizationId === organizationId)
           .map((m) => {
@@ -450,7 +459,7 @@ export function createLocalServices(): AppServices {
           });
       },
       async updateRole(organizationId, userId, role) {
-        update((state) => {
+        await update((state) => {
           const owners = state.members.filter((m) => m.organizationId === organizationId && m.role === 'owner');
           const member = state.members.find((m) => m.organizationId === organizationId && m.userId === userId);
           if (member?.role === 'owner' && role !== 'owner' && owners.length === 1) throw new Error('A workspace must keep at least one owner');
@@ -458,14 +467,14 @@ export function createLocalServices(): AppServices {
         });
       },
       async removeMember(organizationId, userId) {
-        update((state) => {
+        await update((state) => {
           const owners = state.members.filter((m) => m.organizationId === organizationId && m.role === 'owner');
           if (owners.length === 1 && owners[0].userId === userId) throw new Error('A workspace must keep at least one owner');
           state.members = state.members.filter((m) => !(m.organizationId === organizationId && m.userId === userId));
         });
       },
       async listInvitations(organizationId) {
-        return load().invitations
+        return (await load()).invitations
           .filter((i) => i.organizationId === organizationId && !i.accepted)
           .map(({ id, email, role, expiresAt }) => ({ id, email, role, expiresAt }));
       },
@@ -485,12 +494,12 @@ export function createLocalServices(): AppServices {
         });
       },
       async revokeInvitation(id) {
-        update((state) => {
+        await update((state) => {
           state.invitations = state.invitations.filter((i) => i.id !== id);
         });
       },
       async acceptInvitation(token) {
-        update((state) => {
+        await update((state) => {
           const invite = state.invitations.find((i) => i.token === token && !i.accepted);
           const user = state.users.find((u) => u.id === state.currentUserId);
           if (!invite || !user || invite.email !== user.email) throw new Error('This invitation is invalid or has expired');
@@ -502,7 +511,7 @@ export function createLocalServices(): AppServices {
 
     library: {
       async list(organizationId, kind) {
-        return load().library.filter((item) => item.organizationId === organizationId && item.kind === kind);
+        return (await load()).library.filter((item) => item.organizationId === organizationId && item.kind === kind);
       },
       async create(organizationId, item) {
         return update((state) => {
@@ -512,7 +521,7 @@ export function createLocalServices(): AppServices {
         });
       },
       async remove(id) {
-        update((state) => {
+        await update((state) => {
           state.library = state.library.filter((item) => item.id !== id);
         });
       },
@@ -520,15 +529,15 @@ export function createLocalServices(): AppServices {
 
     publicApi: {
       async getPublishedSite(slug) {
-        const state = load();
+        const state = await load();
         return publishedSnapshot(state, state.projects.find((p) => p.slug === slug));
       },
       async getPublishedExperience(projectId) {
-        const state = load();
+        const state = await load();
         return publishedSnapshot(state, state.projects.find((p) => p.id === projectId));
       },
       async submitForm(projectId, data) {
-        update((state) => {
+        await update((state) => {
           if (!publishedSnapshot(state, state.projects.find((p) => p.id === projectId))) {
             throw new Error('This form is not available');
           }
@@ -538,7 +547,7 @@ export function createLocalServices(): AppServices {
         });
       },
       async trackEvents(projectId, events) {
-        update((state) => {
+        await update((state) => {
           const day = now().slice(0, 10);
           state.events.push(...events.map((event) => ({ projectId, type: event.type, visitorId: event.visitorId, day })));
           if (state.events.length > 5000) state.events.splice(0, state.events.length - 5000);

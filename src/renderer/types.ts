@@ -25,6 +25,8 @@ export interface RenderContext {
   track?: (eventType: string, metadata?: Record<string, unknown>) => void;
   /** Editor only: of this parent's step children, draw only the given one. */
   visibleStep?: { parentKey: string; stepType: string; key: string };
+  /** What a tour draws around its steps: progress and a close button. */
+  tourChrome?: { label?: string; canClose?: boolean };
 }
 
 export interface BlockRenderProps {
@@ -35,7 +37,7 @@ export interface BlockRenderProps {
   ctx: RenderContext;
 }
 
-export type FieldType = 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'color' | 'image' | 'url' | 'menu';
+export type FieldType = 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'color' | 'image' | 'url' | 'menu' | 'placement';
 
 export interface BlockField {
   key: string;

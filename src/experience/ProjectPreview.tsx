@@ -36,10 +36,15 @@ interface ProjectPreviewProps {
   /** When false, clicks inside are ignored: used for gallery thumbnails. */
   interactive?: boolean;
   title?: string;
+  /** For a parent with its own Restart button. */
+  hideReplay?: boolean;
+  /** Changing this starts the experience again. */
+  restartKey?: number;
+  frameStyle?: React.CSSProperties;
 }
 
 export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
-  type, documents, theme, variables, settings, device = 'desktop', initialSlug, className, interactive = true, title = 'Preview',
+  type, documents, theme, variables, settings, device = 'desktop', initialSlug, className, interactive = true, title = 'Preview', hideReplay, restartKey = 0, frameStyle,
 }) => {
   const delivery = MODULES[type].delivery;
   const [doc, setDoc] = useState<Document | null>(null);
@@ -60,7 +65,7 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
 
   return (
     <div className={className} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', width: '100%' }}>
-      {delivery !== 'site' && type !== 'faq' && type !== 'menu' && interactive && (
+      {delivery !== 'site' && type !== 'faq' && type !== 'menu' && interactive && !hideReplay && (
         <button
           type="button"
           onClick={() => setRunKey(runKey + 1)}
@@ -73,7 +78,7 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
         title={title}
         theme={theme}
         onDocument={setDoc}
-        style={{ width: DEVICE_WIDTHS[device], maxWidth: '100%', flex: 1, background: '#fff', pointerEvents: interactive ? undefined : 'none' }}
+        style={{ width: DEVICE_WIDTHS[device], maxWidth: '100%', flex: 1, background: '#fff', pointerEvents: interactive ? undefined : 'none', ...frameStyle }}
       >
         {delivery === 'site' ? (
           <SiteView
@@ -95,9 +100,9 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
           <>
             {delivery === 'overlay' && settings.position !== 'inline' && <SampleHostPage />}
             {host && documents[0] && (
-              <div style={delivery === 'inline' ? { padding: 16 } : undefined}>
+              <div style={delivery === 'inline' ? { padding: type === 'demo' ? '0 16px' : 16 } : undefined}>
                 <ExperiencePlayer
-                  key={runKey}
+                  key={`${runKey}-${restartKey}`}
                   type={type}
                   content={documents[0].content}
                   theme={theme}

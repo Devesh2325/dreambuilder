@@ -97,7 +97,14 @@ interface StudioState {
   updateStyle: (id: string, property: string, value: string | number) => void;
   /** Several styles as one undo step. */
   updateStyles: (id: string, patch: Record<string, string | number>) => void;
-  updateNode: (id: string, patch: Partial<Pick<DocNode, 'name' | 'hidden' | 'locked' | 'showIf' | 'repeat'>>) => void;
+  updateNode: (id: string, patch: Partial<Pick<DocNode, 'name' | 'hidden' | 'hideOn' | 'locked' | 'showIf' | 'repeat'>>) => void;
+  /** Adds or removes items inside a container. New ones copy the last, as people expect. */
+  setChildCount: (id: string, count: number) => void;
+  /** Sets a grid's columns. 0 means automatic. Setting them for desktop also makes smaller screens stack. */
+  setGridColumns: (id: string, count: number) => void;
+  clearDeviceStyles: (id: string, device: Device) => void;
+  /** A step made by clicking something on the customer's own site. */
+  addTourStep: (step: { selector: string; text: string; path: string }) => void;
 
   updateDraft: (change: (draft: Draft<ProjectDraft>) => void, key?: string) => void;
 
@@ -267,7 +274,8 @@ export const useStudio = create<StudioState>((set, get) => {
         draft: { title: project.title, variables: project.variables, theme: project.theme, settings: project.settings },
         // Templates start on their variables, and blank projects on blocks to add.
         // Small screens start closed, leaving the room to the canvas.
-        tool: window.innerWidth < 1100 ? null : project.templateId ? 'variables' : 'add',
+        // A demo's first job is its screenshots, which the Edit tool leads with.
+        tool: window.innerWidth < 1100 ? null : project.type === 'demo' ? 'edit' : project.templateId ? 'variables' : 'add',
       });
     },
 
@@ -435,6 +443,76 @@ export const useStudio = create<StudioState>((set, get) => {
         Object.assign(content.nodes[id], patch);
       // Only typing a name merges into one undo step. Each toggle is its own.
       }, 'name' in patch ? `node:${id}:name` : undefined);
+    },
+
+    setChildCount: (id, count) => {
+      const doc = get().documentOfNode(id);
+      if (!doc) return;
+      editDocument(doc.id, (content) => {
+        const node = content.nodes[id];
+        while (node.children.length > count) removeNode(content, node.children[node.children.length - 1]);
+        while (node.children.length < count) {
+          const last = node.children[node.children.length - 1];
+          if (last) duplicateNode(content, last);
+          else {
+            const box = nodeFromBlock('Box')!;
+            insertSubtree(content, id, box.id, { [box.id]: box });
+          }
+        }
+      });
+    },
+
+    setGridColumns: (id, count) => {
+      const state = get();
+      const doc = state.documentOfNode(id);
+      if (!doc) return;
+      const { device } = state;
+      const tracks = (n: number) => (n === 1 ? 'minmax(0, 1fr)' : `repeat(${n}, minmax(0, 1fr))`);
+      editDocument(doc.id, (content) => {
+        const node = content.nodes[id];
+        if (device !== 'desktop') {
+          node.responsive ??= {};
+          node.responsive[device] ??= {};
+          if (count === 0) delete node.responsive[device]!.gridTemplateColumns;
+          else node.responsive[device]!.gridTemplateColumns = tracks(count);
+          return;
+        }
+        if (count === 0) {
+          delete node.styles.gridTemplateColumns;
+          return;
+        }
+        node.styles.gridTemplateColumns = tracks(count);
+        node.responsive ??= {};
+        node.responsive.tablet ??= {};
+        node.responsive.mobile ??= {};
+        if (count > 2) node.responsive.tablet.gridTemplateColumns ??= tracks(2);
+        if (count > 1) node.responsive.mobile.gridTemplateColumns ??= tracks(1);
+      });
+    },
+
+    clearDeviceStyles: (id, device) => {
+      const doc = get().documentOfNode(id);
+      if (!doc || device === 'desktop') return;
+      editDocument(doc.id, (content) => {
+        delete content.nodes[id].responsive?.[device];
+      });
+    },
+
+    addTourStep: ({ selector, text, path }) => {
+      const state = get();
+      const doc = state.documents.find((d) => d.id === state.activeDocumentId);
+      if (!doc) return;
+      const title = text || 'New step';
+      const make = (type: string, props: Record<string, unknown>, children: string[] = []): DocNode => ({ ...nodeFromBlock(type)!, props: { ...BLOCK_META[type].defaultProps, ...props }, children });
+      const heading = make('Heading', { text: title, level: 'h4' });
+      const body = make('Text', { text: 'Tell people what this does.' });
+      const back = make('Button', { text: 'Back', action: 'prev', variant: 'secondary' });
+      const next = make('Button', { text: 'Next', action: 'next' });
+      const row: DocNode = { ...make('Row', {}, [back.id, next.id]), styles: { justifyContent: 'flex-end', gap: '8px' } };
+      const step = make('TourStep', { selector, path }, [heading.id, body.id, row.id]);
+      const nodes = Object.fromEntries([step, heading, body, back, next, row].map((node) => [node.id, node]));
+      editDocument(doc.id, (content) => insertSubtree(content, content.rootId, step.id, nodes));
+      set({ selectedId: step.id });
     },
 
     updateDraft: (change, key) => {

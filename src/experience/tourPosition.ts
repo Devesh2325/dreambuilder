@@ -1,4 +1,5 @@
 export type Placement = 'top' | 'bottom' | 'left' | 'right';
+export type Align = 'start' | 'center' | 'end';
 
 export interface Rect {
   top: number;
@@ -19,19 +20,22 @@ const MARGIN = 8;
  * Where to draw a tour step: on the requested side of the target if it fits,
  * otherwise the opposite side, and always kept inside the viewport.
  */
-export function positionStep(target: Rect, step: Size, viewport: Size, placement: Placement): { top: number; left: number; placement: Placement } {
+export function positionStep(target: Rect, step: Size, viewport: Size, placement: Placement, align: Align = 'center'): { top: number; left: number; placement: Placement; caret: number } {
   const opposite: Record<Placement, Placement> = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+
+  const across = align === 'start' ? target.left : align === 'end' ? target.left + target.width - step.width : target.left + target.width / 2 - step.width / 2;
+  const down = align === 'start' ? target.top : align === 'end' ? target.top + target.height - step.height : target.top + target.height / 2 - step.height / 2;
 
   const coords = (side: Placement) => {
     switch (side) {
       case 'top':
-        return { top: target.top - step.height - GAP, left: target.left + target.width / 2 - step.width / 2 };
+        return { top: target.top - step.height - GAP, left: across };
       case 'bottom':
-        return { top: target.top + target.height + GAP, left: target.left + target.width / 2 - step.width / 2 };
+        return { top: target.top + target.height + GAP, left: across };
       case 'left':
-        return { top: target.top + target.height / 2 - step.height / 2, left: target.left - step.width - GAP };
+        return { top: down, left: target.left - step.width - GAP };
       case 'right':
-        return { top: target.top + target.height / 2 - step.height / 2, left: target.left + target.width + GAP };
+        return { top: down, left: target.left + target.width + GAP };
     }
   };
 
@@ -46,10 +50,17 @@ export function positionStep(target: Rect, step: Size, viewport: Size, placement
   const side = fits(placement) || !fits(opposite[placement]) ? placement : opposite[placement];
   const { top, left } = coords(side);
   const clamp = (value: number, max: number) => Math.max(MARGIN, Math.min(value, Math.max(MARGIN, max)));
+  const finalTop = clamp(top, viewport.height - step.height - MARGIN);
+  const finalLeft = clamp(left, viewport.width - step.width - MARGIN);
+  // The arrow points at the middle of the target, wherever the step ended up.
+  const isVertical = side === 'top' || side === 'bottom';
+  const raw = isVertical ? target.left + target.width / 2 - finalLeft - 6 : target.top + target.height / 2 - finalTop - 6;
+  const length = isVertical ? step.width : step.height;
   return {
-    top: clamp(top, viewport.height - step.height - MARGIN),
-    left: clamp(left, viewport.width - step.width - MARGIN),
+    top: finalTop,
+    left: finalLeft,
     placement: side,
+    caret: Math.max(12, Math.min(raw, length - 24)),
   };
 }
 

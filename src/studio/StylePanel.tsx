@@ -1,35 +1,40 @@
 import React, { useState } from 'react';
 import {
-  AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowRight, ChevronDown, Italic, Link2, Link2Off, Strikethrough, Underline, X,
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowRight, ChevronDown, Italic, Link2, Link2Off, Minus, Plus, RotateCcw, Strikethrough, Underline, X,
   LucideIcon,
 } from 'lucide-react';
-import { DocNode } from '../core/schema';
+import { Device, DEVICES, DocNode } from '../core/schema';
 import { ImageInput } from '../app/shared/VariableForm';
-import { GOOGLE_FONTS } from '../renderer/css';
-import { ColorField, fieldClass } from './fields';
+import { BLOCK_META } from '../renderer/blockMeta';
+import { ColorField, fieldClass, FontSelect } from './fields';
 import { useStudio } from './store';
 
 const smallLabel = 'block mb-1 text-xs font-medium text-slate-500 dark:text-slate-400';
 
-// Remembered while the editor is open, so moving between blocks keeps your place.
-const openGroups = new Set(['Layout', 'Spacing', 'Size', 'Typography', 'Fill', 'Border']);
+const DEVICE_WIDTH: Record<Device, string> = { desktop: 'any large screen', tablet: 'up to 991 px wide', mobile: 'up to 640 px wide' };
 
-const Group: React.FC<{ title: string; onReset?: () => void; children: React.ReactNode }> = ({ title, onReset, children }) => {
-  const [isOpen, setIsOpen] = useState(openGroups.has(title));
+// Remembered while the editor is open, so moving between blocks keeps your place.
+const groupChoice = new Map<string, boolean>();
+
+const Group: React.FC<{ title: string; defaultOpen: boolean; count?: number; onReset?: () => void; children: React.ReactNode }> = ({ title, defaultOpen, count, onReset, children }) => {
+  const [isOpen, setIsOpen] = useState(groupChoice.get(title) ?? defaultOpen);
   return (
     <section aria-label={title} className="border-b border-slate-100 dark:border-slate-800 last:border-b-0">
       <div className="flex items-center">
         <button
           type="button"
           aria-expanded={isOpen}
+          aria-label={title}
           className="flex-1 flex items-center justify-between h-10 text-sm font-semibold text-slate-800 dark:text-slate-100"
           onClick={() => {
-            if (isOpen) openGroups.delete(title);
-            else openGroups.add(title);
+            groupChoice.set(title, !isOpen);
             setIsOpen(!isOpen);
           }}
         >
-          {title}
+          <span className="flex items-center gap-1.5">
+            {title}
+            {Boolean(count) && <span aria-hidden="true" title="Changed on this device" className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+          </span>
           <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
         </button>
         {onReset && (
@@ -49,13 +54,15 @@ interface Choice {
   icon?: LucideIcon;
 }
 
-const Segmented: React.FC<{ label: string; value: string; choices: Choice[]; disabled?: boolean; onChange: (value: string) => void }> = ({ label, value, choices, disabled, onChange }) => (
+const Segmented: React.FC<{ label: string; value: string; inherited?: string; choices: Choice[]; disabled?: boolean; onChange: (value: string) => void }> = ({ label, value, inherited, choices, disabled, onChange }) => (
   <div>
     <p className={smallLabel}>{label}</p>
     <div role="group" aria-label={label} className="flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800">
       {choices.map((choice) => {
         const ChoiceIcon = choice.icon;
         const selected = value === choice.value;
+        // Coming from a larger device: shown, but quieter than a choice made here.
+        const fromLarger = !value && inherited === choice.value;
         return (
           <button
             key={choice.value}
@@ -63,10 +70,10 @@ const Segmented: React.FC<{ label: string; value: string; choices: Choice[]; dis
             disabled={disabled}
             aria-pressed={selected}
             aria-label={`${label}: ${choice.label}`}
-            title={choice.label}
+            title={fromLarger ? `${choice.label} (from a larger screen)` : choice.label}
             // Clicking the current choice clears it, returning to the block's default.
             onClick={() => onChange(selected ? '' : choice.value)}
-            className={`flex-1 min-w-0 h-8 flex items-center justify-center rounded-md text-xs font-medium transition-colors ${selected ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white'}`}
+            className={`flex-1 min-w-0 h-8 flex items-center justify-center rounded-md text-xs font-medium transition-colors ${selected ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-white shadow-sm' : fromLarger ? 'bg-white/50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200' : 'text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white'}`}
           >
             {ChoiceIcon ? <ChoiceIcon className="w-4 h-4" aria-hidden="true" /> : <span className="truncate px-0.5">{choice.label}</span>}
           </button>
@@ -99,7 +106,7 @@ const NumberField: React.FC<{ label: string; value: string; placeholder?: string
       onKeyDown={(event) => {
         if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
         event.preventDefault();
-        const next = stepValue(value, event.key === 'ArrowUp' ? 1 : -1, event.shiftKey);
+        const next = stepValue(value || placeholder || '', event.key === 'ArrowUp' ? 1 : -1, event.shiftKey);
         if (next !== null) onChange(next);
       }}
     />
@@ -113,13 +120,32 @@ const NumberField: React.FC<{ label: string; value: string; placeholder?: string
   );
 };
 
-const SelectField: React.FC<{ label: string; value: string; options: (string | { value: string; label: string })[]; disabled?: boolean; onChange: (value: string) => void }> = ({ label, value, options, disabled, onChange }) => {
+/** A count people can raise and lower with buttons, such as columns or items. */
+const Stepper: React.FC<{ label: string; noun: string; value: number; min: number; max: number; empty?: string; disabled?: boolean; onChange: (value: number) => void }> = ({ label, noun, value, min, max, empty, disabled, onChange }) => (
+  <div>
+    <p className={smallLabel}>{label}</p>
+    <div className="flex items-center gap-1">
+      <button type="button" aria-label={`Fewer ${noun}`} disabled={disabled || value <= min} className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 disabled:opacity-40" onClick={() => onChange(value - 1)}>
+        <Minus className="w-4 h-4" aria-hidden="true" />
+      </button>
+      <output aria-label={label} className="flex-1 h-9 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 text-sm font-semibold tabular-nums">
+        {value === 0 && empty ? empty : value}
+      </output>
+      <button type="button" aria-label={`More ${noun}`} disabled={disabled || value >= max} className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 disabled:opacity-40" onClick={() => onChange(value + 1)}>
+        <Plus className="w-4 h-4" aria-hidden="true" />
+      </button>
+    </div>
+  </div>
+);
+
+const SelectField: React.FC<{ label: string; value: string; inherited?: string; options: (string | { value: string; label: string })[]; disabled?: boolean; onChange: (value: string) => void }> = ({ label, value, inherited, options, disabled, onChange }) => {
   const list = options.map((option) => (typeof option === 'string' ? { value: option, label: option } : option));
+  const inheritedLabel = inherited ? list.find((option) => option.value === inherited)?.label ?? inherited : '';
   return (
     <div>
       <p className={smallLabel} aria-hidden="true">{label}</p>
       <select aria-label={label} disabled={disabled} className={fieldClass} value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">Default</option>
+        <option value="">{inheritedLabel ? `Same as larger screen (${inheritedLabel})` : 'Default'}</option>
         {value && !list.some((option) => option.value === value) && <option value={value}>{value}</option>}
         {list.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -144,14 +170,14 @@ const sideOfShorthand = (shorthand: string, side: typeof SIDES[number]): string 
 };
 
 /** Margin outside and padding inside, drawn like the block they apply to. */
-const BoxModel: React.FC<{ read: (key: string) => string; disabled?: boolean; set: (key: string, value: string) => void }> = ({ read, disabled, set }) => {
+const BoxModel: React.FC<{ read: (key: string) => string; inherited: (key: string) => string; disabled?: boolean; set: (key: string, value: string) => void }> = ({ read, inherited, disabled, set }) => {
   const sideField = (kind: 'margin' | 'padding', side: typeof SIDES[number]) => {
     const key = `${kind}${side}`;
     return (
       <NumberField
         bare
         label={`${kind === 'margin' ? 'Margin' : 'Padding'} ${side.toLowerCase()}`}
-        placeholder={sideOfShorthand(read(kind), side) || '0'}
+        placeholder={inherited(key) || sideOfShorthand(read(kind) || inherited(kind), side) || '0'}
         disabled={disabled}
         value={read(key)}
         onChange={(value) => set(key, value)}
@@ -204,50 +230,71 @@ const GRADIENTS = [
   'linear-gradient(180deg, var(--fp-background), var(--fp-surface))',
 ];
 
-const GRID_COLUMNS = [1, 2, 3, 4, 5, 6].map((count) => ({
-  value: count === 1 ? 'minmax(0, 1fr)' : `repeat(${count}, minmax(0, 1fr))`,
-  label: count === 1 ? '1 column' : `${count} columns`,
-}));
-
 const backgroundImageUrl = (value: string) => value.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/)?.[1] ?? '';
 
-/** Every design property of a block, grouped the way design tools group them. */
+/** Columns in a value such as repeat(3, ...) or a plain list of tracks. 0 means automatic. */
+const trackCount = (value: string): number => {
+  if (!value) return 0;
+  const repeat = value.match(/repeat\(\s*(\d+)/);
+  return repeat ? Number(repeat[1]) : splitValues(value).length;
+};
+
+const TEXT_BLOCKS = ['Heading', 'Text', 'Button', 'FormField', 'ScaleField', 'Accordion', 'Navbar'];
+const MEDIA_BLOCKS = ['Image', 'Video', 'Divider', 'Spacer'];
+
+/** What people change most often comes first, and depends on the kind of block. */
+const groupOrder = (type: string): string[] => {
+  if (TEXT_BLOCKS.includes(type)) return ['Typography', 'Fill', 'Spacing', 'Size', 'Border', 'Effects', 'Position', 'Layout'];
+  if (MEDIA_BLOCKS.includes(type)) return ['Size', 'Border', 'Spacing', 'Effects', 'Position'];
+  return ['Layout', 'Spacing', 'Fill', 'Size', 'Border', 'Typography', 'Effects', 'Position'];
+};
+const OPEN_BY_DEFAULT = 3;
+
+/** Every design property of a block, per device. */
 export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
   const device = useStudio((s) => s.device);
   const readOnly = useStudio((s) => s.readOnly);
   const theme = useStudio((s) => s.draft?.theme);
-  const { updateStyle, updateStyles } = useStudio.getState();
+  const { updateStyle, updateStyles, updateNode, setChildCount, setGridColumns, clearDeviceStyles, setTool } = useStudio.getState();
   const [splitCorners, setSplitCorners] = useState(() => CORNERS.some((corner) => node.styles[corner.key] !== undefined));
 
-  const overrides = device === 'desktop' ? undefined : node.responsive?.[device];
-  const read = (key: string) => String(overrides?.[key] ?? node.styles[key] ?? '');
+  const own = device === 'desktop' ? node.styles : node.responsive?.[device];
+  const read = (key: string) => String(own?.[key] ?? '');
+  // A tablet change also carries to phones, as the stylesheet does.
+  const inherited = (key: string) => {
+    if (device === 'desktop') return '';
+    if (device === 'mobile' && node.responsive?.tablet?.[key] !== undefined) return String(node.responsive.tablet[key]);
+    return String(node.styles[key] ?? '');
+  };
+  const effective = (key: string) => read(key) || inherited(key);
   const set = (key: string) => (value: string) => updateStyle(node.id, key, value);
   const setKey = (key: string, value: string) => updateStyle(node.id, key, value);
   const clear = (...keys: string[]) => updateStyles(node.id, Object.fromEntries(keys.map((key) => [key, ''])));
   const hasAny = (...keys: string[]) => keys.some((key) => read(key) !== '');
+  const changedHere = (...keys: string[]) => (device === 'desktop' ? 0 : keys.filter((key) => read(key) !== '').length);
 
   const number = (label: string, key: string, placeholder?: string) => (
-    <NumberField label={label} placeholder={placeholder} disabled={readOnly} value={read(key)} onChange={set(key)} />
+    <NumberField label={label} placeholder={inherited(key) || placeholder} disabled={readOnly} value={read(key)} onChange={set(key)} />
   );
   const select = (label: string, key: string, options: (string | { value: string; label: string })[]) => (
-    <SelectField label={label} disabled={readOnly} value={read(key)} options={options} onChange={set(key)} />
+    <SelectField label={label} disabled={readOnly} value={read(key)} inherited={inherited(key)} options={options} onChange={set(key)} />
   );
   const segmented = (label: string, key: string, choices: Choice[]) => (
-    <Segmented label={label} disabled={readOnly} value={read(key)} choices={choices} onChange={set(key)} />
+    <Segmented label={label} disabled={readOnly} value={read(key)} inherited={inherited(key)} choices={choices} onChange={set(key)} />
   );
 
   // A border needs a style to appear, so setting anything else also turns it on.
   const setBorder = (key: string, value: string) => {
-    const shorthand = splitValues(read('border'));
+    const shorthand = splitValues(effective('border'));
     const patch: Record<string, string> = { [key]: value };
     if (shorthand.length > 0) {
       patch.border = '';
-      patch.borderWidth = read('borderWidth') || shorthand[0] || '';
-      patch.borderStyle = read('borderStyle') || shorthand[1] || '';
-      patch.borderColor = read('borderColor') || shorthand[2] || '';
+      patch.borderWidth = effective('borderWidth') || shorthand[0] || '';
+      patch.borderStyle = effective('borderStyle') || shorthand[1] || '';
+      patch.borderColor = effective('borderColor') || shorthand[2] || '';
       patch[key] = value;
     }
-    if (value && key !== 'borderStyle' && !read('borderStyle') && !patch.borderStyle) patch.borderStyle = 'solid';
+    if (value && key !== 'borderStyle' && !effective('borderStyle') && !patch.borderStyle) patch.borderStyle = 'solid';
     updateStyles(node.id, patch);
   };
   const borderPart = (key: string, index: number) => read(key) || splitValues(read('border'))[index] || '';
@@ -261,152 +308,269 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
   const rotate = read('transform').match(/rotate\((-?[\d.]+)deg\)/)?.[1] ?? '';
   const blur = read('filter').match(/blur\((-?[\d.]+)px\)/)?.[1] ?? '';
 
-  const isGrid = read('display') === 'grid' || (node.type === 'Grid' && !read('display'));
+  const isContainer = Boolean(BLOCK_META[node.type]?.isContainer);
+  const isGrid = effective('display') === 'grid' || (node.type === 'Grid' && !effective('display'));
+  const childNodes = node.children;
+  const documents = useStudio((s) => s.documents);
+  const owner = documents.find((doc) => doc.content.nodes[node.id]);
+  const repeatedChild = childNodes.map((id) => owner?.content.nodes[id]).find((child) => child?.repeat);
+
+  const layoutKeys = ['display', 'flexDirection', 'flexWrap', 'justifyContent', 'alignItems', 'gap', 'gridTemplateColumns', 'gridTemplateRows'];
+  const spacingKeys = ['margin', 'padding', ...SIDES.flatMap((side) => [`margin${side}`, `padding${side}`])];
+  const sizeKeys = ['width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight', 'overflow', 'objectFit'];
+  const typeKeys = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'textAlign', 'textTransform', 'textDecoration', 'color'];
+  const fillKeys = ['background', 'backgroundColor', 'backgroundImage', 'backgroundSize', 'backgroundPosition', 'backgroundRepeat'];
+  const borderKeys = ['border', 'borderWidth', 'borderStyle', 'borderColor', 'borderRadius', ...CORNERS.map((corner) => corner.key)];
+  const effectKeys = ['boxShadow', 'opacity', 'transform', 'filter'];
+  const positionKeys = ['position', 'top', 'right', 'bottom', 'left', 'zIndex', 'order', 'alignSelf', 'flexGrow'];
+
+  const groups: Record<string, { keys: string[]; canReset?: boolean; onReset?: () => void; body: React.ReactNode }> = {
+    Layout: {
+      keys: layoutKeys,
+      canReset: true,
+      body: (
+        <>
+          {isContainer && (repeatedChild ? (
+            <p className="text-[13px] rounded-lg px-2.5 py-2 bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+              The items here come from a list.{' '}
+              <button type="button" className="font-semibold underline" onClick={() => setTool('variables')}>Add or remove them in Variables</button>
+            </p>
+          ) : (
+            <Stepper label="Items inside" noun="items" value={childNodes.length} min={0} max={24} disabled={readOnly} onChange={(count) => setChildCount(node.id, count)} />
+          ))}
+          {segmented('Display', 'display', [{ value: 'block', label: 'Block' }, { value: 'flex', label: 'Flex' }, { value: 'grid', label: 'Grid' }, { value: 'none', label: 'Hide' }])}
+          {isGrid ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Stepper label="Columns" noun="columns" value={trackCount(effective('gridTemplateColumns'))} min={0} max={12} empty="Auto" disabled={readOnly} onChange={(count) => setGridColumns(node.id, count)} />
+              <Stepper label="Rows" noun="rows" value={trackCount(effective('gridTemplateRows'))} min={0} max={12} empty="Auto" disabled={readOnly} onChange={(count) => setKey('gridTemplateRows', count === 0 ? '' : `repeat(${count}, auto)`)} />
+            </div>
+          ) : (
+            <>
+              {segmented('Direction', 'flexDirection', [{ value: 'row', label: 'Horizontal', icon: ArrowRight }, { value: 'column', label: 'Vertical', icon: ArrowDown }])}
+              {segmented('Wrap', 'flexWrap', [{ value: 'nowrap', label: 'No wrap' }, { value: 'wrap', label: 'Wrap' }])}
+            </>
+          )}
+          {select('Distribute', 'justifyContent', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'space-between', label: 'Space between' }, { value: 'space-around', label: 'Space around' }, { value: 'space-evenly', label: 'Space evenly' }])}
+          {select('Align', 'alignItems', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'stretch', label: 'Stretch' }, { value: 'baseline', label: 'Baseline' }])}
+          {number('Gap', 'gap', '0')}
+        </>
+      ),
+    },
+    Spacing: {
+      keys: spacingKeys,
+      body: (
+        <>
+          <BoxModel read={read} inherited={inherited} disabled={readOnly} set={setKey} />
+          <p className="text-xs text-slate-500 dark:text-slate-400">A number means pixels. You can also type 2rem, 5% or auto. Arrow keys change the value.</p>
+        </>
+      ),
+    },
+    Size: {
+      keys: sizeKeys,
+      body: (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            {number('Width', 'width', 'auto')}
+            {number('Height', 'height', 'auto')}
+            {number('Min width', 'minWidth', '0')}
+            {number('Min height', 'minHeight', '0')}
+            {number('Max width', 'maxWidth', 'none')}
+            {number('Max height', 'maxHeight', 'none')}
+          </div>
+          {select('Overflow', 'overflow', [{ value: 'visible', label: 'Show' }, { value: 'hidden', label: 'Clip' }, { value: 'auto', label: 'Scroll' }])}
+          {node.type === 'Image' && select('Image fit', 'objectFit', [{ value: 'cover', label: 'Fill the box' }, { value: 'contain', label: 'Show all of it' }, { value: 'fill', label: 'Stretch' }, { value: 'none', label: 'Original size' }])}
+        </>
+      ),
+    },
+    Typography: {
+      keys: typeKeys,
+      canReset: true,
+      body: (
+        <>
+          <FontSelect label="Font" disabled={readOnly} value={read('fontFamily')} defaultLabel={inherited('fontFamily') ? `Same as larger screen (${inherited('fontFamily')})` : 'Theme font'} onChange={set('fontFamily')} />
+          <div className="grid grid-cols-2 gap-2">
+            {number('Font size', 'fontSize', 'inherit')}
+            {select('Weight', 'fontWeight', [{ value: '300', label: '300 Light' }, { value: '400', label: '400 Regular' }, { value: '500', label: '500 Medium' }, { value: '600', label: '600 Semibold' }, { value: '700', label: '700 Bold' }, { value: '800', label: '800 Heavy' }, { value: '900', label: '900 Black' }])}
+            {number('Line height', 'lineHeight', '1.5')}
+            {number('Letter spacing', 'letterSpacing', '0')}
+          </div>
+          {segmented('Text align', 'textAlign', [{ value: 'left', label: 'Left', icon: AlignLeft }, { value: 'center', label: 'Center', icon: AlignCenter }, { value: 'right', label: 'Right', icon: AlignRight }, { value: 'justify', label: 'Justify', icon: AlignJustify }])}
+          {segmented('Case', 'textTransform', [{ value: 'none', label: 'Aa' }, { value: 'uppercase', label: 'AA' }, { value: 'lowercase', label: 'aa' }, { value: 'capitalize', label: 'Ab' }])}
+          <div className="grid grid-cols-2 gap-2">
+            {segmented('Style', 'fontStyle', [{ value: 'italic', label: 'Italic', icon: Italic }])}
+            {segmented('Line', 'textDecoration', [{ value: 'underline', label: 'Underline', icon: Underline }, { value: 'line-through', label: 'Strikethrough', icon: Strikethrough }])}
+          </div>
+          <ColorField label="Text color" disabled={readOnly} theme={theme} clearable value={read('color')} onChange={set('color')} />
+        </>
+      ),
+    },
+    Fill: {
+      keys: fillKeys,
+      onReset: () => setBackground(''),
+      body: (
+        <>
+          <div role="tablist" aria-label="Fill type" className="flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800">
+            {(['color', 'gradient', 'image'] as const).map((tab) => (
+              <button key={tab} role="tab" type="button" aria-selected={fillTab === tab} onClick={() => setFillTab(tab)} className={`flex-1 h-8 rounded-md text-xs font-medium capitalize transition-colors ${fillTab === tab ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-300'}`}>
+                {tab}
+              </button>
+            ))}
+          </div>
+          {fillTab === 'color' && <ColorField label="Background" disabled={readOnly} theme={theme} clearable value={background} onChange={setBackground} />}
+          {fillTab === 'gradient' && (
+            <>
+              <div role="group" aria-label="Gradients" className="grid grid-cols-6 gap-1.5">
+                {GRADIENTS.map((gradient, index) => (
+                  <button key={gradient} type="button" disabled={readOnly} aria-label={`Gradient ${index + 1}`} aria-pressed={background === gradient} onClick={() => setBackground(gradient)} className={`h-9 rounded-lg border border-black/10 dark:border-white/20 ${background === gradient ? 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-900' : ''}`} style={{ background: gradient.replace(/var\(--fp-background\)/, theme?.background ?? '#fff').replace(/var\(--fp-surface\)/, theme?.surface ?? '#f1f5f9') }} />
+                ))}
+              </div>
+              <NumberField label="Custom gradient" placeholder="linear-gradient(90deg, #000, #fff)" disabled={readOnly} value={background.includes('gradient') ? background : ''} onChange={setBackground} />
+            </>
+          )}
+          {fillTab === 'image' && (
+            <>
+              <div>
+                <p className={smallLabel}>Background image</p>
+                <ImageInput
+                  id={`style-${node.id}-bg-image`}
+                  value={imageUrl}
+                  onChange={(url) => updateStyles(node.id, {
+                    background: '',
+                    backgroundColor: '',
+                    backgroundImage: url ? `url("${url}")` : '',
+                    backgroundSize: url ? read('backgroundSize') || 'cover' : '',
+                    backgroundPosition: url ? read('backgroundPosition') || 'center' : '',
+                  })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {select('Image size', 'backgroundSize', [{ value: 'cover', label: 'Fill' }, { value: 'contain', label: 'Fit' }, { value: 'auto', label: 'Original' }])}
+                {select('Image position', 'backgroundPosition', ['center', 'top', 'bottom', 'left', 'right'])}
+              </div>
+              {select('Repeat', 'backgroundRepeat', [{ value: 'no-repeat', label: 'Once' }, { value: 'repeat', label: 'Tile' }])}
+            </>
+          )}
+        </>
+      ),
+    },
+    Border: {
+      keys: borderKeys,
+      canReset: true,
+      body: (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <NumberField label="Border width" placeholder={inherited('borderWidth') || '0'} disabled={readOnly} value={borderPart('borderWidth', 0)} onChange={(value) => setBorder('borderWidth', value)} />
+            <SelectField label="Border style" disabled={readOnly} value={borderPart('borderStyle', 1)} inherited={inherited('borderStyle')} options={[{ value: 'solid', label: 'Solid' }, { value: 'dashed', label: 'Dashed' }, { value: 'dotted', label: 'Dotted' }, { value: 'none', label: 'None' }]} onChange={(value) => setBorder('borderStyle', value)} />
+          </div>
+          <ColorField label="Border color" disabled={readOnly} theme={theme} clearable value={borderPart('borderColor', 2)} onChange={(value) => setBorder('borderColor', value)} />
+          <div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1 min-w-0">{number('Corner radius', 'borderRadius', 'theme')}</div>
+              <button type="button" aria-label="Set each corner separately" aria-pressed={splitCorners} title="Set each corner separately" className={`shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 ${splitCorners ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' : 'text-slate-500'}`} onClick={() => setSplitCorners(!splitCorners)}>
+                {splitCorners ? <Link2Off className="w-4 h-4" aria-hidden="true" /> : <Link2 className="w-4 h-4" aria-hidden="true" />}
+              </button>
+            </div>
+            {splitCorners && <div className="mt-2 grid grid-cols-2 gap-2">{CORNERS.map((corner) => <React.Fragment key={corner.key}>{number(corner.label, corner.key, '-')}</React.Fragment>)}</div>}
+          </div>
+        </>
+      ),
+    },
+    Effects: {
+      keys: effectKeys,
+      canReset: true,
+      body: (
+        <>
+          <Segmented label="Shadow" disabled={readOnly} value={shadow} inherited={inherited('boxShadow')} choices={SHADOWS} onChange={set('boxShadow')} />
+          <div>
+            <label htmlFor={`style-${node.id}-opacity`} className={smallLabel}>Opacity {effective('opacity') ? `${Math.round(Number(effective('opacity')) * 100)}%` : '100%'}</label>
+            <input id={`style-${node.id}-opacity`} type="range" min={0} max={1} step={0.05} disabled={readOnly} className="w-full accent-indigo-600" value={effective('opacity') || 1} onChange={(event) => setKey('opacity', event.target.value === '1' ? '' : event.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <NumberField label="Rotate (degrees)" placeholder="0" disabled={readOnly} value={rotate} onChange={(value) => setKey('transform', value ? `rotate(${value}deg)` : '')} />
+            <NumberField label="Blur (pixels)" placeholder="0" disabled={readOnly} value={blur} onChange={(value) => setKey('filter', value ? `blur(${value}px)` : '')} />
+          </div>
+        </>
+      ),
+    },
+    Position: {
+      keys: positionKeys,
+      canReset: true,
+      body: (
+        <>
+          {select('Position', 'position', [{ value: 'static', label: 'Normal' }, { value: 'relative', label: 'Relative' }, { value: 'absolute', label: 'Absolute' }, { value: 'fixed', label: 'Fixed' }, { value: 'sticky', label: 'Sticky' }])}
+          <div className="grid grid-cols-2 gap-2">
+            {number('Top', 'top', 'auto')}
+            {number('Right', 'right', 'auto')}
+            {number('Bottom', 'bottom', 'auto')}
+            {number('Left', 'left', 'auto')}
+            {number('Stack order', 'zIndex', 'auto')}
+            {number('Order', 'order', '0')}
+            {number('Grow', 'flexGrow', '0')}
+            {select('Align self', 'alignSelf', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'stretch', label: 'Stretch' }])}
+          </div>
+        </>
+      ),
+    },
+  };
+
+  const deviceChanges = device === 'desktop' ? 0 : Object.keys(node.responsive?.[device] ?? {}).length;
+  const hideOn = node.hideOn ?? [];
+  const isHiddenHere = hideOn.includes(device);
 
   return (
     <div>
-      {device !== 'desktop' && (
-        <p className="mb-2 text-[13px] rounded-lg px-2.5 py-2 bg-indigo-50 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">
-          Changes here only apply on {device}. Desktop stays the same.
-        </p>
-      )}
-
-      <Group title="Layout" onReset={hasAny('display', 'flexDirection', 'flexWrap', 'justifyContent', 'alignItems', 'gap', 'gridTemplateColumns') ? () => clear('display', 'flexDirection', 'flexWrap', 'justifyContent', 'alignItems', 'gap', 'gridTemplateColumns') : undefined}>
-        {segmented('Display', 'display', [{ value: 'block', label: 'Block' }, { value: 'flex', label: 'Flex' }, { value: 'grid', label: 'Grid' }, { value: 'none', label: 'Hide' }])}
-        {isGrid ? (
-          select('Columns', 'gridTemplateColumns', GRID_COLUMNS)
+      <section aria-label="Devices" className="mb-3 rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 space-y-2.5">
+        {device === 'desktop' ? (
+          <p className="text-[13px] text-slate-600 dark:text-slate-300">Changes here apply everywhere, until you change them on a smaller screen. Use the device buttons at the top to design for tablet and mobile.</p>
         ) : (
-          <>
-            {segmented('Direction', 'flexDirection', [{ value: 'row', label: 'Horizontal', icon: ArrowRight }, { value: 'column', label: 'Vertical', icon: ArrowDown }])}
-            {segmented('Wrap', 'flexWrap', [{ value: 'nowrap', label: 'No wrap' }, { value: 'wrap', label: 'Wrap' }])}
-          </>
-        )}
-        {select('Distribute', 'justifyContent', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'space-between', label: 'Space between' }, { value: 'space-around', label: 'Space around' }, { value: 'space-evenly', label: 'Space evenly' }])}
-        {select('Align', 'alignItems', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'stretch', label: 'Stretch' }, { value: 'baseline', label: 'Baseline' }])}
-        {number('Gap', 'gap', '0')}
-      </Group>
-
-      <Group title="Spacing">
-        <BoxModel read={read} disabled={readOnly} set={setKey} />
-        <p className="text-xs text-slate-500 dark:text-slate-400">A number means pixels. You can also type 2rem, 5% or auto. Arrow keys change the value.</p>
-      </Group>
-
-      <Group title="Size">
-        <div className="grid grid-cols-2 gap-2">
-          {number('Width', 'width', 'auto')}
-          {number('Height', 'height', 'auto')}
-          {number('Min width', 'minWidth', '0')}
-          {number('Min height', 'minHeight', '0')}
-          {number('Max width', 'maxWidth', 'none')}
-          {number('Max height', 'maxHeight', 'none')}
-        </div>
-        {select('Overflow', 'overflow', [{ value: 'visible', label: 'Show' }, { value: 'hidden', label: 'Clip' }, { value: 'auto', label: 'Scroll' }])}
-        {node.type === 'Image' && select('Image fit', 'objectFit', [{ value: 'cover', label: 'Fill the box' }, { value: 'contain', label: 'Show all of it' }, { value: 'fill', label: 'Stretch' }, { value: 'none', label: 'Original size' }])}
-      </Group>
-
-      <Group title="Typography" onReset={hasAny('fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'textAlign', 'textTransform', 'textDecoration', 'color') ? () => clear('fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'textAlign', 'textTransform', 'textDecoration', 'color') : undefined}>
-        {select('Font', 'fontFamily', GOOGLE_FONTS)}
-        <div className="grid grid-cols-2 gap-2">
-          {number('Font size', 'fontSize', 'inherit')}
-          {select('Weight', 'fontWeight', [{ value: '300', label: '300 Light' }, { value: '400', label: '400 Regular' }, { value: '500', label: '500 Medium' }, { value: '600', label: '600 Semibold' }, { value: '700', label: '700 Bold' }, { value: '800', label: '800 Heavy' }, { value: '900', label: '900 Black' }])}
-          {number('Line height', 'lineHeight', '1.5')}
-          {number('Letter spacing', 'letterSpacing', '0')}
-        </div>
-        {segmented('Text align', 'textAlign', [{ value: 'left', label: 'Left', icon: AlignLeft }, { value: 'center', label: 'Center', icon: AlignCenter }, { value: 'right', label: 'Right', icon: AlignRight }, { value: 'justify', label: 'Justify', icon: AlignJustify }])}
-        {segmented('Case', 'textTransform', [{ value: 'none', label: 'Aa' }, { value: 'uppercase', label: 'AA' }, { value: 'lowercase', label: 'aa' }, { value: 'capitalize', label: 'Ab' }])}
-        <div className="grid grid-cols-2 gap-2">
-          {segmented('Style', 'fontStyle', [{ value: 'italic', label: 'Italic', icon: Italic }])}
-          {segmented('Line', 'textDecoration', [{ value: 'underline', label: 'Underline', icon: Underline }, { value: 'line-through', label: 'Strikethrough', icon: Strikethrough }])}
-        </div>
-        <ColorField label="Text color" disabled={readOnly} theme={theme} clearable value={read('color')} onChange={set('color')} />
-      </Group>
-
-      <Group title="Fill" onReset={hasAny('background', 'backgroundColor', 'backgroundImage') ? () => setBackground('') : undefined}>
-        <div role="tablist" aria-label="Fill type" className="flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800">
-          {(['color', 'gradient', 'image'] as const).map((tab) => (
-            <button key={tab} role="tab" type="button" aria-selected={fillTab === tab} onClick={() => setFillTab(tab)} className={`flex-1 h-8 rounded-md text-xs font-medium capitalize transition-colors ${fillTab === tab ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-300'}`}>
-              {tab}
-            </button>
-          ))}
-        </div>
-        {fillTab === 'color' && <ColorField label="Background" disabled={readOnly} theme={theme} clearable value={background} onChange={setBackground} />}
-        {fillTab === 'gradient' && (
-          <>
-            <div role="group" aria-label="Gradients" className="grid grid-cols-6 gap-1.5">
-              {GRADIENTS.map((gradient, index) => (
-                <button key={gradient} type="button" disabled={readOnly} aria-label={`Gradient ${index + 1}`} aria-pressed={background === gradient} onClick={() => setBackground(gradient)} className={`h-9 rounded-lg border border-black/10 dark:border-white/20 ${background === gradient ? 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-900' : ''}`} style={{ background: gradient.replace(/var\(--fp-background\)/, theme?.background ?? '#fff').replace(/var\(--fp-surface\)/, theme?.surface ?? '#f1f5f9') }} />
-              ))}
-            </div>
-            <NumberField label="Custom gradient" placeholder="linear-gradient(90deg, #000, #fff)" disabled={readOnly} value={background.includes('gradient') ? background : ''} onChange={setBackground} />
-          </>
-        )}
-        {fillTab === 'image' && (
-          <>
-            <div>
-              <p className={smallLabel}>Background image</p>
-              <ImageInput
-                id={`style-${node.id}-bg-image`}
-                value={imageUrl}
-                onChange={(url) => updateStyles(node.id, {
-                  background: '',
-                  backgroundColor: '',
-                  backgroundImage: url ? `url("${url}")` : '',
-                  backgroundSize: url ? read('backgroundSize') || 'cover' : '',
-                  backgroundPosition: url ? read('backgroundPosition') || 'center' : '',
-                })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {select('Image size', 'backgroundSize', [{ value: 'cover', label: 'Fill' }, { value: 'contain', label: 'Fit' }, { value: 'auto', label: 'Original' }])}
-              {select('Image position', 'backgroundPosition', ['center', 'top', 'bottom', 'left', 'right'])}
-            </div>
-            {select('Repeat', 'backgroundRepeat', [{ value: 'no-repeat', label: 'Once' }, { value: 'repeat', label: 'Tile' }])}
-          </>
-        )}
-      </Group>
-
-      <Group title="Border" onReset={hasAny('border', 'borderWidth', 'borderStyle', 'borderColor', 'borderRadius', ...CORNERS.map((corner) => corner.key)) ? () => clear('border', 'borderWidth', 'borderStyle', 'borderColor', 'borderRadius', ...CORNERS.map((corner) => corner.key)) : undefined}>
-        <div className="grid grid-cols-2 gap-2">
-          <NumberField label="Border width" placeholder="0" disabled={readOnly} value={borderPart('borderWidth', 0)} onChange={(value) => setBorder('borderWidth', value)} />
-          <SelectField label="Border style" disabled={readOnly} value={borderPart('borderStyle', 1)} options={[{ value: 'solid', label: 'Solid' }, { value: 'dashed', label: 'Dashed' }, { value: 'dotted', label: 'Dotted' }, { value: 'none', label: 'None' }]} onChange={(value) => setBorder('borderStyle', value)} />
-        </div>
-        <ColorField label="Border color" disabled={readOnly} theme={theme} clearable value={borderPart('borderColor', 2)} onChange={(value) => setBorder('borderColor', value)} />
-        <div>
-          <div className="flex items-end gap-2">
-            <div className="flex-1 min-w-0">{number('Corner radius', 'borderRadius', 'theme')}</div>
-            <button type="button" aria-label="Set each corner separately" aria-pressed={splitCorners} title="Set each corner separately" className={`shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 ${splitCorners ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' : 'text-slate-500'}`} onClick={() => setSplitCorners(!splitCorners)}>
-              {splitCorners ? <Link2Off className="w-4 h-4" aria-hidden="true" /> : <Link2 className="w-4 h-4" aria-hidden="true" />}
-            </button>
+          <div>
+            <p className="text-[13px] font-semibold text-indigo-700 dark:text-indigo-300">Designing for {device}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Only affects screens {DEVICE_WIDTH[device]}. Grey values come from a larger screen.</p>
+            {deviceChanges > 0 && !readOnly && (
+              <button type="button" className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => clearDeviceStyles(node.id, device)}>
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                Reset {deviceChanges} {device} {deviceChanges === 1 ? 'change' : 'changes'}
+              </button>
+            )}
           </div>
-          {splitCorners && <div className="mt-2 grid grid-cols-2 gap-2">{CORNERS.map((corner) => <React.Fragment key={corner.key}>{number(corner.label, corner.key, '-')}</React.Fragment>)}</div>}
-        </div>
-      </Group>
+        )}
+        <fieldset>
+          <legend className={smallLabel}>Show this block on</legend>
+          <div className="flex gap-3">
+            {DEVICES.map((option) => (
+              <label key={option} className="flex items-center gap-1.5 text-[13px] capitalize cursor-pointer">
+                <input
+                  type="checkbox"
+                  disabled={readOnly}
+                  checked={!hideOn.includes(option)}
+                  onChange={(event) => {
+                    const next = event.target.checked ? hideOn.filter((value) => value !== option) : [...hideOn, option];
+                    updateNode(node.id, { hideOn: next.length > 0 ? next : undefined });
+                  }}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        {isHiddenHere && <p role="status" className="text-[13px] rounded-lg px-2 py-1.5 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200">Hidden on {device}, so it isn't on the canvas. Find it in Layers.</p>}
+      </section>
 
-      <Group title="Effects" onReset={hasAny('boxShadow', 'opacity', 'transform', 'filter') ? () => clear('boxShadow', 'opacity', 'transform', 'filter') : undefined}>
-        <Segmented label="Shadow" disabled={readOnly} value={shadow} choices={SHADOWS} onChange={set('boxShadow')} />
-        <div>
-          <label htmlFor={`style-${node.id}-opacity`} className={smallLabel}>Opacity {read('opacity') ? `${Math.round(Number(read('opacity')) * 100)}%` : '100%'}</label>
-          <input id={`style-${node.id}-opacity`} type="range" min={0} max={1} step={0.05} disabled={readOnly} className="w-full accent-indigo-600" value={read('opacity') || 1} onChange={(event) => setKey('opacity', event.target.value === '1' ? '' : event.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <NumberField label="Rotate (degrees)" placeholder="0" disabled={readOnly} value={rotate} onChange={(value) => setKey('transform', value ? `rotate(${value}deg)` : '')} />
-          <NumberField label="Blur (pixels)" placeholder="0" disabled={readOnly} value={blur} onChange={(value) => setKey('filter', value ? `blur(${value}px)` : '')} />
-        </div>
-      </Group>
-
-      <Group title="Position" onReset={hasAny('position', 'top', 'right', 'bottom', 'left', 'zIndex', 'order', 'alignSelf', 'flexGrow') ? () => clear('position', 'top', 'right', 'bottom', 'left', 'zIndex', 'order', 'alignSelf', 'flexGrow') : undefined}>
-        {select('Position', 'position', [{ value: 'static', label: 'Normal' }, { value: 'relative', label: 'Relative' }, { value: 'absolute', label: 'Absolute' }, { value: 'fixed', label: 'Fixed' }, { value: 'sticky', label: 'Sticky' }])}
-        <div className="grid grid-cols-2 gap-2">
-          {number('Top', 'top', 'auto')}
-          {number('Right', 'right', 'auto')}
-          {number('Bottom', 'bottom', 'auto')}
-          {number('Left', 'left', 'auto')}
-          {number('Stack order', 'zIndex', 'auto')}
-          {number('Order', 'order', '0')}
-          {number('Grow', 'flexGrow', '0')}
-          {select('Align self', 'alignSelf', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'stretch', label: 'Stretch' }])}
-        </div>
-      </Group>
+      {groupOrder(node.type).map((title, index) => {
+        const group = groups[title];
+        const canReset = group.onReset ? hasAny(...group.keys) : group.canReset && hasAny(...group.keys);
+        return (
+          <Group
+            key={title}
+            title={title}
+            defaultOpen={index < OPEN_BY_DEFAULT}
+            count={changedHere(...group.keys)}
+            onReset={canReset ? (group.onReset ?? (() => clear(...group.keys))) : undefined}
+          >
+            {group.body}
+          </Group>
+        );
+      })}
     </div>
   );
 };

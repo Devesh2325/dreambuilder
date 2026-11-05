@@ -27,6 +27,7 @@ const experiences = new Map<string, Experience>();
 const loading = new Map<string, Promise<void>>();
 let identifiedVisitor: string | null = null;
 let useFonts = true;
+let isLive = false;
 
 const safeStorage = (kind: 'local' | 'session') => {
   try {
@@ -117,7 +118,17 @@ function playerHost(projectId: string, frequencyFinish?: (reason: 'closed' | 'co
       safeStorage('session')?.removeItem(stepKey);
       frequencyFinish?.(reason);
     },
+    goToPath: (path) => goToPath(projectId, path),
   };
+}
+
+/** Moves to a step's page, once. If it sends us back here, trying again would loop forever. */
+function goToPath(projectId: string, path: string): boolean {
+  const key = `fp_nav_${projectId}`;
+  if (read('session', key) === path) return false;
+  write('session', key, path);
+  window.location.assign(path);
+  return true;
 }
 
 function renderInto(mount: HTMLElement, experience: Experience, host: PlayerHost): Root {
@@ -172,7 +183,19 @@ function schedule(triggers: Triggers, show: () => void): () => void {
     show();
   };
 
-  const hasBehaviorTrigger = triggers.scrollPercent !== undefined || triggers.exitIntent;
+  const hasBehaviorTrigger = triggers.scrollPercent !== undefined || triggers.exitIntent || Boolean(triggers.clickSelector);
+
+  if (triggers.clickSelector) {
+    const onClick = (event: MouseEvent) => {
+      try {
+        if ((event.target as Element).closest?.(triggers.clickSelector!)) fire();
+      } catch {
+        // A mistyped selector just never fires.
+      }
+    };
+    document.addEventListener('click', onClick, true);
+    cleanups.push(() => document.removeEventListener('click', onClick, true));
+  }
 
   if (triggers.scrollPercent !== undefined) {
     const onScroll = () => {
@@ -230,6 +253,7 @@ function evaluate(projectId: string, experience: Experience) {
   }
 
   const triggers = triggersOf(project.settings);
+  if (triggers.manualOnly && !experience.isActive) return;
   const allowed = shouldShow(triggers, window.location.pathname, window.innerWidth, seenState(projectId));
 
   // An overlay already showing stays while a page change still matches its URL rules.
@@ -326,16 +350,134 @@ function startPicker(nonce: string, origin: string) {
   document.addEventListener('keydown', onKey, true);
 }
 
-/** Returns true when the page was opened from the editor to pick an element. */
-function checkPickerMode(): boolean {
-  if (!window.opener) return false;
-  const match = window.location.hash.match(/^#fp-pick=([\w-]+)&origin=([^&]+)$/);
-  if (!match) return false;
-  const origin = decodeURIComponent(match[2]);
-  if (!/^https?:\/\/[^/]+$/.test(origin)) return false;
-  history.replaceState(null, '', window.location.pathname + window.location.search);
-  startPicker(match[1], origin);
+// --- Building and testing a tour on the customer's own site ---------------------
+
+const LIVE_KEY = 'fp_live';
+
+type LiveMode = 'build' | 'test';
+
+function toolbarButton(label: string, primary = false): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.style.cssText = `font:600 13px system-ui,sans-serif;padding:7px 12px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,.25);color:#fff;background:${primary ? '#4f46e5' : 'transparent'}`;
+  return button;
+}
+
+function liveBar(text: string): { host: HTMLElement; bar: HTMLElement; label: HTMLElement } {
+  const { host, mount } = createHost(document.body);
+  mount.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:2147483647';
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;align-items:center;gap:10px;background:#0f172a;color:#fff;padding:8px 10px 8px 14px;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.45);font:500 13px system-ui,sans-serif;white-space:nowrap';
+  const label = document.createElement('span');
+  label.textContent = text;
+  bar.append(label);
+  mount.append(bar);
+  return { host, bar, label };
+}
+
+/** Adds a tour step for each element clicked, while the toolbar lets people use their app too. */
+function startBuilder(nonce: string, origin: string) {
+  const send = (message: Record<string, unknown>) => window.opener?.postMessage({ nonce, ...message }, origin);
+  const { host, bar, label } = liveBar('');
+  const highlight = document.createElement('div');
+  highlight.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;outline:2px solid #6366f1;background:rgba(99,102,241,.15);display:none';
+  document.body.append(highlight);
+
+  let added = 0;
+  let isSelecting = true;
+  const toggle = toolbarButton('Use my site');
+  const done = toolbarButton('Done', true);
+  bar.append(toggle, done);
+  const refresh = () => {
+    label.textContent = isSelecting ? `Click an element to add a step (${added} added)` : `Using your site. ${added} added`;
+    toggle.textContent = isSelecting ? 'Use my site' : 'Add steps';
+    highlight.style.display = 'none';
+  };
+  refresh();
+
+  const inBar = (event: Event) => event.composedPath().includes(host);
+  document.addEventListener('mousemove', (event) => {
+    if (!isSelecting || inBar(event)) return;
+    const box = (event.target as Element).getBoundingClientRect();
+    Object.assign(highlight.style, { display: 'block', top: `${box.top}px`, left: `${box.left}px`, width: `${box.width}px`, height: `${box.height}px` });
+  }, true);
+  document.addEventListener('click', (event) => {
+    if (!isSelecting || inBar(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const element = event.target as HTMLElement;
+    const text = (element.getAttribute('aria-label') || element.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+    send({ type: 'flowpilot:step', selector: selectorFor(element), text, path: window.location.pathname });
+    added += 1;
+    refresh();
+  }, true);
+  toggle.onclick = () => {
+    isSelecting = !isSelecting;
+    refresh();
+  };
+  done.onclick = () => {
+    send({ type: 'flowpilot:done' });
+    safeStorage('session')?.removeItem(LIVE_KEY);
+    window.close();
+  };
+}
+
+/** Plays the editor's unpublished draft here. Nothing is recorded, and only this tab sees it. */
+function startTest(nonce: string, origin: string) {
+  liveBar('Test mode: only you can see this');
+  const onMessage = (event: MessageEvent) => {
+    if (event.source !== window.opener || event.origin !== origin || event.data?.type !== 'flowpilot:draft' || event.data.nonce !== nonce) return;
+    const snapshot = event.data.snapshot as PublishedSnapshot;
+    if (!snapshot?.documents?.[0]?.content || !snapshot.project?.id) return;
+    window.removeEventListener('message', onMessage);
+    const projectId = snapshot.project.id;
+    const experience: Experience = { snapshot, roots: [], isActive: true };
+    const { mount } = createHost(document.body);
+    ensureFonts(snapshot);
+    renderInto(mount, experience, { ...playerHost(projectId), track: undefined, submitForm: async () => ({ ok: true }) });
+  };
+  window.addEventListener('message', onMessage);
+}
+
+/** Returns true when the editor opened this page, for picking, building or testing. */
+function checkLiveMode(allowedOrigin: string | null): boolean {
+  if (!window.opener || !allowedOrigin) return false;
+  const match = window.location.hash.match(/^#fp-(pick|build|test)=([\w-]+)&origin=([^&]+)$/);
+  let live: { mode: LiveMode | 'pick'; nonce: string; origin: string } | null = null;
+  if (match) {
+    live = { mode: match[1] as LiveMode | 'pick', nonce: match[2], origin: decodeURIComponent(match[3]) };
+  } else {
+    // Build and test continue across the page changes of a site with full page loads.
+    try {
+      live = JSON.parse(read('session', LIVE_KEY) ?? 'null');
+    } catch {
+      live = null;
+    }
+  }
+  // Only the builder this script belongs to may drive it, so no other site can open
+  // a customer's page and read what's clicked, or show something there.
+  if (!live || live.origin !== allowedOrigin) return false;
+  if (match) history.replaceState(null, '', window.location.pathname + window.location.search);
+
+  if (live.mode === 'pick') {
+    startPicker(live.nonce, live.origin);
+    return true;
+  }
+  write('session', LIVE_KEY, JSON.stringify(live));
+  if (live.mode === 'build') startBuilder(live.nonce, live.origin);
+  else startTest(live.nonce, live.origin);
+  window.opener.postMessage({ type: 'flowpilot:ready', nonce: live.nonce }, live.origin);
   return true;
+}
+
+function builderOrigin(script: HTMLScriptElement | null): string | null {
+  if (script?.dataset.builderOrigin) return script.dataset.builderOrigin;
+  try {
+    return script?.src ? new URL(script.src).origin : null;
+  } catch {
+    return null;
+  }
 }
 
 // --- Public API ----------------------------------------------------------------
@@ -388,10 +530,14 @@ function boot(script: HTMLOrSVGScriptElement | null) {
 
   if (isFirst) {
     window.FlowPilot = publicApi;
-    if (checkPickerMode()) return;
+    isLive = checkLiveMode(builderOrigin(element));
+    if (isLive) return;
     watchNavigation();
     window.addEventListener('pagehide', flush);
   }
+
+  // A second script tag on the page must not start tours over the builder.
+  if (isLive) return;
 
   const start = () => {
     const ids = new Set<string>();

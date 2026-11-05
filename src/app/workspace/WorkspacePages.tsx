@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Copy, Trash2, Upload } from 'lucide-react';
 import { MODULES } from '../../core/modules';
 import { AssetRecord } from '../../data/services';
+import { FontSelect } from '../../studio/fields';
 import { PLAN_LIMITS, UserRole } from '../../types/auth';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
@@ -362,8 +363,6 @@ export const AcceptInvitePage: React.FC = () => {
 
 // ---- Brand kit --------------------------------------------------------------
 
-const FONT_CHOICES = ['Inter', 'Plus Jakarta Sans', 'Poppins', 'Outfit', 'Roboto', 'DM Sans', 'Manrope', 'Sora', 'Montserrat', 'Space Grotesk', 'Playfair Display', 'Lora'];
-
 export const BrandPage: React.FC = () => {
   const { workspaces } = useServices();
   const { workspace, can } = useWorkspace();
@@ -425,12 +424,10 @@ export const BrandPage: React.FC = () => {
               <input pattern="#[0-9a-fA-F]{6}" className={inputClass} value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} />
             </span>
           </label>
-          <label className="block text-sm font-medium">Font
-            <select className={`${inputClass} mt-1`} value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
-              <option value="">Use the template's font</option>
-              {FONT_CHOICES.map((font) => <option key={font} value={font}>{font}</option>)}
-            </select>
-          </label>
+          <FontSelect label="Font" value={fontFamily} defaultLabel="Use the template's font" onChange={(font) => {
+            setFontFamily(font);
+            setIsSaved(false);
+          }} />
         </fieldset>
         {canEdit && (
           <div className="flex items-center gap-3">

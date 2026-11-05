@@ -61,7 +61,7 @@ const PreviewDialog: React.FC<{ template: TemplateDefinition; onUse: () => void;
         <button type="button" aria-label="Close preview" className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" onClick={onClose}><X className="w-4 h-4" /></button>
       </header>
       <div className="flex-1 min-h-0 p-3 bg-slate-100 dark:bg-slate-950">
-        <ProjectPreview type={template.type} documents={documents} theme={template.themes[0].theme} variables={initialValues(template)} settings={template.settings ?? {}} device={device} title={`${template.title} preview`} />
+        <ProjectPreview type={template.type} documents={documents} theme={template.themes[0].theme} variables={initialValues(template)} settings={template.settings ?? {}} device={device} title={`${template.title} preview`} hideReplay />
       </div>
     </dialog>
   );
@@ -110,14 +110,45 @@ const BlankDialog: React.FC<{ type: ProjectType; onClose: () => void }> = ({ typ
   );
 };
 
-/** Choosing what to make: a page of its own, with room to compare templates. */
-export const CreatePage: React.FC = () => {
-  const [params, setParams] = useSearchParams();
+const pageClass = 'app-scroll h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans';
+const headerClass = 'h-14 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800';
+
+/** The first question when someone hasn't come from a module's own page. */
+const ChooseModule: React.FC<{ onChoose: (type: ProjectType) => void }> = ({ onChoose }) => (
+  <div className={pageClass}>
+    <header className={headerClass}>
+      <div className="flex items-center gap-2 min-w-0">
+        <Link to={ROUTES.home} aria-label="Back to the dashboard" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-4 h-4" /></Link>
+        <span className="font-bold truncate">Create new</span>
+      </div>
+      <CreateSteps current={1} />
+      <span />
+    </header>
+    <main className="relative flex-1 min-h-0 overflow-y-auto p-6">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-2xl font-bold text-center">What do you want to create?</h1>
+        <p className="mt-1 mb-8 text-center text-slate-500 dark:text-slate-400">Choose one, and we'll show you its templates.</p>
+        <ul aria-label="What to create" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {MODULE_LIST.map((item) => (
+            <li key={item.type}>
+              <button type="button" onClick={() => onChoose(item.type)} className="w-full h-full p-5 text-left rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 hover:shadow-lg transition-all">
+                <span className="w-11 h-11 mb-3 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><Icon name={item.icon} className="w-5 h-5" /></span>
+                <span className="block font-semibold">{item.label}</span>
+                <span className="block mt-1 text-sm text-slate-500 dark:text-slate-400">{item.description}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </main>
+  </div>
+);
+
+/** One module's templates, with room to compare them. */
+const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
   const navigate = useNavigate();
   const { can } = useWorkspace();
   const team = useTeamTemplates();
-  const raw = params.get('type');
-  const type: ProjectType = PROJECT_TYPES.includes(raw as ProjectType) ? (raw as ProjectType) : 'website';
   const module = MODULES[type];
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | null>(null);
@@ -130,44 +161,40 @@ export const CreatePage: React.FC = () => {
   const templates = all.filter((t) =>
     (!category || t.category === category)
     && (!term || [t.title, t.description, t.category ?? '', ...t.tags].join(' ').toLowerCase().includes(term)));
-
-  const chooseType = (next: ProjectType) => {
-    setParams({ type: next });
-    setCategory(null);
-    setSearch('');
-  };
   const use = (template: TemplateDefinition) => navigate(ROUTES.newFromTemplate(template.id));
 
+  const filter = (item: string | null) => (
+    <li key={item ?? 'all'}>
+      <button type="button" aria-pressed={category === item} onClick={() => setCategory(item)}
+        className={`w-full flex items-center justify-between gap-2 px-2.5 h-9 rounded-lg text-sm font-medium text-left transition-colors ${category === item ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+        <span className="truncate">{item ?? 'All'}</span>
+        <span aria-hidden="true" className="text-xs tabular-nums text-slate-400">{item ? all.filter((t) => t.category === item).length : all.length}</span>
+      </button>
+    </li>
+  );
+
   return (
-    <div className="app-scroll h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
-      <header className="h-14 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+    <div className={pageClass}>
+      <header className={headerClass}>
         <div className="flex items-center gap-2 min-w-0">
-          <Link to={ROUTES.home} aria-label="Back to the dashboard" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-4 h-4" /></Link>
-          <h1 className="font-bold truncate">Create new</h1>
+          <Link to={ROUTES.module(type)} aria-label={`Back to ${module.plural}`} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-4 h-4" /></Link>
+          <span className="font-bold truncate">New {moduleNoun(type)}</span>
         </div>
         <CreateSteps current={1} />
         <span />
       </header>
 
       <div className="flex-1 min-h-0 flex">
-        <nav aria-label="What to create" className="relative w-60 shrink-0 overflow-y-auto p-3 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-          <ul className="space-y-0.5">
-            {MODULE_LIST.map((item) => (
-              <li key={item.type}>
-                <button type="button" aria-current={item.type === type ? 'true' : undefined} onClick={() => chooseType(item.type)}
-                  className={`w-full flex items-center gap-2.5 px-2.5 h-10 rounded-lg text-sm font-medium transition-colors ${item.type === type ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-                  <Icon name={item.icon} className="w-[18px] h-[18px] shrink-0" />
-                  {item.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {categories.length > 1 && (
+          <nav aria-label="Filter templates" className="no-scrollbar relative w-56 shrink-0 overflow-y-auto p-3 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+            <ul className="space-y-0.5">{[null, ...categories].map(filter)}</ul>
+          </nav>
+        )}
 
         <main className="relative flex-1 min-w-0 overflow-y-auto p-6">
-          <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
-              <h2 className="text-xl font-bold">{module.plural}</h2>
+              <h1 className="text-xl font-bold">{module.plural}</h1>
               <p className="text-sm text-slate-500 dark:text-slate-400">{module.description}</p>
             </div>
             <div className="relative w-full sm:w-72">
@@ -175,17 +202,6 @@ export const CreatePage: React.FC = () => {
               <input type="search" aria-label="Search templates" placeholder="Search templates..." className={`${inputClass} !pl-8`} value={search} onChange={(event) => setSearch(event.target.value)} />
             </div>
           </div>
-
-          {categories.length > 1 && (
-            <div role="group" aria-label="Filter templates" className="flex flex-wrap gap-1.5 mb-5">
-              {[null, ...categories].map((item) => (
-                <button key={item ?? 'all'} type="button" aria-pressed={category === item} onClick={() => setCategory(item)}
-                  className={`px-3 h-8 text-[13px] font-medium rounded-full transition-colors ${category === item ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>
-                  {item ?? 'All'}
-                </button>
-              ))}
-            </div>
-          )}
 
           {templates.length === 0 && term && <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">No templates match your search.</p>}
 
@@ -228,4 +244,12 @@ export const CreatePage: React.FC = () => {
       {isBlankOpen && <BlankDialog type={type} onClose={() => setIsBlankOpen(false)} />}
     </div>
   );
+};
+
+export const CreatePage: React.FC = () => {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get('type');
+  if (!PROJECT_TYPES.includes(raw as ProjectType)) return <ChooseModule onChoose={(type) => setParams({ type })} />;
+  // Keyed, so a filter or search doesn't carry over to another module.
+  return <ChooseTemplate key={raw} type={raw as ProjectType} />;
 };

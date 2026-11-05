@@ -7,8 +7,8 @@ test('full journey: template, details, editor, publish, live site, form response
   await signUp(page);
 
   // Choose a template.
-  await page.getByRole('complementary').getByRole('button', { name: 'Create new' }).click();
-  await page.getByRole('navigation', { name: 'What to create' }).getByRole('button', { name: 'Website' }).click();
+  await page.getByRole('region', { name: /Get started/ }).getByRole('button', { name: 'Choose a template' }).click();
+  await page.getByRole('list', { name: 'What to create' }).getByRole('button', { name: /^Website/ }).click();
   await page.getByRole('searchbox', { name: 'Search templates' }).fill('restaurant');
   await page.getByRole('button', { name: 'Use Restaurant or cafe' }).click();
 
@@ -222,8 +222,8 @@ test('team: invite link works for the invited email', async ({ page, context }) 
   await page.getByLabel('Email').fill('friend@example.com');
   await page.getByLabel('Password').fill('a-long-enough-password');
   await page.getByRole('button', { name: 'Create account' }).click();
-  // Returned to the Team page they were on when logged out.
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible();
+  // A new person starts at their own dashboard, not on the page the last person left.
+  await expect(page.getByRole('heading', { name: 'Welcome, Friend' })).toBeVisible();
 
   await page.goto(link!);
   await page.getByRole('button', { name: 'Accept invitation' }).click();

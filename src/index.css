@@ -14,3 +14,11 @@
   scrollbar-width: thin;
   scrollbar-color: rgb(148 163 184 / 0.5) transparent;
 }
+
+/* Scrolls, without showing a scrollbar. */
+.app-scroll .no-scrollbar {
+  scrollbar-width: none;
+}
+.app-scroll .no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

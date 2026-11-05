@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, CloudOff, Eye, LayoutTemplate, Loader2, Monitor, Redo2, Smartphone, Tablet, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
@@ -8,11 +8,12 @@ import { useServices } from '../app/session';
 import { BusyIcon, BusyLabel, EmptyState, primaryButton, secondaryButton, StudioSkeleton } from '../app/shared/ui';
 import { useWorkspace } from '../app/workspace';
 import { moduleNoun } from '../core/modules';
-import { ProjectPreview } from '../experience/ProjectPreview';
 import { projectVariableDefs } from '../templates';
 import { templateFromProject } from '../templates/library';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
+import { useLiveSite } from './liveSite';
+import { PreviewMode } from './PreviewMode';
 import { SaveToLibrary } from './SaveToLibrary';
 import { handleStudioShortcut } from './shortcuts';
 import { useStudio } from './store';
@@ -79,16 +80,38 @@ const ConflictBanner: React.FC = () => {
   );
 };
 
+/**
+ * Kept above the canvas rather than in the settings panel: adding a step opens that step's
+ * settings, and this still has to be on screen when someone comes back from their site.
+ */
+const LiveSiteBar: React.FC = () => {
+  const status = useLiveSite((s) => s.status);
+  const mode = useLiveSite((s) => s.mode);
+  const added = useLiveSite((s) => s.added);
+  if (status !== 'connected' && status !== 'closed') return null;
+  const count = `${added} ${added === 1 ? 'step' : 'steps'} added`;
+  return (
+    <div role="status" className="shrink-0 flex items-center justify-center gap-3 px-4 py-2 text-sm bg-indigo-50 text-indigo-950 dark:bg-indigo-500/10 dark:text-indigo-100">
+      {status === 'connected'
+        ? (mode === 'build' ? `Connected to your site. ${count}. Click things in that tab to add more.` : 'Connected to your site. The tour is playing in that tab.')
+        : `Your site's tab is closed.${mode === 'build' ? ` ${count}.` : ''}`}
+      {status === 'closed' && (
+        <button type="button" aria-label="Dismiss" className="p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10" onClick={() => useLiveSite.getState().stop()}>
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 const Editor: React.FC = () => {
   const project = useStudio((s) => s.project);
   const draft = useStudio((s) => s.draft);
-  const documents = useStudio((s) => s.documents);
   const device = useStudio((s) => s.device);
   const zoom = useStudio((s) => s.zoom);
   const canUndo = useStudio((s) => s.past.length > 0);
   const canRedo = useStudio((s) => s.future.length > 0);
   const readOnly = useStudio((s) => s.readOnly);
-  const activeDocumentId = useStudio((s) => s.activeDocumentId);
   const { undo, redo, setDevice, setZoom, saveNow } = useStudio.getState();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -112,9 +135,6 @@ const Editor: React.FC = () => {
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, []);
-
-  const activeSlug = documents.find((d) => d.id === activeDocumentId)?.slug;
-  const previewDocs = useMemo(() => documents, [documents]);
 
   if (!project || !draft) return null;
 
@@ -175,6 +195,7 @@ const Editor: React.FC = () => {
       </header>
 
       <ConflictBanner />
+      <LiveSiteBar />
 
       {welcome && (
         <div role="status" className="shrink-0 flex items-center justify-center gap-3 px-4 py-2 text-sm bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
@@ -185,29 +206,12 @@ const Editor: React.FC = () => {
         </div>
       )}
 
-      {isPreviewing ? (
-        <div className="flex-1 min-h-0 flex flex-col p-4 gap-2">
-          <button type="button" className={`${secondaryButton} self-end`} onClick={() => setIsPreviewing(false)}>
-            <X className="w-4 h-4" aria-hidden="true" />
-            Close preview
-          </button>
-          <ProjectPreview
-            type={project.type}
-            documents={previewDocs}
-            theme={draft.theme}
-            variables={draft.variables}
-            settings={draft.settings}
-            device={device}
-            initialSlug={activeSlug}
-            className="flex-1 min-h-0"
-          />
-        </div>
-      ) : (
-        <div className="flex-1 min-h-0 flex overflow-hidden">
-          <LeftPanel />
-          <Canvas />
-        </div>
-      )}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        <LeftPanel />
+        <Canvas />
+      </div>
+
+      {isPreviewing && <PreviewMode onClose={() => setIsPreviewing(false)} />}
 
       {isSavingTemplate && (
         <SaveToLibrary
@@ -276,6 +280,7 @@ export const StudioPage: React.FC = () => {
   }, [query.data, isLoadingWorkspace, services]);
 
   useEffect(() => () => {
+    useLiveSite.getState().stop();
     // Leaving the page: try to save what's left, then clear.
     const state = useStudio.getState();
     void state.saveNow().finally(() => {

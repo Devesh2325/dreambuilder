@@ -123,6 +123,7 @@ export interface RenderNode {
   props: Record<string, unknown>;
   styles: DocNode['styles'];
   responsive?: DocNode['responsive'];
+  hideOn?: DocNode['hideOn'];
   children: RenderNode[];
 }
 
@@ -146,6 +147,7 @@ export function expandContent(
       responsive: node.responsive
         ? (resolveValue(node.responsive, nodeScope) as DocNode['responsive'])
         : undefined,
+      hideOn: node.hideOn,
       children: node.children.flatMap((child) => expandOne(child, nodeScope, instanceSuffix)),
     });
 

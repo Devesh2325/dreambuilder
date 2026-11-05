@@ -26,6 +26,8 @@ export const nodeSchema = z.object({
   /** Variable that must be truthy for the node to render. A leading ! negates it. */
   showIf: z.string().optional(),
   hidden: z.boolean().optional(),
+  /** Devices this node isn't shown on. */
+  hideOn: z.array(z.enum(DEVICES)).optional(),
   locked: z.boolean().optional(),
 });
 export type DocNode = z.infer<typeof nodeSchema>;
@@ -73,13 +75,39 @@ export const triggersSchema = z.object({
   exitIntent: z.boolean().optional(),
   frequency: z.enum(['always', 'once_per_session', 'once_per_visitor', 'until_completed']),
   devices: z.array(z.enum(DEVICES)).optional(),
+  /** Starts when this element on the customer's page is clicked. */
+  clickSelector: z.string().optional(),
+  /** Never starts by itself: only through FlowPilot.start(). */
+  manualOnly: z.boolean().optional(),
 });
 export type Triggers = z.infer<typeof triggersSchema>;
 
 export const DEFAULT_TRIGGERS: Triggers = { urlRules: [], delaySeconds: 0, frequency: 'once_per_visitor' };
 
+/** How a tour looks and behaves, on top of what each step sets for itself. */
+export interface TourSettings {
+  showProgress?: boolean;
+  /** Shown beside the progress, such as "about 2 minutes". */
+  estimatedTime?: string;
+  showClose?: boolean;
+  closeOnBackdrop?: boolean;
+  /** How dark the page behind goes, from 0 to 90 percent. */
+  backdrop?: number;
+  /** Space around a highlighted element, in pixels. */
+  highlightPadding?: number;
+  scrollToTarget?: boolean;
+  keyboard?: boolean;
+  /** Where to send people after the last step. */
+  finishUrl?: string;
+  /** How long to wait for an element to appear, in seconds. */
+  waitSeconds?: number;
+}
+
 export interface ProjectSettings {
   triggers?: Triggers;
+  tour?: TourSettings;
+  /** The customer's own address, used to build and test on their site. Never published. */
+  builderUrl?: string;
   /** Where a banner sits. Inline means inside the customer's page, at a <div> they choose. */
   position?: 'top' | 'bottom' | 'inline';
   /** Web address that receives form submissions. */

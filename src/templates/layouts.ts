@@ -1,6 +1,7 @@
+import { DEFAULT_TRIGGERS } from '../core/schema';
 import { VariableDef } from '../core/variables';
 import { photo } from './assets';
-import { buildContent, button, el, El, heading, image, section, TemplateDefinition, TemplatePage, text } from './dsl';
+import { actionButton, buildContent, button, el, El, experience, heading, image, section, TemplateDefinition, TemplatePage, text } from './dsl';
 import { field, formPage, listVar, longVar, make, textVar, urlVar } from './experiences';
 import { THEME_CORAL, THEME_EMERALD, THEME_INDIGO, THEME_MIDNIGHT, THEME_MONO, THEME_OCEAN, THEME_TERRACOTTA } from './themes';
 
@@ -337,4 +338,60 @@ const formLayouts = [
   ])], { titleVariable: 'form.title' }),
 ];
 
-export const LAYOUT_TEMPLATES: TemplateDefinition[] = [...pageLayouts, ...formLayouts];
+const TOUR_SETTINGS = { triggers: DEFAULT_TRIGGERS, tour: { showProgress: true, showClose: true } };
+
+const nextButton = (label: string) => actionButton(label, 'next');
+
+const tourLayouts = [
+  make('tour', 'video-welcome', 'Video welcome', 'Open with a short video, then point out where to begin.', ['video', 'onboarding', 'youtube'], THEME_INDIGO, [
+    textVar('product', 'Product name', 'Acme', 'Your product'),
+    urlVar('video.url', 'Video link', 'https://www.youtube.com/watch?v=jNQXAC9IVRw', 'Your product'),
+    longVar('intro', 'Text under the video', 'A two-minute look at how everything fits together.', 'Your product'),
+    { key: 'start.selector', label: 'Where to begin', type: 'text', required: true, default: 'button', group: 'Elements on your site', help: 'Which part of your site this step points at. Select the step and use Pick on my site, and this is filled in for you.' },
+  ], [experience([
+    el('TourStep', { props: { layout: 'modal', size: 'xlarge', fallback: 'center', spotlight: true } }, [
+      heading('Welcome to {{product}}', 'h3'),
+      el('Video', { props: { url: '{{video.url}}', title: 'Welcome to {{product}}' } }),
+      text('{{intro}}', muted, 'intro'),
+      el('Row', { styles: { justifyContent: 'flex-end', gap: '8px' } }, [actionButton('Skip', 'close', 'link'), nextButton('Continue')]),
+    ]),
+    el('TourStep', { props: { selector: '{{start.selector}}', placement: 'bottom', fallback: 'center', spotlight: true } }, [
+      heading('Start here', 'h4'),
+      text('This is where most people begin.', muted),
+      el('Row', { styles: { justifyContent: 'flex-end' } }, [nextButton('Finish')]),
+    ]),
+  ])], { settings: TOUR_SETTINGS }),
+
+  make('tour', 'announcement', 'Announcement slide-out', 'A quiet note in the corner that doesn\u2019t interrupt anyone.', ['announcement', 'news', 'slide-out'], THEME_EMERALD, [
+    textVar('title', 'Title', 'New this month', 'The news'),
+    longVar('body', 'Message', 'Reports now update live, so you always see the latest numbers.', 'The news'),
+    { key: 'image', label: 'Image', type: 'image', default: photo('dashboard', 800, 450), group: 'The news' },
+    textVar('cta.label', 'Button label', 'Got it', 'The news'),
+  ], [experience([
+    el('TourStep', { props: { layout: 'slideout', size: 'medium', spotlight: false, fallback: 'center' } }, [
+      image('{{image}}', '{{title}}', { height: '170px' }, 'image'),
+      heading('{{title}}', 'h4'),
+      text('{{body}}', muted),
+      el('Row', { styles: { justifyContent: 'flex-end' } }, [nextButton('{{cta.label}}')]),
+    ]),
+  ])], { settings: { triggers: DEFAULT_TRIGGERS, tour: { showClose: true } } }),
+
+  make('tour', 'long-guide', 'Step-by-step guide', 'A side panel with room for longer instructions, which people can follow while using your app.', ['guide', 'help', 'long'], THEME_OCEAN, [
+    textVar('title', 'Title', 'Set up your first report', 'The guide'),
+    textVar('duration', 'How long it takes', 'About 5 minutes', 'The guide'),
+    listVar('parts', 'Parts of the guide', [
+      { title: 'Choose your data', text: 'Open Reports and pick where the numbers come from. If you are not sure, start with last month. You can change this at any time, and nothing you do here affects your original data.' },
+      { title: 'Pick a chart', text: 'Bar charts suit comparing things, and line charts suit changes over time. Choose whichever makes your point most clearly, then give it a short title that says what it shows.' },
+      { title: 'Share it', text: 'Click Share and add your team. They will always see the latest numbers, so there is nothing to send again next month.' },
+    ], titleText, 'Parts of the guide'),
+  ], [experience([
+    el('TourStep', { props: { layout: 'sidebar', size: 'large', spotlight: false, allowInteraction: true, fallback: 'center' } }, [
+      heading('{{title}}', 'h3'),
+      text('{{duration}}', { ...muted, fontWeight: 600 }),
+      el('Box', { repeat: { list: 'parts', as: 'part' }, styles: { gap: '6px', paddingTop: '10px' } }, [heading('{{part.index}}. {{part.title}}', 'h4'), text('{{part.text}}', muted, 'part.text')]),
+      el('Row', { styles: { justifyContent: 'flex-end', paddingTop: '10px' } }, [nextButton('Done')]),
+    ]),
+  ])], { settings: { triggers: DEFAULT_TRIGGERS, tour: { showClose: true } } }),
+];
+
+export const LAYOUT_TEMPLATES: TemplateDefinition[] = [...pageLayouts, ...formLayouts, ...tourLayouts];

@@ -32,7 +32,7 @@ createServer((request, response) => {
 
   const project = url.searchParams.get('project') ?? 'project-1';
   const inline = url.searchParams.get('inline') ? `<div id="slot" data-flowpilot="${project}"></div>` : '';
-  const script = url.searchParams.get('noscript') ? '' : `<script src="/flowpilot.js" data-project-id="${project}" defer></script>`;
+  const script = url.searchParams.get('noscript') ? '' : `<script src="/flowpilot.js" data-project-id="${project}"${url.searchParams.get('builder') ? ' data-builder-origin="http://localhost:5199"' : ''} defer></script>`;
 
   response.setHeader('Content-Type', 'text/html');
   response.end(page(`

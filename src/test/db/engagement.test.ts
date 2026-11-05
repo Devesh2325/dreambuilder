@@ -16,7 +16,7 @@ describe('publishing and visitor functions', () => {
         user.orgId,
         title,
         JSON.stringify([{ title: 'Home', slug: '', content: { rootId: 'draft', nodes: {} } }]),
-        JSON.stringify({ webhookUrl: 'https://hooks.example.com/secret' }),
+        JSON.stringify({ webhookUrl: 'https://hooks.example.com/secret', builderUrl: 'https://staging.internal.example', variableDefs: [{ key: 'my.x', label: 'X', type: 'text' }], tour: { showProgress: true } }),
       ],
     );
     return row.id;
@@ -68,6 +68,14 @@ describe('publishing and visitor functions', () => {
     it('never exposes the webhook address to visitors', async () => {
       const [row] = await t.asAnon<{ s: unknown }>(`select public.get_published_site('contact') as s`);
       expect(JSON.stringify(row.s)).not.toContain('hooks.example.com');
+    });
+
+    it('keeps the build address and variable list private, but not what tours need to run', async () => {
+      const [row] = await t.asAnon<{ s: { project: { settings: Record<string, unknown> } } }>(`select public.get_published_site('contact') as s`);
+      expect(row.s.project.settings.builderUrl).toBeUndefined();
+      expect(row.s.project.settings.variableDefs).toBeUndefined();
+      expect(row.s.project.settings.tour).toEqual({ showProgress: true });
+      await expect(t.asAnon(`select public.public_snapshot(gen_random_uuid())`)).rejects.toThrow(/permission denied/);
     });
 
     it('keeps visitors on the published version while drafts change', async () => {

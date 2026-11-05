@@ -1,10 +1,10 @@
 import React, { CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { DocContent, ProjectSettings, ProjectType, Theme } from '../core/schema';
+import { DocContent, ProjectSettings, ProjectType, Theme, TourSettings } from '../core/schema';
 import { MODULES } from '../core/modules';
-import { expandContent, RenderNode, VariableValues } from '../core/variables';
+import { expandContent, RenderNode, safeUrl, VariableValues } from '../core/variables';
 import { RenderedNode, StyleTag } from '../renderer/ExperienceView';
 import { RenderContext } from '../renderer/types';
-import { Placement, positionStep, Rect } from './tourPosition';
+import { Align, Placement, positionStep, Rect } from './tourPosition';
 
 export interface PlayerHost {
   /** Whole document the tour targets live in. */
@@ -17,6 +17,8 @@ export interface PlayerHost {
   initialStep?: number;
   onStepChange?: (step: number) => void;
   navigate?: RenderContext['navigate'];
+  /** Moves the tour to another page of the customer's site. */
+  goToPath?: (path: string) => boolean;
 }
 
 export interface ExperiencePlayerProps {
@@ -29,6 +31,7 @@ export interface ExperiencePlayerProps {
   mode?: 'preview' | 'live';
 }
 
+const EMPTY_TOUR: TourSettings = {};
 const FIXED_FULL: CSSProperties = { position: 'fixed', inset: 0, zIndex: 2147483000 };
 
 const findTarget = (doc: Document, selector: unknown): Element | null => {
@@ -41,22 +44,26 @@ const findTarget = (doc: Document, selector: unknown): Element | null => {
   }
 };
 
-const TARGET_WAIT_MS = 2500;
+const DEFAULT_WAIT_SECONDS = 2.5;
 
-const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: PlayerHost }> = ({ tree, ctxBase, host }) => {
+const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: PlayerHost; settings: TourSettings }> = ({ tree, ctxBase, host, settings }) => {
   const steps = tree.children.filter((child) => child.type === 'TourStep');
   const [index, setIndex] = useState(() => Math.min(host.initialStep ?? 0, Math.max(steps.length - 1, 0)));
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; side?: Placement; caret?: number } | null>(null);
   const [isCentered, setIsCentered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const directionRef = useRef(1);
   const step = steps[index];
+  const layout = (step?.props.layout as string) || 'tooltip';
+  const usesTarget = layout === 'tooltip';
+  const view = host.targetDocument.defaultView ?? window;
 
   const finish = useCallback((reason: 'closed' | 'completed') => {
     host.track?.(reason === 'completed' ? 'tour_completed' : 'tour_skipped', { step: index + 1 });
     host.onFinish?.(reason);
-  }, [host, index]);
+    if (reason === 'completed' && settings.finishUrl && ctxBase.mode === 'live') view.location.assign(safeUrl(settings.finishUrl));
+  }, [host, index, settings.finishUrl, ctxBase.mode, view]);
 
   const goTo = useCallback((next: number, direction: number) => {
     directionRef.current = direction;
@@ -77,11 +84,21 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
+  // A step can belong to another page of the customer's site.
+  const path = typeof step?.props.path === 'string' ? step.props.path.trim() : '';
+  const [refusedPath, setRefusedPath] = useState<string | null>(null);
+  const isOnPage = !path || !path.startsWith('/') || path.startsWith('//') || view.location.pathname === path || !host.goToPath || refusedPath === path;
+  useEffect(() => {
+    // Refused means this page was already tried and it sent us back, so stay here.
+    if (path && !isOnPage && host.goToPath?.(path) === false) setRefusedPath(path);
+  }, [path, isOnPage, host]);
+
   // Target elements may appear after the page loads, so this waits briefly before falling back.
   useEffect(() => {
-    if (!step) return undefined;
-    const selector = step.props.selector;
+    if (!step || !isOnPage) return undefined;
+    const selector = usesTarget ? step.props.selector : '';
     const hasSelector = typeof selector === 'string' && selector.trim() !== '';
+    const waitMs = (settings.waitSeconds ?? DEFAULT_WAIT_SECONDS) * 1000;
     let frame = 0;
     let cancelled = false;
     let scrolled = false;
@@ -93,7 +110,7 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
       if (target) {
         if (!scrolled) {
           scrolled = true;
-          target.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+          if (settings.scrollToTarget !== false) target.scrollIntoView?.({ block: 'center', inline: 'nearest' });
         }
         const box = target.getBoundingClientRect();
         setIsCentered(false);
@@ -102,7 +119,7 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
             ? previous
             : { top: box.top, left: box.left, width: box.width, height: box.height },
         );
-      } else if (!hasSelector || Date.now() - started > TARGET_WAIT_MS) {
+      } else if (!hasSelector || Date.now() - started > waitMs) {
         if (hasSelector && step.props.fallback === 'skip') {
           host.track?.('tour_step_skipped', { step: index + 1, reason: 'missing_target' });
           // Going back from the second step onto a missing first step has nowhere to
@@ -122,25 +139,61 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
       cancelled = true;
       window.cancelAnimationFrame(frame);
     };
-  }, [step, index, host, goTo]);
+  }, [step, index, host, goTo, usesTarget, isOnPage, settings.waitSeconds, settings.scrollToTarget]);
+
+  // A step can move on when its element is clicked, which is how people learn by doing.
+  const hasTarget = Boolean(targetRect);
+  useEffect(() => {
+    if (!step || !hasTarget || step.props.advance !== 'target') return undefined;
+    const target = findTarget(host.targetDocument, step.props.selector);
+    if (!target) return undefined;
+    const onClick = () => {
+      host.track?.('tour_step_completed', { step: index + 1 });
+      goTo(index + 1, 1);
+    };
+    target.addEventListener('click', onClick);
+    return () => target.removeEventListener('click', onClick);
+  }, [step, hasTarget, host, index, goTo]);
+
+  useEffect(() => {
+    if (settings.keyboard === false) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      const typing = (event.target as Element | null)?.closest?.('input,textarea,select,[contenteditable]');
+      if (typing) return;
+      if (event.key === 'Escape') finish('closed');
+      else if (event.key === 'ArrowRight') goTo(index + 1, 1);
+      else if (event.key === 'ArrowLeft') goTo(index - 1, -1);
+    };
+    host.targetDocument.addEventListener('keydown', onKey);
+    return () => host.targetDocument.removeEventListener('keydown', onKey);
+  }, [settings.keyboard, host, finish, goTo, index]);
 
   useLayoutEffect(() => {
     const card = cardRef.current;
     if (!card) return;
     const size = { width: card.offsetWidth, height: card.offsetHeight };
     // Previews run in an iframe, whose viewport isn't this script's window.
-    const view = host.targetDocument.defaultView ?? window;
     const viewport = { width: view.innerWidth, height: view.innerHeight };
-    if (targetRect) {
-      const result = positionStep(targetRect, size, viewport, (step?.props.placement as Placement) ?? 'bottom');
-      setPosition((previous) => (previous && previous.top === result.top && previous.left === result.left ? previous : { top: result.top, left: result.left }));
-    } else if (isCentered) {
-      setPosition({ top: Math.max(8, (viewport.height - size.height) / 2), left: Math.max(8, (viewport.width - size.width) / 2) });
+    const edge = 16;
+    let next: { top: number; left: number; side?: Placement; caret?: number } | null = null;
+    if (layout === 'slideout') next = { top: Math.max(8, viewport.height - size.height - edge), left: Math.max(8, viewport.width - size.width - edge) };
+    else if (layout === 'sidebar') next = { top: 0, left: Math.max(0, viewport.width - size.width) };
+    else if (targetRect) {
+      const result = positionStep(targetRect, size, viewport, (step?.props.placement as Placement) || 'bottom', (step?.props.align as Align) || 'center');
+      next = { top: result.top, left: result.left, side: result.placement, caret: result.caret };
+    } else if (isCentered || layout === 'modal') {
+      next = { top: Math.max(8, (viewport.height - size.height) / 2), left: Math.max(8, (viewport.width - size.width) / 2) };
     }
-  }, [targetRect, isCentered, step, index, host]);
+    if (next) {
+      const value = next;
+      setPosition((previous) => (previous && previous.top === value.top && previous.left === value.left && previous.side === value.side && previous.caret === value.caret ? previous : value));
+    }
+  }, [targetRect, isCentered, step, index, layout, view]);
 
+  const label = [settings.showProgress ? `Step ${index + 1} of ${steps.length}` : '', settings.estimatedTime?.trim() ?? ''].filter(Boolean).join('  ·  ');
   const ctx: RenderContext = {
     ...ctxBase,
+    tourChrome: { label: label || undefined, canClose: settings.showClose },
     onAction: (action) => {
       if (action === 'next') {
         host.track?.('tour_step_completed', { step: index + 1 });
@@ -150,14 +203,33 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
     },
   };
 
-  if (!step) return null;
+  if (!step || !isOnPage) return null;
 
-  const pad = 6;
-  const dims = step.props.spotlight !== false;
+  const pad = settings.highlightPadding ?? 6;
+  const dims = step.props.spotlight !== false && layout !== 'slideout';
+  const shade = `rgba(15,23,42,${Math.max(0, Math.min(90, settings.backdrop ?? 55)) / 100})`;
+  const usesPage = step.props.advance === 'target' || step.props.allowInteraction === true || !dims;
+  // The arrow follows the side the step really ended up on, which can differ near an edge.
+  const shown: RenderNode = {
+    ...step,
+    props: {
+      ...step.props,
+      selector: targetRect ? step.props.selector : '',
+      placement: position?.side ?? step.props.placement,
+      align: '',
+    },
+  };
+  const closeFromBackdrop = settings.closeOnBackdrop ? () => finish('closed') : undefined;
 
   return (
-    <div style={FIXED_FULL} data-fp-tour="">
-      {dims && !targetRect && <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.55)' }} />}
+    <div
+      style={{ ...FIXED_FULL, pointerEvents: usesPage ? 'none' : undefined }}
+      data-fp-tour=""
+      onClick={(event) => {
+        if (event.target === event.currentTarget) closeFromBackdrop?.();
+      }}
+    >
+      {dims && !targetRect && <div style={{ position: 'fixed', inset: 0, background: shade }} onClick={closeFromBackdrop} />}
       {targetRect && (
         <div
           data-fp-spotlight=""
@@ -169,7 +241,7 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
             height: targetRect.height + pad * 2,
             borderRadius: 8,
             pointerEvents: 'none',
-            boxShadow: dims ? '0 0 0 9999px rgba(15,23,42,.55)' : '0 0 0 3px var(--fp-primary)',
+            boxShadow: dims ? `0 0 0 9999px ${shade}` : '0 0 0 3px var(--fp-primary)',
           }}
         />
       )}
@@ -182,9 +254,11 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
           // Kept invisible until measured, so it doesn't flash in the corner.
           visibility: position ? 'visible' : 'hidden',
           maxWidth: 'calc(100vw - 16px)',
+          pointerEvents: 'auto',
+          ...(position?.caret !== undefined ? ({ '--fp-caret': `${position.caret}px` } as CSSProperties) : {}),
         }}
       >
-        <RenderedNode node={step} ctx={ctx} />
+        <RenderedNode node={shown} ctx={ctx} />
       </div>
     </div>
   );
@@ -272,7 +346,7 @@ export const ExperiencePlayer: React.FC<ExperiencePlayerProps> = ({ type, conten
 
   let body: React.ReactNode;
   if (type === 'tour') {
-    body = <TourPlayer tree={tree} ctxBase={ctxBase} host={closingHost} />;
+    body = <TourPlayer tree={tree} ctxBase={ctxBase} host={closingHost} settings={settings.tour ?? EMPTY_TOUR} />;
   } else if (type === 'demo') {
     body = <DemoPlayer tree={tree} ctxBase={ctxBase} host={host} />;
   } else if (type === 'banner') {

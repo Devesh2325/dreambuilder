@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Image, LayoutDashboard, LayoutTemplate, Loader2, LogOut, Moon, Palette, Settings, Sun, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Image, LayoutDashboard, LayoutTemplate, Loader2, LogOut, Moon, PanelLeft, Palette, Settings, Sun, Users } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
 import { isLocalBackend } from '../../data';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
 import { Icon } from '../shared/Icon';
 import { DashboardSkeleton } from '../shared/ui';
-import { CreateButton } from '../templates/CreateButton';
 import { useTheme } from '../theme';
 import { useWorkspace } from '../workspace';
 
@@ -73,28 +72,31 @@ export const Shell: React.FC = () => {
   const handleSignOut = async () => {
     setIsSigningOut(true);
     const { error } = await auth.signOut();
-    setIsSigningOut(false);
-    // Cached data must not stay visible to whoever logs in next on this browser.
-    if (!error) queryClient.clear();
+    if (error) setIsSigningOut(false);
   };
 
   return (
     <div className="app-scroll h-screen flex overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
-      <aside className={`relative z-20 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-[width] duration-200 ${collapsed ? 'w-[64px]' : 'w-60'}`}>
-        <div className={`h-14 shrink-0 flex items-center gap-2 ${collapsed ? 'justify-center' : 'px-3'}`}>
-          <span aria-hidden="true" className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-600 text-white text-sm font-extrabold">F</span>
-          {!collapsed && <span className="font-extrabold text-slate-900 dark:text-white">FlowPilot</span>}
+      <aside className={`relative z-20 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-[width] duration-200 ${collapsed ? 'w-[60px]' : 'w-60'}`}>
+        <div className={`h-14 shrink-0 flex items-center ${collapsed ? 'justify-center' : 'justify-between pl-3 pr-2'}`}>
+          {!collapsed && (
+            <span className="flex items-center gap-2 min-w-0">
+              <span aria-hidden="true" className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-600 text-white text-sm font-extrabold">F</span>
+              <span className="font-extrabold truncate text-slate-900 dark:text-white">FlowPilot</span>
+            </span>
+          )}
+          <button
+            type="button"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="group/toggle w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors"
+            onClick={toggleCollapsed}
+          >
+            {collapsed && <span aria-hidden="true" className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-600 text-white text-sm font-extrabold group-hover/toggle:hidden">F</span>}
+            <PanelLeft className={`${iconSize} ${collapsed ? 'hidden group-hover/toggle:block' : ''}`} aria-hidden="true" />
+          </button>
         </div>
-        <button
-          type="button"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!collapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="absolute -right-3 top-[17px] w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md text-slate-500 hover:text-indigo-600 hover:border-indigo-400 transition-colors"
-          onClick={toggleCollapsed}
-        >
-          {collapsed ? <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}
-        </button>
 
         {!collapsed && (
           <div className="px-3 pb-2">
@@ -117,11 +119,7 @@ export const Shell: React.FC = () => {
           </div>
         )}
 
-        <div className={`shrink-0 ${collapsed ? 'px-2 pb-2' : 'px-3 pb-2'}`}>
-          <CreateButton iconOnly={collapsed} className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors" />
-        </div>
-
-        <nav aria-label="Main" className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden ${collapsed ? 'px-2' : 'px-3'} pb-3`}>
+        <nav aria-label="Main" className={`no-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden ${collapsed ? 'px-2' : 'px-3'} pb-3`}>
           <SideLink to={ROUTES.home} end collapsed={collapsed} label="Dashboard" icon={<LayoutDashboard className={iconSize} aria-hidden="true" />} />
           <Group label="Build" collapsed={collapsed}>
             {MODULE_LIST.filter((m) => m.primary).map((m) => <SideLink key={m.type} to={m.path} collapsed={collapsed} label={m.plural} icon={<Icon name={m.icon} className={iconSize} />} />)}

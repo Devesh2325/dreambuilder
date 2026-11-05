@@ -1,5 +1,6 @@
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { safeImageUrl, safeUrl } from '../core/variables';
+import { parseVideoUrl } from '../core/video';
 import { BlockRenderProps, NavLink, RenderContext } from './types';
 
 type Block = React.FC<BlockRenderProps>;
@@ -85,6 +86,32 @@ const Image: Block = ({ node, attrs }) => {
   const src = safeImageUrl(node.props.src);
   if (!src) return <div {...withClass(attrs, 'fp-image')} />;
   return <img {...withClass(attrs, 'fp-image')} src={src} alt={asText(node.props.alt)} loading="lazy" />;
+};
+
+const Video: Block = ({ node, attrs, ctx }) => {
+  const source = parseVideoUrl(node.props.url);
+  const title = asText(node.props.title) || 'Video';
+  if (!source) {
+    if (ctx.mode !== 'edit') return null;
+    return <div {...withClass(attrs, 'fp-video')} data-empty="true">Paste a YouTube, Vimeo or MP4 link</div>;
+  }
+  return (
+    <div {...withClass(attrs, 'fp-video')}>
+      {source.kind === 'iframe' ? (
+        <iframe
+          src={source.src}
+          title={title}
+          loading="lazy"
+          allow="encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+          sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+        />
+      ) : (
+        <video src={source.src} title={title} controls preload="metadata" />
+      )}
+    </div>
+  );
 };
 
 const Divider: Block = ({ attrs }) => <hr {...withClass(attrs, 'fp-divider')} />;
@@ -358,7 +385,29 @@ const ScaleField: Block = ({ node, attrs, ctx }) => {
   );
 };
 
-const TourStep: Block = ({ attrs, children }) => <div {...withClass(attrs, 'fp-step')}>{children}</div>;
+const oneOf = (value: unknown, allowed: string[], fallback: string) => (allowed.includes(asText(value)) ? asText(value) : fallback);
+
+const TourStep: Block = ({ node, attrs, children, ctx }) => {
+  const layout = oneOf(node.props.layout, ['tooltip', 'modal', 'slideout', 'sidebar'], 'tooltip');
+  const hasArrow = layout === 'tooltip' && asText(node.props.selector) !== '';
+  const chrome = ctx.tourChrome;
+  return (
+    <div
+      {...withClass(attrs, 'fp-step')}
+      data-layout={layout}
+      data-size={oneOf(node.props.size, ['small', 'medium', 'large', 'xlarge'], 'medium')}
+      data-side={hasArrow ? oneOf(node.props.placement, ['top', 'bottom', 'left', 'right'], 'bottom') : undefined}
+      data-caret={hasArrow ? asText(node.props.align) || undefined : undefined}
+    >
+      {chrome?.canClose && <CloseButton ctx={ctx} />}
+      {/* Long steps scroll in here, leaving the arrow and close button in place. */}
+      <div className="fp-step-body">
+        {chrome?.label && <p className="fp-step-progress">{chrome.label}</p>}
+        {children}
+      </div>
+    </div>
+  );
+};
 
 const DemoScreen: Block = ({ node, attrs, children }) => {
   const image = safeImageUrl(node.props.image);
@@ -374,19 +423,37 @@ const DemoHotspot: Block = ({ node, attrs, ctx }) => {
   const x = Number(node.props.x) || 0;
   const y = Number(node.props.y) || 0;
   const tip = asText(node.props.tip);
+  const title = asText(node.props.title);
+  const buttonText = asText(node.props.buttonText);
   const goTo = Number(node.props.goTo);
+  const go = () => {
+    if (ctx.mode !== 'edit') ctx.onAction?.(goTo > 0 ? 'goto' : 'next', goTo - 1);
+  };
+  const place = { left: `${x}%`, top: `${y}%` };
   return (
     <>
       <button
         type="button"
         {...withClass(attrs, 'fp-hotspot')}
-        style={{ left: `${x}%`, top: `${y}%` }}
-        aria-label={tip || 'Continue'}
-        onClick={() => {
-          if (ctx.mode !== 'edit') ctx.onAction?.(goTo > 0 ? 'goto' : 'next', goTo - 1);
-        }}
+        data-beacon={node.props.showBeacon !== false}
+        style={place}
+        aria-label={tip || title || 'Continue'}
+        onClick={go}
       />
-      {tip && <span className="fp-hotspot-tip" style={{ left: `${x}%`, top: `${y}%` }}>{tip}</span>}
+      {(tip || title || buttonText) && (
+        <div
+          className="fp-hotspot-tip"
+          // Grabbing the tooltip in the editor moves it, the same as grabbing the dot.
+          data-fp-node={attrs['data-fp-node']}
+          data-side={oneOf(node.props.placement, ['top', 'bottom', 'left', 'right'], 'bottom')}
+          data-caret={oneOf(node.props.align, ['start', 'center', 'end'], 'center')}
+          style={place}
+        >
+          {title && <strong>{title}</strong>}
+          {tip && <span>{tip}</span>}
+          {buttonText && <button type="button" className="fp-btn fp-btn-primary" onClick={go}>{buttonText}</button>}
+        </div>
+      )}
     </>
   );
 };
@@ -469,6 +536,7 @@ export const BLOCK_RENDERERS: Record<string, Block> = {
   Text,
   Button,
   Image,
+  Video,
   Divider,
   Spacer,
   Navbar,

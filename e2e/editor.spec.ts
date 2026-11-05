@@ -81,7 +81,6 @@ test.describe('steps show one at a time', () => {
     await stepBar(page).getByRole('button', { name: 'Add slide' }).click();
     await expect(slides).toHaveCount(count + 1);
     await expect(stepBar(page).getByRole('button', { name: 'Slide 2' })).toHaveAttribute('aria-current', 'step');
-    await expect(page.getByRole('tabpanel', { name: 'Variables' }).getByText(`Item ${count + 1}`, { exact: true })).toBeVisible();
 
     await stepBar(page).getByRole('button', { name: 'Delete this slide' }).click();
     await expect(slides).toHaveCount(count);
@@ -105,7 +104,7 @@ test.describe('variables', () => {
     await expect(page.getByRole('tab', { name: 'Details' })).toHaveCount(0);
 
     await panel.getByRole('button', { name: 'New variable' }).click();
-    await panel.getByLabel('Name').fill('Phone number');
+    await panel.getByLabel('What is it called?').fill('Phone number');
     await panel.getByRole('button', { name: 'Add variable' }).click();
     await panel.getByRole('textbox', { name: 'Phone number' }).fill('555-0100');
 
@@ -145,7 +144,7 @@ test.describe('variables', () => {
     await page.getByRole('tab', { name: 'Variables' }).click();
     const panel = page.getByRole('tabpanel', { name: 'Variables' });
     await panel.getByRole('button', { name: 'New variable' }).click();
-    await panel.getByLabel('Name').fill('Sale ends');
+    await panel.getByLabel('What is it called?').fill('Sale ends');
     await panel.getByRole('button', { name: 'Add variable' }).click();
     await expect(panel.getByRole('textbox', { name: 'Sale ends' })).toBeVisible();
   });
@@ -236,10 +235,10 @@ test.describe('style panel', () => {
     await createInEditor(page, 'page-launch');
     const frame = canvas(page);
     const heading = await openHeading(page, frame);
-    await openGroup(page, 'Effects');
-    await openGroup(page, 'Position');
+    for (const group of ['Size', 'Border', 'Effects', 'Position']) await openGroup(page, group);
 
-    await page.getByLabel('Font', { exact: true }).selectOption('Lora');
+    await page.getByRole('button', { name: 'Font', exact: true }).click();
+    await page.getByRole('listbox', { name: 'Font' }).getByRole('option', { name: 'Lora' }).click();
     await expect.poll(() => css(heading, 'font-family')).toContain('Lora');
     await expect(frame.locator('link[href*="family=Lora"]')).toBeAttached();
     await page.getByLabel('Weight').selectOption('300');
@@ -332,7 +331,7 @@ test.describe('style panel', () => {
     await expect.poll(() => css(box, 'row-gap')).toBe('31px');
 
     await page.getByRole('button', { name: 'Display: Grid' }).click();
-    await page.getByLabel('Columns').selectOption({ label: '3 columns' });
+    for (let n = 0; n < 3; n += 1) await page.getByRole('button', { name: 'More columns' }).click();
     await expect.poll(async () => (await css(box, 'grid-template-columns')).split(' ').length).toBe(3);
 
     await page.getByRole('button', { name: 'Clear layout styles' }).click();
@@ -478,7 +477,7 @@ test.describe('team templates', () => {
     await page.getByRole('tab', { name: 'Variables' }).click();
     const variables = page.getByRole('tabpanel', { name: 'Variables' });
     await variables.getByRole('button', { name: 'New variable' }).click();
-    await variables.getByLabel('Name').fill('Offer');
+    await variables.getByLabel('What is it called?').fill('Offer');
     await variables.getByRole('button', { name: 'Add variable' }).click();
     await variables.getByRole('textbox', { name: 'Offer' }).fill('Half price');
 
@@ -500,7 +499,7 @@ test.describe('team templates', () => {
 
     // It's in the library and on the create page.
     await page.goto('/create?type=page');
-    await expect(page.getByRole('group', { name: 'Filter templates' }).getByRole('button', { name: 'Campaigns' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Filter templates' }).getByRole('button', { name: 'Campaigns' })).toBeVisible();
     await page.getByRole('button', { name: 'Use Campaign page', exact: true }).click();
 
     // Its variables become the form, with the saved value to start from.
@@ -575,13 +574,8 @@ test.describe('layout', () => {
     expect((await page.getByRole('tabpanel', { name: 'Edit' }).boundingBox())!.width).toBeGreaterThanOrEqual(320);
   });
 
-  test('sidebar and editor panel have round collapse buttons on their edge', async ({ page }) => {
+  test('the editor panel can be hidden and brought back', async ({ page }) => {
     await signUp(page);
-    const sidebar = (await page.getByRole('complementary').boundingBox())!;
-    const collapse = (await page.getByRole('button', { name: 'Collapse sidebar' }).boundingBox())!;
-    expect(Math.abs(collapse.x + collapse.width / 2 - (sidebar.x + sidebar.width))).toBeLessThan(2);
-    expect(collapse.width).toBe(collapse.height);
-
     await createInEditor(page, 'page-launch');
     await expect(page.getByRole('tabpanel', { name: 'Variables' })).toBeVisible();
     await page.getByRole('button', { name: 'Hide panel' }).click();

@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { canvas, createFromTemplate, signUp, waitForSaved } from './helpers';
+import { canvas, changeLocalData, createFromTemplate, signUp, waitForSaved } from './helpers';
 
 const openEditor = async (page: Page, templateId: string) => {
   await createFromTemplate(page, templateId);
@@ -247,11 +247,7 @@ test('read-only: viewers see no editing controls', async ({ page }) => {
   const projectUrl = page.url();
   const projectId = projectUrl.split('/').pop();
 
-  await page.evaluate(() => {
-    const state = JSON.parse(localStorage.getItem('flowpilot_local_backend')!);
-    state.members[0].role = 'viewer';
-    localStorage.setItem('flowpilot_local_backend', JSON.stringify(state));
-  });
+  await changeLocalData(page, `state.members[0].role = 'viewer';`);
   await page.goto(`/studio/${projectId}`);
   await expect(page.getByText('View only')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Publish' })).toHaveCount(0);

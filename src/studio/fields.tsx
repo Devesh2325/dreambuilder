@@ -1,6 +1,6 @@
-import React from 'react';
-import { X } from 'lucide-react';
-import { GOOGLE_FONTS } from '../renderer/css';
+import React, { useEffect, useState } from 'react';
+import { Check, ChevronDown, X } from 'lucide-react';
+import { fontPreviewUrl, GOOGLE_FONTS } from '../renderer/css';
 
 export const labelClass = 'block text-[13px] font-medium text-slate-700 dark:text-slate-200';
 export const fieldClass =
@@ -76,12 +76,63 @@ export const ColorField: React.FC<ColorFieldProps> = ({ label, value, onChange, 
   );
 };
 
-export const FontField: React.FC<{ label: string; value: string; onChange: (value: string) => void; disabled?: boolean }> = ({ label, value, onChange, disabled }) => (
-  <label className={labelClass}>
-    {label}
-    <select disabled={disabled} className={`${fieldClass} mt-1`} value={value} onChange={(event) => onChange(event.target.value)}>
-      {!GOOGLE_FONTS.includes(value) && <option value={value}>{value}</option>}
-      {GOOGLE_FONTS.map((font) => <option key={font} value={font}>{font}</option>)}
-    </select>
-  </label>
-);
+const FONT_GROUPS: { title: string; fonts: string[] }[] = [
+  { title: 'Clean and modern', fonts: ['Inter', 'Plus Jakarta Sans', 'Poppins', 'Outfit', 'Roboto', 'DM Sans', 'Manrope', 'Sora', 'Montserrat', 'Work Sans', 'Rubik', 'Nunito'] },
+  { title: 'Bold and decorative', fonts: ['Space Grotesk', 'Syne', 'Righteous'] },
+  { title: 'Classic', fonts: ['Playfair Display', 'Lora', 'Merriweather', 'Cinzel', 'Bodoni Moda'] },
+  { title: 'Typewriter', fonts: ['JetBrains Mono', 'Fira Code', 'Space Mono', 'IBM Plex Mono'] },
+];
+
+let isPreviewLoaded = false;
+const loadFontPreviews = () => {
+  if (isPreviewLoaded || typeof document === 'undefined') return;
+  isPreviewLoaded = true;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = fontPreviewUrl();
+  document.head.appendChild(link);
+};
+
+const fontStyle = (font: string): React.CSSProperties => ({ fontFamily: `'${font}', system-ui, sans-serif` });
+
+/** Shows every font in its own style, so people can see what they're choosing. */
+export const FontSelect: React.FC<{ label: string; value: string; onChange: (value: string) => void; disabled?: boolean; defaultLabel?: string }> = ({ label, value, onChange, disabled, defaultLabel }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(loadFontPreviews, []);
+  const choose = (font: string) => {
+    onChange(font);
+    setIsOpen(false);
+  };
+  const option = (font: string, text: string, style?: React.CSSProperties) => (
+    <button key={font || 'default'} type="button" role="option" aria-selected={value === font} style={style} onClick={() => choose(font)}
+      className={`w-full flex items-center justify-between gap-2 h-9 px-2.5 text-[15px] text-left rounded-md ${value === font ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+      <span className="truncate">{text}</span>
+      {value === font && <Check className="w-4 h-4 shrink-0" aria-hidden="true" />}
+    </button>
+  );
+  return (
+    <div>
+      <p className={`${labelClass} mb-1`} aria-hidden="true">{label}</p>
+      <button type="button" aria-label={label} aria-haspopup="listbox" aria-expanded={isOpen} disabled={disabled} className={`${fieldClass} flex items-center justify-between gap-2 text-left`} style={value ? fontStyle(value) : undefined} onClick={() => setIsOpen(!isOpen)} onKeyDown={(event) => {
+        if (event.key === 'Escape') setIsOpen(false);
+      }}>
+        <span className="truncate">{value || defaultLabel || 'Choose a font'}</span>
+        <ChevronDown className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+      </button>
+      {isOpen && (
+        <div role="listbox" aria-label={label} className="mt-1 max-h-64 overflow-y-auto p-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+          {defaultLabel && option('', defaultLabel)}
+          {value && !GOOGLE_FONTS.includes(value) && option(value, value)}
+          {FONT_GROUPS.map((group) => (
+            <div key={group.title} role="group" aria-label={group.title}>
+              <p className="px-2.5 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{group.title}</p>
+              {group.fonts.map((font) => option(font, font, fontStyle(font)))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const FontField = FontSelect;

@@ -18,3 +18,12 @@ Each **Demo screen** shows a screenshot. Inside it, **Hotspot** blocks are the p
 A hotspot goes to the next screen unless you set **Go to screen number**, which lets you create branches. After the last screen, visitors can restart.
 
 Screenshots are stored as images, so remove any private customer data before uploading them.
+
+## Use your own screens
+
+1. With nothing selected, click **Edit**. The panel shows the current screen.
+2. Add a screenshot of your app.
+3. Click **Add tooltip**, and drag it to the right spot on the screen.
+4. Choose which side it sits on, and where its arrow is.
+
+Use the bar above the canvas to move between screens and add more. Each tooltip can have a title, text and a button, and can go to any screen.

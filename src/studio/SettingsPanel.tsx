@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowUp, BookmarkPlus, Crosshair, EyeOff, Link2, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookmarkPlus, Crosshair, EyeOff, Link2, Loader2, Plus, Trash2 } from 'lucide-react';
 import { DEFAULT_TRIGGERS, DEVICES, DocNode, Triggers } from '../core/schema';
 import { MODULES } from '../core/modules';
 import { getAncestors } from '../core/tree';
-import { hasToken, resolveValue, VariableDef, VariableValues } from '../core/variables';
+import { hasToken, resolveString, resolveValue, VariableDef, VariableValues } from '../core/variables';
 import { ImageInput } from '../app/shared/VariableForm';
 import { pagesOf } from '../experience/SiteView';
 import { BLOCK_META } from '../renderer/blockMeta';
@@ -11,6 +11,7 @@ import { BlockField } from '../renderer/types';
 import { projectVariableDefs } from '../templates';
 import { sectionFromNode } from '../templates/library';
 import { ColorField, fieldClass, labelClass, slugFromTitle } from './fields';
+import { DemoPanel, TourPanel } from './ModulePanels';
 import { SaveToLibrary } from './SaveToLibrary';
 import { useStudio } from './store';
 import { StylePanel } from './StylePanel';
@@ -179,6 +180,63 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
   );
 };
 
+/** Which side a tooltip sits on, and where along that side its arrow is. */
+const PlacementField: React.FC<{ node: DocNode; label: string }> = ({ node, label }) => {
+  const readOnly = useStudio((s) => s.readOnly);
+  const { updateProps } = useStudio.getState();
+  const placement = String(node.props.placement || 'bottom');
+  const align = String(node.props.align || 'center');
+  const side = (value: string, name: string, Arrow: typeof ArrowUp, area: string) => (
+    <button type="button" aria-label={`Tooltip ${name}`} aria-pressed={placement === value} disabled={readOnly} title={`Tooltip ${name}`} style={{ gridArea: area }}
+      className={`h-8 flex items-center justify-center rounded-md border transition-colors ${placement === value ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-400'}`}
+      onClick={() => updateProps(node.id, { placement: value })}>
+      <Arrow className="w-4 h-4" aria-hidden="true" />
+    </button>
+  );
+  return (
+    <div>
+      <p className={`${labelClass} mb-1`}>{label}</p>
+      <div className="flex items-center gap-3">
+        <div role="group" aria-label="Tooltip side" className="grid gap-1 w-[120px]" style={{ gridTemplateAreas: '". up ." "left mid right" ". down ."', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+          {side('top', 'above', ArrowUp, 'up')}
+          {side('left', 'on the left', ArrowLeft, 'left')}
+          <span aria-hidden="true" title="The element" style={{ gridArea: 'mid' }} className="h-8 rounded-md bg-slate-100 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600" />
+          {side('right', 'on the right', ArrowRight, 'right')}
+          {side('bottom', 'below', ArrowDown, 'down')}
+        </div>
+        <div role="group" aria-label="Arrow position" className="flex-1 space-y-1">
+          {[['start', 'Arrow at start'], ['center', 'Arrow in middle'], ['end', 'Arrow at end']].map(([value, name]) => (
+            <button key={value} type="button" aria-pressed={align === value} disabled={readOnly} onClick={() => updateProps(node.id, { align: value })}
+              className={`w-full h-8 text-xs font-medium rounded-md border transition-colors ${align === value ? 'bg-indigo-50 border-indigo-400 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-400'}`}>
+              {name}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TOKEN_PATTERN = /\{\{\s*([a-zA-Z][\w.]*)\s*\}\}/g;
+
+interface TokenName {
+  key: string;
+  label: string;
+}
+
+/** Shows {{brand.name}} as [Brand name], so nobody has to read or type code. */
+export const toFriendly = (text: string, names: TokenName[]) =>
+  text.replace(TOKEN_PATTERN, (match, key: string) => {
+    const name = names.find((item) => item.key === key);
+    return name ? `[${name.label}]` : match;
+  });
+
+export const fromFriendly = (text: string, names: TokenName[]) =>
+  text.replace(/\[([^[\]]+)\]/g, (match, label: string) => {
+    const name = names.find((item) => item.label === label);
+    return name ? `{{${name.key}}}` : match;
+  });
+
 const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () => void }> = ({ node, field, pickSelector }) => {
   const readOnly = useStudio((s) => s.readOnly);
   const { updateProps } = useStudio.getState();
@@ -186,6 +244,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
   const draftVariables = useStudio((s) => s.draft?.variables ?? EMPTY_VALUES);
 
   if (field.type === 'menu') return <MenuEditor node={node} fieldKey={field.key} />;
+  if (field.type === 'placement') return <PlacementField node={node} label={field.label} />;
 
   const value = node.props[field.key];
   const text = value === undefined || value === null ? '' : String(value);
@@ -251,6 +310,18 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
   }
   const textual = field.type === 'text' || field.type === 'longtext' || field.type === 'url';
   const usable = variables.filter((def) => def.type !== 'list');
+  // Inside a repeating block, the fields of each item can be used too.
+  const loopOwner = useStudio.getState().documentOfNode(node.id);
+  const loopNames: TokenName[] = loopOwner
+    ? [node.id, ...getAncestors(loopOwner.content, node.id)].flatMap((id) => {
+        const repeat = loopOwner.content.nodes[id]?.repeat;
+        const list = repeat ? variables.find((def) => def.key === repeat.list) : undefined;
+        return repeat && list ? (list.itemFields ?? []).map((item) => ({ key: `${repeat.as}.${item.key}`, label: item.label })) : [];
+      })
+    : [];
+  const names: TokenName[] = [...loopNames, ...usable.map((def) => ({ key: def.key, label: def.label }))];
+  const friendly = textual ? toFriendly(text, names) : text;
+  const setFriendly = (next: string) => set(textual ? fromFriendly(next, names) : next);
 
   if (field.type === 'color') {
     return <ColorField label={field.label} disabled={readOnly} value={text} onChange={set} clearable />;
@@ -260,7 +331,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
     <div>
       <label htmlFor={fieldId} className={`${labelClass} mb-1`}>{field.label}</label>
       {field.type === 'longtext' ? (
-        <textarea id={fieldId} rows={3} disabled={readOnly} className={`${fieldClass} !h-auto py-1.5`} value={text} onChange={(e) => set(e.target.value)} />
+        <textarea id={fieldId} rows={3} disabled={readOnly} className={`${fieldClass} !h-auto py-1.5`} value={friendly} onChange={(e) => setFriendly(e.target.value)} />
       ) : field.type === 'select' ? (
         <select id={fieldId} disabled={readOnly} className={fieldClass} value={text} onChange={(e) => set(e.target.value)}>
           {(field.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -268,7 +339,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
       ) : field.type === 'image' ? (
         <ImageInput id={fieldId} value={text} onChange={set} />
       ) : (
-        <input id={fieldId} type={field.type === 'number' ? 'number' : 'text'} disabled={readOnly} className={fieldClass} value={text} onChange={(e) => set(field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)} />
+        <input id={fieldId} type={field.type === 'number' ? 'number' : 'text'} disabled={readOnly} className={fieldClass} value={friendly} onChange={(e) => (field.type === 'number' ? set(e.target.value === '' ? '' : Number(e.target.value)) : setFriendly(e.target.value))} />
       )}
 
       {pickSelector && !readOnly && (
@@ -281,7 +352,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
       {linked && (
         <p className="mt-1 flex items-start gap-1 text-xs text-emerald-700 dark:text-emerald-400">
           <Link2 className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
-          Filled in from your variables. Typing here stops it following them.
+          <span>Shows: {toFriendly(String(resolveString(text.replace(TOKEN_PATTERN, (match, key: string) => (key in draftVariables ? match : `[${names.find((item) => item.key === key)?.label ?? key}]`)), draftVariables)), names)}</span>
         </p>
       )}
       {textual && usable.length > 0 && !readOnly && (
@@ -294,7 +365,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
           }}
         >
           <option value="">+ Insert a variable</option>
-          {usable.map((def) => <option key={def.key} value={def.key}>{def.label}</option>)}
+          {names.map((name) => <option key={name.key} value={name.key}>{name.label}</option>)}
         </select>
       )}
     </div>
@@ -327,7 +398,7 @@ const AdvancedPanel: React.FC<{ node: DocNode }> = ({ node }) => {
             <option value="">Don't repeat</option>
             {lists.map((def) => <option key={def.key} value={def.key}>{def.label}</option>)}
           </select>
-          {node.repeat && <span className="mt-1 block font-normal text-xs text-slate-500 dark:text-slate-400">{`Use {{${node.repeat.as}.fieldName}} in text inside this block.`}</span>}
+          {node.repeat && <span className="mt-1 block font-normal text-xs text-slate-500 dark:text-slate-400">This block appears once for each item. Use <strong>+ Insert a variable</strong> on text inside it to show that item's words.</span>}
         </label>
       )}
       {conditions.length > 0 && (
@@ -371,6 +442,7 @@ const AdvancedPanel: React.FC<{ node: DocNode }> = ({ node }) => {
 };
 
 const openElementPicker = (url: string, nodeId: string) => {
+  useStudio.getState().updateDraft((d) => { d.settings.builderUrl = url; }, 'builderUrl');
   const nonce = crypto.randomUUID();
   const target = new URL(url);
   target.hash = `fp-pick=${nonce}&origin=${encodeURIComponent(window.location.origin)}`;
@@ -395,6 +467,7 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
   const projectType = useStudio((s) => s.project?.type) ?? 'page';
   const inputRef = useRef<HTMLInputElement>(null);
   const hasFields = (meta?.fields.length ?? 0) > 0;
+  const builderUrl = useStudio((s) => s.draft?.settings.builderUrl);
   const activeTab = tab === 'content' && !hasFields ? 'style' : tab;
 
   useEffect(() => {
@@ -429,12 +502,19 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
         ))}
       </div>
       <div role="tabpanel" className="relative flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
-        {activeTab === 'content' && meta?.fields.map((field) => (
+        {activeTab === 'content' && meta?.fields.filter((field) => {
+          // These only mean something for a tooltip attached to an element.
+          if (node.type !== 'TourStep' || !['selector', 'placement', 'advance', 'fallback'].includes(field.key)) return true;
+          return (node.props.layout || 'tooltip') === 'tooltip';
+        }).map((field) => (
           <PropField
             key={field.key}
             node={node}
             field={field}
-            pickSelector={node.type === 'TourStep' && field.key === 'selector' ? () => setPickerUrl('') : undefined}
+            pickSelector={node.type === 'TourStep' && field.key === 'selector' ? () => {
+              if (builderUrl) openElementPicker(builderUrl, node.id);
+              else setPickerUrl('');
+            } : undefined}
           />
         ))}
         {activeTab === 'content' && pickerUrl !== null && (
@@ -492,13 +572,32 @@ const ProjectSettingsPanel: React.FC = () => {
         <p className="text-[13px] text-slate-500 dark:text-slate-400">Select a block on the canvas to edit it.</p>
       </div>
 
+      {project.type === 'demo' && <DemoPanel />}
+
       <label className={labelClass}>Project name
         <input className={`${fieldClass} mt-1`} value={draft.title} onChange={(e) => updateDraft((d) => { d.title = e.target.value; }, 'title')} />
       </label>
 
+      {project.type === 'tour' && <TourPanel project={project} />}
+
       {module.delivery === 'overlay' && (
         <section aria-label="When it appears" className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">When it appears</h4>
+          <label className={labelClass}>Starts
+            <select className={`${fieldClass} mt-1`} value={triggers.manualOnly ? 'manual' : triggers.clickSelector !== undefined ? 'click' : 'auto'} onChange={(e) => setTriggers({
+              manualOnly: e.target.value === 'manual' || undefined,
+              clickSelector: e.target.value === 'click' ? (triggers.clickSelector ?? '') : undefined,
+            }, 'start')}>
+              <option value="auto">By itself, on the pages below</option>
+              <option value="click">When someone clicks an element</option>
+              <option value="manual">Only from my own code</option>
+            </select>
+          </label>
+          {triggers.clickSelector !== undefined && !triggers.manualOnly && (
+            <label className={labelClass}>Element they click
+              <input placeholder="#help-button" className={`${fieldClass} mt-1`} value={triggers.clickSelector} onChange={(e) => setTriggers({ clickSelector: e.target.value }, 'clickSelector')} />
+            </label>
+          )}
           <label className={labelClass}>Page address
             <select className={`${fieldClass} mt-1`} value={rule?.type ?? 'contains'} onChange={(e) => setTriggers({ urlRules: [{ type: e.target.value as 'exact', value: rule?.value ?? '' }] }, 'rule')}>
               <option value="contains">contains</option>
