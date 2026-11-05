@@ -1,19 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowUp, ChevronDown, Crosshair, EyeOff, Link2, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, BookmarkPlus, Crosshair, EyeOff, Link2, Plus, Trash2 } from 'lucide-react';
 import { DEFAULT_TRIGGERS, DEVICES, DocNode, Triggers } from '../core/schema';
 import { MODULES } from '../core/modules';
+import { getAncestors } from '../core/tree';
 import { hasToken, resolveValue, VariableDef, VariableValues } from '../core/variables';
 import { ImageInput } from '../app/shared/VariableForm';
 import { pagesOf } from '../experience/SiteView';
 import { BLOCK_META } from '../renderer/blockMeta';
 import { BlockField } from '../renderer/types';
-import { getTemplate } from '../templates';
+import { projectVariableDefs } from '../templates';
+import { sectionFromNode } from '../templates/library';
 import { ColorField, fieldClass, labelClass, slugFromTitle } from './fields';
+import { SaveToLibrary } from './SaveToLibrary';
 import { useStudio } from './store';
+import { StylePanel } from './StylePanel';
+
+const NO_SETTINGS = {};
 
 const useTemplateVariables = (): VariableDef[] => {
-  const project = useStudio((s) => s.project);
-  return project?.templateId ? (getTemplate(project.templateId)?.variables ?? []) : [];
+  const templateId = useStudio((s) => s.project?.templateId);
+  const settings = useStudio((s) => s.draft?.settings ?? NO_SETTINGS);
+  return projectVariableDefs(templateId, settings);
 };
 
 interface MenuItem {
@@ -38,13 +45,13 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
   const pages = pagesOf(documents);
   const value = node.props[fieldKey];
 
-  // From a template: the list lives in the Details form until the user takes over here.
+  // From a template: the list lives in Variables until the user takes over here.
   if (hasToken(value)) {
     return (
-      <div className="rounded-md border border-slate-200 dark:border-slate-700 p-2.5 text-xs space-y-1.5">
+      <div className="rounded-md border border-slate-200 dark:border-slate-700 p-2.5 text-[13px] space-y-1.5">
         <p className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
           <Link2 className="w-3 h-3 shrink-0" aria-hidden="true" />
-          These items come from your details.
+          These items come from your variables.
         </p>
         {!readOnly && (
           <button
@@ -95,7 +102,7 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
     <div>
       <p className={`${labelClass} mb-1.5`}>Menu items</p>
       {usesPages ? (
-        <div className="rounded-md bg-slate-50 dark:bg-slate-800/60 p-2.5 text-xs text-slate-600 dark:text-slate-300 space-y-2">
+        <div className="rounded-md bg-slate-50 dark:bg-slate-800/60 p-2.5 text-[13px] text-slate-600 dark:text-slate-300 space-y-2">
           <p>{isWebsite ? 'Listing your website pages automatically.' : 'No menu items yet.'}</p>
           {isWebsite && !readOnly && pages.length > 0 && (
             <button type="button" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={startCustom}>
@@ -146,15 +153,15 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
           })}
         </ul>
       )}
-      {error && <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p role="alert" className="mt-1 text-[13px] text-rose-600 dark:text-rose-400">{error}</p>}
       {!readOnly && (
-        <button type="button" onClick={addItem} className="mt-2 w-full h-8 inline-flex items-center justify-center gap-1 text-xs font-semibold rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-indigo-600 dark:text-indigo-400 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors">
+        <button type="button" onClick={addItem} className="mt-2 w-full h-8 inline-flex items-center justify-center gap-1 text-[13px] font-semibold rounded-md border border-dashed border-slate-300 dark:border-slate-600 text-indigo-600 dark:text-indigo-400 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors">
           <Plus className="w-3.5 h-3.5" aria-hidden="true" />
           Add menu item
         </button>
       )}
       {!usesPages && isWebsite && !readOnly && (
-        <button type="button" className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 hover:underline" onClick={() => setItems([])}>
+        <button type="button" className="mt-1.5 text-[13px] text-slate-500 dark:text-slate-400 hover:underline" onClick={() => setItems([])}>
           Go back to listing pages automatically
         </button>
       )}
@@ -193,16 +200,40 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
     return (
       <div>
         <p className={`${labelClass} mb-1`}>{field.label}</p>
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 px-2.5 py-2 text-xs">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 px-2.5 py-2 text-[13px]">
           <p className="flex items-center gap-1.5 font-medium text-emerald-800 dark:text-emerald-300">
             <Link2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             Uses your {linkedDetail.label}
           </p>
           {!readOnly && (
             <div className="mt-1.5 flex gap-3 font-semibold">
-              <button type="button" className="text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().setTool('details')}>Change it</button>
+              <button type="button" className="text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().setTool('variables')}>Change it</button>
               <button type="button" aria-label={`Type your own ${field.label}`} className="text-slate-500 dark:text-slate-400 hover:underline" onClick={() => set(typeof current === 'string' ? current : '')}>Type your own</button>
             </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  // Inside a repeating block, a token like {{q.question}} is one field of a list's items.
+  const loopParts = wholeToken?.match(/^(\w+)\.(.+)$/);
+  const owner = loopParts ? useStudio.getState().documentOfNode(node.id) : null;
+  const loopNode = loopParts && owner
+    ? [node.id, ...[...getAncestors(owner.content, node.id)].reverse()].map((id) => owner.content.nodes[id]).find((item) => item?.repeat?.as === loopParts[1])
+    : undefined;
+  const loopList = loopNode ? variables.find((def) => def.key === loopNode.repeat?.list) : undefined;
+  if (loopList && loopParts) {
+    const itemField = loopList.itemFields?.find((item) => item.key === loopParts[2]);
+    return (
+      <div>
+        <p className={`${labelClass} mb-1`}>{field.label}</p>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10 px-2.5 py-2 text-[13px]">
+          <p className="flex items-center gap-1.5 font-medium text-emerald-800 dark:text-emerald-300">
+            <Link2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            Uses {itemField?.label ?? field.label} from {loopList.label}
+          </p>
+          {!readOnly && (
+            <button type="button" className="mt-1.5 font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().setTool('variables')}>Edit the list</button>
           )}
         </div>
       </div>
@@ -231,148 +262,31 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
       )}
 
       {pickSelector && !readOnly && (
-        <button type="button" onClick={pickSelector} className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+        <button type="button" onClick={pickSelector} className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
           <Crosshair className="w-3 h-3" aria-hidden="true" />
           Pick on my site
         </button>
       )}
-      {field.help && <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{field.help}</p>}
+      {field.help && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{field.help}</p>}
       {linked && (
-        <p className="mt-1 flex items-start gap-1 text-[11px] text-emerald-700 dark:text-emerald-400">
+        <p className="mt-1 flex items-start gap-1 text-xs text-emerald-700 dark:text-emerald-400">
           <Link2 className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
-          Filled in from your details. Typing here stops it following them.
+          Filled in from your variables. Typing here stops it following them.
         </p>
       )}
       {textual && usable.length > 0 && !readOnly && (
         <select
-          aria-label={`Insert a detail into ${field.label}`}
-          className="mt-1 w-full text-[11px] bg-transparent text-slate-500 dark:text-slate-400 focus:outline-none"
+          aria-label={`Insert a variable into ${field.label}`}
+          className="mt-1 w-full text-[13px] bg-transparent text-indigo-600 dark:text-indigo-400 focus:outline-none"
           value=""
           onChange={(e) => {
             if (e.target.value) set(`${text}{{${e.target.value}}}`);
           }}
         >
-          <option value="">+ Insert a detail</option>
+          <option value="">+ Insert a variable</option>
           {usable.map((def) => <option key={def.key} value={def.key}>{def.label}</option>)}
         </select>
       )}
-    </div>
-  );
-};
-
-const STYLE_GROUPS: { title: string; fields: { key: string; label: string; placeholder?: string; options?: string[] }[] }[] = [
-  {
-    title: 'Text',
-    fields: [
-      { key: 'fontSize', label: 'Size', placeholder: '16px' },
-      { key: 'fontWeight', label: 'Weight', options: ['', '400', '500', '600', '700', '800'] },
-      { key: 'textAlign', label: 'Align', options: ['', 'left', 'center', 'right'] },
-      { key: 'lineHeight', label: 'Line height', placeholder: '1.5' },
-    ],
-  },
-  {
-    title: 'Size',
-    fields: [
-      { key: 'width', label: 'Width', placeholder: 'auto' },
-      { key: 'maxWidth', label: 'Max width', placeholder: 'none' },
-      { key: 'height', label: 'Height', placeholder: 'auto' },
-      { key: 'minHeight', label: 'Min height', placeholder: '0' },
-    ],
-  },
-  {
-    title: 'Spacing',
-    fields: [
-      { key: 'paddingTop', label: 'Padding top', placeholder: '0' },
-      { key: 'paddingBottom', label: 'Padding bottom', placeholder: '0' },
-      { key: 'paddingLeft', label: 'Padding left', placeholder: '0' },
-      { key: 'paddingRight', label: 'Padding right', placeholder: '0' },
-      { key: 'marginTop', label: 'Margin top', placeholder: '0' },
-      { key: 'marginBottom', label: 'Margin bottom', placeholder: '0' },
-      { key: 'gap', label: 'Gap', placeholder: '0' },
-    ],
-  },
-  {
-    title: 'Layout',
-    fields: [
-      { key: 'display', label: 'Display', options: ['', 'block', 'flex', 'grid', 'none'] },
-      { key: 'flexDirection', label: 'Direction', options: ['', 'row', 'column'] },
-      { key: 'justifyContent', label: 'Main axis', options: ['', 'flex-start', 'center', 'flex-end', 'space-between'] },
-      { key: 'alignItems', label: 'Cross axis', options: ['', 'flex-start', 'center', 'flex-end', 'stretch'] },
-      { key: 'gridTemplateColumns', label: 'Grid columns', placeholder: 'repeat(3, 1fr)' },
-    ],
-  },
-  {
-    title: 'Border and effects',
-    fields: [
-      { key: 'borderRadius', label: 'Corner radius', placeholder: '8px' },
-      { key: 'border', label: 'Border', placeholder: '1px solid #ccc' },
-      { key: 'boxShadow', label: 'Shadow', placeholder: '0 4px 12px #0002' },
-      { key: 'opacity', label: 'Opacity', placeholder: '1' },
-    ],
-  },
-];
-
-const StyleGroup: React.FC<{ title: string; defaultOpen?: boolean; children: React.ReactNode }> = ({ title, defaultOpen, children }) => (
-  <details open={defaultOpen} className="group/style border-b border-slate-100 dark:border-slate-800 last:border-b-0">
-    <summary className="flex items-center justify-between h-9 cursor-pointer list-none text-xs font-semibold text-slate-700 dark:text-slate-200 [&::-webkit-details-marker]:hidden">
-      {title}
-      <ChevronDown className="w-3.5 h-3.5 text-slate-400 transition-transform group-open/style:rotate-180" aria-hidden="true" />
-    </summary>
-    <div className="pb-3">{children}</div>
-  </details>
-);
-
-const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
-  const device = useStudio((s) => s.device);
-  const readOnly = useStudio((s) => s.readOnly);
-  const theme = useStudio((s) => s.draft?.theme);
-  const { updateStyle } = useStudio.getState();
-
-  const overrides = device === 'desktop' ? undefined : node.responsive?.[device];
-  const valueOf = (key: string) => String(overrides?.[key] ?? node.styles[key] ?? '');
-  const isOverridden = (key: string) => overrides?.[key] !== undefined;
-
-  return (
-    <div>
-      {device !== 'desktop' && (
-        <p className="mb-2 text-xs rounded-md px-2 py-1.5 bg-indigo-50 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">
-          Changes here only apply on {device}. Desktop stays the same.
-        </p>
-      )}
-      <StyleGroup title="Colors" defaultOpen>
-        <div className="space-y-3">
-          <ColorField label="Text color" disabled={readOnly} theme={theme} clearable value={valueOf('color')} onChange={(value) => updateStyle(node.id, 'color', value)} />
-          <ColorField label="Background" disabled={readOnly} theme={theme} clearable value={valueOf('background') || valueOf('backgroundColor')}
-            onChange={(value) => {
-              // Templates may set either property, and only one should remain.
-              if (node.styles.backgroundColor !== undefined) updateStyle(node.id, 'backgroundColor', '');
-              updateStyle(node.id, 'background', value);
-            }} />
-        </div>
-      </StyleGroup>
-      {STYLE_GROUPS.map((group, groupIndex) => (
-        <StyleGroup key={group.title} title={group.title} defaultOpen={groupIndex === 0}>
-          <div className="grid grid-cols-2 gap-2">
-            {group.fields.map((field) => {
-              const id = `style-${node.id}-${field.key}`;
-              return (
-                <div key={field.key}>
-                  <label htmlFor={id} className="block text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">
-                    {field.label}{isOverridden(field.key) && <span title={`Set for ${device}`} className="text-indigo-500"> •</span>}
-                  </label>
-                  {field.options ? (
-                    <select id={id} disabled={readOnly} className={fieldClass} value={valueOf(field.key)} onChange={(e) => updateStyle(node.id, field.key, e.target.value)}>
-                      {field.options.map((option) => <option key={option} value={option}>{option || 'Default'}</option>)}
-                    </select>
-                  ) : (
-                    <input id={id} disabled={readOnly} className={fieldClass} placeholder={field.placeholder} value={valueOf(field.key)} onChange={(e) => updateStyle(node.id, field.key, e.target.value)} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </StyleGroup>
-      ))}
     </div>
   );
 };
@@ -381,6 +295,9 @@ const AdvancedPanel: React.FC<{ node: DocNode }> = ({ node }) => {
   const readOnly = useStudio((s) => s.readOnly);
   const { updateNode } = useStudio.getState();
   const variables = useTemplateVariables();
+  const [isSaving, setIsSaving] = useState(false);
+  const owner = useStudio.getState().documentOfNode(node.id);
+  const isRoot = owner?.content.rootId === node.id;
   const lists = variables.filter((def) => def.type === 'list');
   const conditions = variables.filter((def) => def.type !== 'list');
 
@@ -400,7 +317,7 @@ const AdvancedPanel: React.FC<{ node: DocNode }> = ({ node }) => {
             <option value="">Don't repeat</option>
             {lists.map((def) => <option key={def.key} value={def.key}>{def.label}</option>)}
           </select>
-          {node.repeat && <span className="mt-1 block font-normal text-[11px] text-slate-500 dark:text-slate-400">{`Use {{${node.repeat.as}.fieldName}} in text inside this block.`}</span>}
+          {node.repeat && <span className="mt-1 block font-normal text-xs text-slate-500 dark:text-slate-400">{`Use {{${node.repeat.as}.fieldName}} in text inside this block.`}</span>}
         </label>
       )}
       {conditions.length > 0 && (
@@ -419,6 +336,26 @@ const AdvancedPanel: React.FC<{ node: DocNode }> = ({ node }) => {
         <input type="checkbox" disabled={readOnly} checked={Boolean(node.locked)} onChange={(e) => updateNode(node.id, { locked: e.target.checked })} />
         Lock (can't be moved or deleted)
       </label>
+      {!readOnly && !isRoot && (
+        <button type="button" className="w-full h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors" onClick={() => setIsSaving(true)}>
+          <BookmarkPlus className="w-4 h-4" aria-hidden="true" />
+          Save to team library
+        </button>
+      )}
+      {isSaving && (
+        <SaveToLibrary
+          kind="section"
+          initialName={node.name ?? BLOCK_META[node.type]?.label ?? 'Section'}
+          buildDefinition={async () => {
+            const state = useStudio.getState();
+            const doc = state.documentOfNode(node.id);
+            const section = doc ? sectionFromNode(doc.content, node.id, state.draft?.variables ?? {}) : null;
+            if (!section) throw new Error('This block is hidden right now. Show it first, then save it.');
+            return section;
+          }}
+          onClose={() => setIsSaving(false)}
+        />
+      )}
     </div>
   );
 };
@@ -459,15 +396,15 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
   return (
     <>
       <div className="px-3 pt-3 shrink-0">
-        <button type="button" className="mb-1 inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => useStudio.getState().select(null)}>
+        <button type="button" className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => useStudio.getState().select(null)}>
           <ArrowLeft className="w-3 h-3" aria-hidden="true" />
           {MODULES[projectType].label} settings
         </button>
         <h3 className="font-semibold text-sm truncate">{node.name ?? meta?.label ?? node.type}</h3>
-        {node.name && node.name !== meta?.label && <p className="text-[11px] text-slate-500 dark:text-slate-400">{meta?.label}</p>}
+        {node.name && node.name !== meta?.label && <p className="text-xs text-slate-500 dark:text-slate-400">{meta?.label}</p>}
       </div>
       {node.hidden && (
-        <div role="status" className="mx-3 mt-2 shrink-0 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+        <div role="status" className="mx-3 mt-2 shrink-0 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200">
           <EyeOff className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           <span className="flex-1">Hidden from the page.</span>
           {!readOnly && <button type="button" className="font-semibold underline" onClick={() => updateNode(node.id, { hidden: false })}>Show</button>}
@@ -476,7 +413,7 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
       <div role="tablist" aria-label="Block settings" className="flex shrink-0 mt-2 px-3 border-b border-slate-200 dark:border-slate-800">
         {tabs.map((id) => (
           <button key={id} role="tab" type="button" aria-selected={activeTab === id} onClick={() => setInspectorTab(id as typeof tab)}
-            className={`mr-4 py-2 text-xs font-semibold capitalize border-b-2 -mb-px transition-colors ${activeTab === id ? 'border-indigo-600 text-indigo-700 dark:text-indigo-300' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+            className={`mr-4 py-2 text-[13px] font-semibold capitalize border-b-2 -mb-px transition-colors ${activeTab === id ? 'border-indigo-600 text-indigo-700 dark:text-indigo-300' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
             {id}
           </button>
         ))}
@@ -509,11 +446,11 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
             <label className={labelClass}>Page on your site
               <input ref={inputRef} type="url" placeholder="https://app.example.com/dashboard" className={`${fieldClass} mt-1`} value={pickerUrl} onChange={(e) => setPickerUrl(e.target.value)} />
             </label>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">The FlowPilot script must be installed on that page. Click an element there to choose it.</p>
-            {pickerError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{pickerError}</p>}
+            <p className="text-xs text-slate-500 dark:text-slate-400">The FlowPilot script must be installed on that page. Click an element there to choose it.</p>
+            {pickerError && <p role="alert" className="text-[13px] text-rose-600 dark:text-rose-400">{pickerError}</p>}
             <div className="flex gap-2">
-              <button type="submit" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Open page</button>
-              <button type="button" className="text-xs" onClick={() => setPickerUrl(null)}>Cancel</button>
+              <button type="submit" className="text-[13px] font-semibold text-indigo-600 dark:text-indigo-400">Open page</button>
+              <button type="button" className="text-[13px]" onClick={() => setPickerUrl(null)}>Cancel</button>
             </div>
           </form>
         )}
@@ -542,7 +479,7 @@ const ProjectSettingsPanel: React.FC = () => {
     <fieldset disabled={readOnly} className="relative flex-1 min-h-0 overflow-y-auto p-3 space-y-4 min-w-0">
       <div>
         <h3 className="font-semibold text-sm">{module.label} settings</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Select a block on the canvas to edit it.</p>
+        <p className="text-[13px] text-slate-500 dark:text-slate-400">Select a block on the canvas to edit it.</p>
       </div>
 
       <label className={labelClass}>Project name
@@ -551,7 +488,7 @@ const ProjectSettingsPanel: React.FC = () => {
 
       {module.delivery === 'overlay' && (
         <section aria-label="When it appears" className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">When it appears</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">When it appears</h4>
           <label className={labelClass}>Page address
             <select className={`${fieldClass} mt-1`} value={rule?.type ?? 'contains'} onChange={(e) => setTriggers({ urlRules: [{ type: e.target.value as 'exact', value: rule?.value ?? '' }] }, 'rule')}>
               <option value="contains">contains</option>
@@ -587,7 +524,7 @@ const ProjectSettingsPanel: React.FC = () => {
               {DEVICES.map((device) => {
                 const selected = triggers.devices ?? DEVICES;
                 return (
-                  <label key={device} className="flex items-center gap-1 text-xs capitalize">
+                  <label key={device} className="flex items-center gap-1 text-[13px] capitalize">
                     <input type="checkbox" checked={selected.includes(device)} onChange={(e) => {
                       const next = e.target.checked ? [...selected, device] : selected.filter((d) => d !== device);
                       setTriggers({ devices: [...new Set(next)] }, 'devices');
@@ -612,7 +549,7 @@ const ProjectSettingsPanel: React.FC = () => {
 
       {collectsResponses && (
         <section aria-label="Form responses" className="pt-3 border-t border-slate-100 dark:border-slate-800">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Form responses</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Form responses</h4>
           <label className={labelClass}>Send to webhook (optional)
             <input type="url" placeholder="https://hooks.example.com/..." className={`${fieldClass} mt-1`} value={draft.settings.webhookUrl ?? ''}
               onChange={(e) => updateDraft((d) => {
@@ -620,7 +557,7 @@ const ProjectSettingsPanel: React.FC = () => {
                 else delete d.settings.webhookUrl;
               }, 'webhook')} />
           </label>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Must start with https://. Responses are also saved in the project.</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Must start with https://. Responses are also saved in the project.</p>
         </section>
       )}
     </fieldset>

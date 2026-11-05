@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2, Upload } from 'lucide-react';
 import { defaultValues, VariableDef, VariableValues } from '../../core/variables';
 import { useServices } from '../session';
 import { useWorkspace } from '../workspace';
-import { errorMessage, inputClass } from './ui';
+import { BusyIcon, errorMessage, inputClass } from './ui';
 
 export const ImageInput: React.FC<{
   id: string;
@@ -43,7 +43,7 @@ export const ImageInput: React.FC<{
           onChange={(event) => onChange(event.target.value)}
         />
         <label className="relative shrink-0 inline-flex items-center gap-1 px-3 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">
-          <Upload className="w-3.5 h-3.5" aria-hidden="true" />
+          <BusyIcon busy={isUploading} className="w-3.5 h-3.5"><Upload className="w-3.5 h-3.5" aria-hidden="true" /></BusyIcon>
           {isUploading ? 'Uploading...' : 'Upload'}
           <input
             type="file"
@@ -68,7 +68,7 @@ interface FieldProps {
   onChange: (value: unknown) => void;
 }
 
-const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error, errors, errorPrefix, onChange }) => {
+export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error, errors, errorPrefix, onChange }) => {
   const describedBy = error ? `${fieldId}-error` : def.help ? `${fieldId}-help` : undefined;
   const text = value === undefined || value === null ? '' : String(value);
   const common = { id: fieldId, 'aria-invalid': Boolean(error), 'aria-describedby': describedBy };
@@ -92,7 +92,7 @@ const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error, error
 
     return (
       <fieldset>
-        <legend className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{def.label}</legend>
+        <legend className={def.group === def.label ? 'sr-only' : 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'}>{def.label}</legend>
         <div className="space-y-3">
           {items.map((item, index) => (
             <div key={index} className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-3">

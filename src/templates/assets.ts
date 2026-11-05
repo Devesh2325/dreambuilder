@@ -1,4 +1,4 @@
-// Starting images for templates. Users replace these with their own, under Details.
+// Starting images for templates. Users replace these with their own, under Variables.
 
 const PHOTOS = {
   restaurant: '1517248135467-4c7edcad34c4', food: '1504674900247-0877df9cc836', pizza: '1565299624946-b28f40a0ae38', dessert: '1551024506-0bccd828d307',

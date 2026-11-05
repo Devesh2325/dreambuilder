@@ -4,7 +4,7 @@ import { RenderNode } from '../core/variables';
 export const TABLET_MAX = 991;
 export const MOBILE_MAX = 640;
 
-const UNITLESS = new Set(['opacity', 'zIndex', 'fontWeight', 'lineHeight', 'flexGrow', 'flexShrink', 'order']);
+const UNITLESS = new Set(['opacity', 'zIndex', 'fontWeight', 'lineHeight', 'flexGrow', 'flexShrink', 'order', 'flex']);
 
 /**
  * Style values are user data placed inside a stylesheet. Anything able to end the
@@ -14,11 +14,16 @@ const UNITLESS = new Set(['opacity', 'zIndex', 'fontWeight', 'lineHeight', 'flex
 export function safeCssValue(value: string | number): string | null {
   const text = String(value).trim();
   if (text === '') return null;
-  if (/[;{}<>\\]|\/\*|expression\s*\(|@import/i.test(text)) return null;
-  const urlMatches = text.matchAll(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi);
-  for (const match of urlMatches) {
-    if (!/^https?:\/\//i.test(match[2])) return null;
+  // Demo mode stores uploads as data. Base64 raster images can't carry code or close the rule.
+  const checked = text.replace(/url\(\s*(['"]?)data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+\1\s*\)/gi, 'url(https://data)');
+  if (/[;{}<>\\]|\/\*|expression\s*\(|@import/i.test(checked)) return null;
+  // Quotes are matched as a pair, so a ")" inside an address can't end the match early.
+  const URL_PATTERN = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^'"\s)]*))\s*\)/gi;
+  for (const match of checked.matchAll(URL_PATTERN)) {
+    if (!/^https?:\/\//i.test(match[1] ?? match[2] ?? match[3] ?? '')) return null;
   }
+  // A url( that didn't fit the pattern went unchecked, so it isn't allowed.
+  if (/url\(/i.test(checked.replace(URL_PATTERN, ''))) return null;
   return text;
 }
 
@@ -30,7 +35,9 @@ function declarations(styles: Record<string, string | number> | undefined): stri
     const value = safeCssValue(raw);
     if (value === null) continue;
     const kebab = property.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-    const withUnit = typeof raw === 'number' && raw !== 0 && !UNITLESS.has(property) ? `${value}px` : value;
+    // A plain number typed into a style field means pixels.
+    const isPlainNumber = /^-?\d*\.?\d+$/.test(value) && Number(value) !== 0;
+    const withUnit = isPlainNumber && !UNITLESS.has(property) ? `${value}px` : value;
     css += `${kebab}:${withUnit};`;
   }
   return css;
@@ -89,8 +96,26 @@ export const GOOGLE_FONTS = [
 ];
 const KNOWN_GOOGLE_FONTS = new Set(GOOGLE_FONTS);
 
+/** Fonts picked on individual blocks, beyond the theme's two. */
+export function nodeFonts(root: RenderNode | null): string[] {
+  const found = new Set<string>();
+  const visit = (node: RenderNode) => {
+    for (const styles of [node.styles, node.responsive?.tablet, node.responsive?.mobile]) {
+      const font = styles?.fontFamily;
+      if (typeof font === 'string' && KNOWN_GOOGLE_FONTS.has(font)) found.add(font);
+    }
+    node.children.forEach(visit);
+  };
+  if (root) visit(root);
+  return [...found];
+}
+
 export function googleFontsUrl(theme: Theme): string | null {
-  const families = [...new Set([theme.fontHeading, theme.fontBody])].filter((font) => KNOWN_GOOGLE_FONTS.has(font));
+  return fontsUrl([theme.fontHeading, theme.fontBody]);
+}
+
+export function fontsUrl(fonts: string[]): string | null {
+  const families = [...new Set(fonts)].filter((font) => KNOWN_GOOGLE_FONTS.has(font));
   if (families.length === 0) return null;
   const query = families.map((family) => `family=${family.replace(/ /g, '+')}:wght@400;500;600;700;800`).join('&');
   return `https://fonts.googleapis.com/css2?${query}&display=swap`;

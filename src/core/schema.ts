@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { VariableDef } from './variables';
 
 export const PROJECT_TYPES = [
   'website', 'page', 'tour', 'form', 'demo', 'banner', 'menu', 'faq',
@@ -83,6 +84,8 @@ export interface ProjectSettings {
   position?: 'top' | 'bottom' | 'inline';
   /** Web address that receives form submissions. */
   webhookUrl?: string;
+  /** Variables added in the editor, or carried over from a team template. */
+  variableDefs?: VariableDef[];
 }
 
 export type DocumentKind = 'page' | 'global' | 'experience';

@@ -9,6 +9,7 @@ export const ROUTES = {
   resetPassword: '/reset-password',
   templates: '/templates',
   module: (type: ProjectType) => MODULES[type].path,
+  create: (type?: ProjectType) => (type ? `/create?type=${type}` : '/create'),
   newFromTemplate: (id: string) => `/new/${id}`,
   project: (id: string) => `/projects/${id}`,
   studio: (id: string) => `/studio/${id}`,

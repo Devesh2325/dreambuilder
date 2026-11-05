@@ -28,9 +28,13 @@ interface HistoryEntry {
   at: number;
 }
 
-export type StudioTool = 'edit' | 'details' | 'add' | 'layers' | 'pages' | 'theme';
+export type StudioTool = 'edit' | 'variables' | 'add' | 'layers' | 'pages' | 'theme';
 export type SaveStatus = 'saved' | 'dirty' | 'saving' | 'conflict' | 'error';
-export type DragPayload = { kind: 'block'; type: string } | { kind: 'node'; id: string };
+export type DragPayload =
+  | { kind: 'block'; type: string }
+  | { kind: 'node'; id: string }
+  /** A ready-made section from the library. */
+  | { kind: 'nodes'; rootId: string; nodes: Record<string, DocNode> };
 
 const COALESCE_MS = 1000;
 const AUTOSAVE_MS = 1200;
@@ -60,6 +64,9 @@ interface StudioState {
   /** Stays the same across blocks and tools, so you can style one block after another. */
   inspectorTab: 'content' | 'style' | 'advanced';
   setInspectorTab: (tab: 'content' | 'style' | 'advanced') => void;
+  /** Which step, screen or slide the canvas draws. Null means the first. */
+  activeStepKey: string | null;
+  setActiveStep: (key: string | null) => void;
 
   load: (services: AppServices, project: ProjectRecord, documents: DocumentRecord[], readOnly: boolean) => void;
   reset: () => void;
@@ -80,12 +87,16 @@ interface StudioState {
   getNode: (nodeId: string) => DocNode | null;
 
   addBlock: (type: string, parentId?: string, index?: number) => string | null;
+  /** Adds a ready-made subtree. Without a place, it goes after the selected block's section. */
+  addNodes: (rootId: string, nodes: Record<string, DocNode>, parentId?: string, index?: number) => string | null;
   moveBlock: (id: string, parentId: string, index: number) => boolean;
   removeBlock: (id: string) => void;
   duplicateBlock: (id: string) => void;
   updateProps: (id: string, patch: Record<string, unknown>) => void;
   /** An empty value removes the style. */
   updateStyle: (id: string, property: string, value: string | number) => void;
+  /** Several styles as one undo step. */
+  updateStyles: (id: string, patch: Record<string, string | number>) => void;
   updateNode: (id: string, patch: Partial<Pick<DocNode, 'name' | 'hidden' | 'locked' | 'showIf' | 'repeat'>>) => void;
 
   updateDraft: (change: (draft: Draft<ProjectDraft>) => void, key?: string) => void;
@@ -145,8 +156,9 @@ const initialState = {
   status: 'saved' as SaveStatus,
   saveError: null,
   dragging: null,
-  tool: 'details' as StudioTool | null,
+  tool: 'variables' as StudioTool | null,
   inspectorTab: 'content' as const,
+  activeStepKey: null,
 };
 
 export const useStudio = create<StudioState>((set, get) => {
@@ -253,9 +265,9 @@ export const useStudio = create<StudioState>((set, get) => {
         documents: sorted,
         activeDocumentId: firstPage?.id ?? null,
         draft: { title: project.title, variables: project.variables, theme: project.theme, settings: project.settings },
-        // Templates start on their details form, and blank projects on blocks to add.
+        // Templates start on their variables, and blank projects on blocks to add.
         // Small screens start closed, leaving the room to the canvas.
-        tool: window.innerWidth < 1100 ? null : project.templateId ? 'details' : 'add',
+        tool: window.innerWidth < 1100 ? null : project.templateId ? 'variables' : 'add',
       });
     },
 
@@ -276,6 +288,7 @@ export const useStudio = create<StudioState>((set, get) => {
     },
     setTool: (tool) => set({ tool }),
     setInspectorTab: (inspectorTab) => set({ inspectorTab }),
+    setActiveStep: (activeStepKey) => set({ activeStepKey }),
 
     visibleDocuments: () => {
       const { documents, activeDocumentId } = get();
@@ -307,6 +320,37 @@ export const useStudio = create<StudioState>((set, get) => {
       editDocument(documentId, (content) => insertSubtree(content, finalParent, node.id, { [node.id]: node }, finalIndex));
       set({ selectedId: node.id });
       return node.id;
+    },
+
+    addNodes: (rootId, nodes, parentId, index) => {
+      const state = get();
+      const type = nodes[rootId]?.type;
+      if (!type || state.readOnly) return null;
+      let target: { documentId: string; parentId: string; index?: number } | null = null;
+      if (parentId) {
+        const doc = state.documentOfNode(parentId);
+        if (doc && canContain(doc.content.nodes[parentId].type, type)) target = { documentId: doc.id, parentId, index };
+      } else {
+        // A shared header or footer isn't where a new section is meant to go.
+        const selectedDoc = state.selectedId ? state.documentOfNode(state.selectedId) : null;
+        if (selectedDoc && selectedDoc.id !== state.activeDocumentId) set({ selectedId: null });
+        const active = state.documents.find((d) => d.id === state.activeDocumentId);
+        if (type === 'Section' && active) {
+          // Sections stack on the page itself, even when the selection is deep inside one.
+          const { rootId: pageId } = active.content;
+          let top = selectedDoc?.id === active.id ? state.selectedId : null;
+          while (top && top !== pageId && findParentId(active.content, top) !== pageId) top = findParentId(active.content, top);
+          const position = top && top !== pageId ? active.content.nodes[pageId].children.indexOf(top) + 1 : undefined;
+          if (canContain(active.content.nodes[pageId].type, type)) target = { documentId: active.id, parentId: pageId, index: position };
+        } else {
+          target = resolveInsertion(type);
+        }
+      }
+      if (!target) return null;
+      const { documentId, parentId: finalParent, index: finalIndex } = target;
+      editDocument(documentId, (content) => insertSubtree(content, finalParent, rootId, nodes, finalIndex));
+      set({ selectedId: rootId });
+      return rootId;
     },
 
     moveBlock: (id, parentId, index) => {
@@ -364,6 +408,26 @@ export const useStudio = create<StudioState>((set, get) => {
       }, `style:${id}:${device}:${property}`);
     },
 
+    updateStyles: (id, patch) => {
+      const state = get();
+      const doc = state.documentOfNode(id);
+      if (!doc) return;
+      const { device } = state;
+      editDocument(doc.id, (content) => {
+        const node = content.nodes[id];
+        let styles: DocNode['styles'] = node.styles;
+        if (device !== 'desktop') {
+          node.responsive ??= {};
+          node.responsive[device] ??= {};
+          styles = node.responsive[device]!;
+        }
+        for (const [property, value] of Object.entries(patch)) {
+          if (value === '') delete styles[property];
+          else styles[property] = value;
+        }
+      }, `style:${id}:${device}:${Object.keys(patch).join(',')}`);
+    },
+
     updateNode: (id, patch) => {
       const doc = get().documentOfNode(id);
       if (!doc) return;
@@ -383,7 +447,7 @@ export const useStudio = create<StudioState>((set, get) => {
       scheduleSave();
     },
 
-    setActiveDocument: (id) => set({ activeDocumentId: id, selectedId: null, hoveredId: null }),
+    setActiveDocument: (id) => set({ activeDocumentId: id, selectedId: null, hoveredId: null, activeStepKey: null }),
 
     addPage: async (title, slug, options = {}) => {
       const { services, project, documents } = get();

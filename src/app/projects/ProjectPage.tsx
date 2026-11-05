@@ -2,13 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronRight, Copy, Download, ExternalLink, Pencil, RotateCcw, Trash2 } from 'lucide-react';
-import { MODULES } from '../../core/modules';
+import { moduleNoun, MODULES } from '../../core/modules';
 import { DocumentRecord, ProjectRecord } from '../../data/services';
 import { ProjectPreview } from '../../experience/ProjectPreview';
 import { publicSitePath, ROUTES } from '../routes';
 import { useServices } from '../session';
 import { Icon } from '../shared/Icon';
-import { cardClass, dangerButton, EmptyState, ErrorNote, errorMessage, LoadingNote, primaryButton, secondaryButton } from '../shared/ui';
+import { BusyIcon, BusyLabel, cardClass, dangerButton, EmptyState, ErrorNote, errorMessage, LoadingNote, primaryButton, ProjectSkeleton, secondaryButton } from '../shared/ui';
 import { useWorkspace } from '../workspace';
 import { collectsResponses, MODULE_COLUMNS } from './moduleColumns';
 import { StatusBadge } from './ProjectsPage';
@@ -49,7 +49,7 @@ const OverviewTab: React.FC<{ project: ProjectRecord; documents: DocumentRecord[
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-      <div className={`${cardClass} h-[520px] p-2`}>
+      <div className={`${cardClass} h-[calc(100vh-260px)] min-h-[440px] p-2`}>
         <ProjectPreview type={project.type} documents={documents} theme={project.theme} variables={project.variables} settings={project.settings} title={`${project.title} preview`} />
       </div>
       <div className="space-y-5">
@@ -115,7 +115,7 @@ const ShareTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
       {showsInline && <CopyBlock label="Place where it should appear" code={inlineSnippet(project.id)} />}
       <p className="text-sm">
         <Link to={`${ROUTES.doc(project.type)}?project=${project.id}`} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-          Read the {module.label.toLowerCase()} integration guide
+          Read the {moduleNoun(project.type)} integration guide
         </Link>
       </p>
     </div>
@@ -178,10 +178,10 @@ const ResponsesTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
                   {columns.map((column) => <td key={column} className="py-2 pr-4">{String(row.data[column] ?? '')}</td>)}
                   <td className="py-2 text-right">
                     {can('edit:project') && (
-                      <button type="button" aria-label="Delete response" className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
+                      <button type="button" aria-label="Delete response" disabled={remove.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
                         if (window.confirm('Delete this response?')) remove.mutate(row.id);
                       }}>
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <BusyIcon busy={remove.isPending && remove.variables === row.id} className="w-3.5 h-3.5"><Trash2 className="w-3.5 h-3.5" /></BusyIcon>
                       </button>
                     )}
                   </td>
@@ -214,6 +214,7 @@ const VersionsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
       <h2 className="font-semibold mb-1">Published versions</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">Every publish is saved here, so you can go back.</p>
       <ErrorNote message={restore.isError ? errorMessage(restore.error) : null} />
+      {query.isLoading && <LoadingNote />}
       {query.isSuccess && query.data.length === 0 && <p className="text-sm text-slate-500 dark:text-slate-400">Nothing published yet.</p>}
       <ul className="divide-y divide-slate-100 dark:divide-slate-800">
         {query.data?.map((version) => (
@@ -228,12 +229,13 @@ const VersionsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
             {can('edit:project') && (
               <button
                 type="button"
-                className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400"
+                disabled={restore.isPending}
+                className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 disabled:opacity-60"
                 onClick={() => {
                   if (window.confirm(`Replace your current draft with version ${version.versionNumber}? What's live won't change until you publish.`)) restore.mutate(version.id);
                 }}
               >
-                <RotateCcw className="w-3 h-3" aria-hidden="true" />
+                <BusyIcon busy={restore.isPending && restore.variables === version.id} className="w-3 h-3"><RotateCcw className="w-3 h-3" aria-hidden="true" /></BusyIcon>
                 Restore
               </button>
             )}
@@ -287,7 +289,7 @@ const SettingsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
             setName(event.target.value);
             setIsSaved(false);
           }} />
-          <button type="submit" className={secondaryButton} disabled={rename.isPending}>Save</button>
+          <button type="submit" className={secondaryButton} disabled={rename.isPending}><BusyLabel busy={rename.isPending} busyText="Saving...">Save</BusyLabel></button>
           {isSaved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-400">Saved</span>}
         </fieldset>
       </form>
@@ -300,7 +302,7 @@ const SettingsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
               <button type="button" className={secondaryButton} disabled={unpublish.isPending} onClick={() => {
                 if (window.confirm('Take this offline? Visitors will no longer be able to see it.')) unpublish.mutate();
               }}>
-                Take offline
+                <BusyLabel busy={unpublish.isPending} busyText="Taking offline...">Take offline</BusyLabel>
               </button>
             </div>
           )}
@@ -310,8 +312,8 @@ const SettingsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
               <button type="button" className={dangerButton} disabled={remove.isPending} onClick={() => {
                 if (window.confirm(`Delete "${project.title}" permanently? This also removes its versions and responses.`)) remove.mutate();
               }}>
-                <Trash2 className="w-4 h-4" aria-hidden="true" />
-                Delete project
+                <BusyIcon busy={remove.isPending}><Trash2 className="w-4 h-4" aria-hidden="true" /></BusyIcon>
+                {remove.isPending ? 'Deleting...' : 'Delete project'}
               </button>
             </div>
           )}
@@ -331,7 +333,7 @@ export const ProjectPage: React.FC = () => {
   const location = useLocation();
   const [tab, setTab] = useState<TabId>('overview');
   const [isPublishing, setIsPublishing] = useState(false);
-  const notice = location.state as { justCreated?: boolean; justPublished?: boolean } | null;
+  const notice = location.state as { justPublished?: boolean } | null;
   const [justPublished, setJustPublished] = useState(Boolean(notice?.justPublished));
 
   const query = useQuery({
@@ -348,7 +350,7 @@ export const ProjectPage: React.FC = () => {
     enabled: Boolean(workspace),
   });
 
-  if (query.isLoading) return <LoadingNote />;
+  if (query.isLoading) return <ProjectSkeleton />;
   if (query.isError) return <ErrorNote message="We couldn't load this project. Please refresh the page." />;
   const project = query.data?.project;
   if (!project) {
@@ -378,11 +380,7 @@ export const ProjectPage: React.FC = () => {
         <span className="truncate text-slate-700 dark:text-slate-200">{project.title}</span>
       </nav>
 
-      {notice?.justCreated && (
-        <p role="status" className="mb-4 rounded-lg px-4 py-3 text-sm bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
-          Your {module.label.toLowerCase()} is ready. Publish it now, or open the editor to adjust the design first.
-        </p>
-      )}
+
       {justPublished && project.status === 'published' && (
         <p role="status" className="mb-4 rounded-lg px-4 py-3 text-sm bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
           Published! Your changes are live.

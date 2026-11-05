@@ -23,6 +23,8 @@ export interface RenderContext {
   /** Experience controls: next, prev, close, goto. */
   onAction?: (action: string, value?: unknown) => void;
   track?: (eventType: string, metadata?: Record<string, unknown>) => void;
+  /** Editor only: of this parent's step children, draw only the given one. */
+  visibleStep?: { parentKey: string; stepType: string; key: string };
 }
 
 export interface BlockRenderProps {

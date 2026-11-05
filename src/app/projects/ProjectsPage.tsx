@@ -8,8 +8,8 @@ import { ProjectRecord } from '../../data/services';
 import { publicSitePath, ROUTES } from '../routes';
 import { useServices } from '../session';
 import { Icon } from '../shared/Icon';
-import { cardClass, EmptyState, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, StatTile } from '../shared/ui';
-import { CreateButton } from '../templates/CreateDialog';
+import { BusyIcon, cardClass, EmptyState, ErrorNote, errorMessage, inputClass, PageHeader, StatTile, TableSkeleton } from '../shared/ui';
+import { CreateButton } from '../templates/CreateButton';
 import { useWorkspace } from '../workspace';
 import { collectsResponses, MODULE_COLUMNS, ProjectRow } from './moduleColumns';
 import { duplicateProject } from './projectHelpers';
@@ -124,7 +124,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
         actions={<CreateButton type={type} />}
       />
       <ErrorNote message={failure ? errorMessage(failure) : null} />
-      {(query.isLoading || isLoadingWorkspace) && <LoadingNote />}
+      {(query.isLoading || isLoadingWorkspace) && <TableSkeleton />}
       {query.isError && <ErrorNote message="We couldn't load your projects. Please refresh the page." />}
 
       {query.isSuccess && moduleProjects.length === 0 && (
@@ -199,7 +199,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
                               <a href={publicSitePath(project.slug)} target="_blank" rel="noreferrer" aria-label={`Open ${project.title} live`} title="Open live" className={iconAction}><ExternalLink className="w-4 h-4" /></a>
                             )}
                             {can('create:project') && (
-                              <button type="button" aria-label={`Duplicate ${project.title}`} title="Duplicate" disabled={duplicate.isPending} className={iconAction} onClick={() => duplicate.mutate(project)}><Copy className="w-4 h-4" /></button>
+                              <button type="button" aria-label={`Duplicate ${project.title}`} title="Duplicate" disabled={duplicate.isPending} className={iconAction} onClick={() => duplicate.mutate(project)}><BusyIcon busy={duplicate.isPending && duplicate.variables?.id === project.id}><Copy className="w-4 h-4" /></BusyIcon></button>
                             )}
                             {can('delete:project') && (
                               <button
@@ -212,7 +212,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
                                   if (window.confirm(`Delete "${project.title}" permanently? This also removes its versions and responses.`)) remove.mutate(project.id);
                                 }}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <BusyIcon busy={remove.isPending && remove.variables === project.id}><Trash2 className="w-4 h-4" /></BusyIcon>
                               </button>
                             )}
                           </div>

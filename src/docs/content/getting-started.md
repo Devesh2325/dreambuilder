@@ -4,7 +4,7 @@ FlowPilot lets you build websites, forms, product tours and other experiences fr
 
 1. **Choose a template.** Go to **Create new** and pick one.
 2. **Fill in your details.** The preview updates as you type. Your details are stored as variables, so changing one later updates it everywhere it appears.
-3. **Publish.** Every project gets a web address. Open the editor first if you want to change the design.
+3. **Edit and publish.** Your project opens in the editor, where you can change anything. Every project gets a web address when you publish it.
 
 ## How each type reaches your visitors
 

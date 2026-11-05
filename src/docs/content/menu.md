@@ -13,6 +13,6 @@ Place it where the bar should appear, usually first in the `<body>`:
 
 ## Menu items
 
-Add, rename, reorder and remove items under **Details** in the editor, or select the menu block and click **Edit them here instead**. A link can be a full address or a path on your site, such as `/pricing`.
+Add, rename, reorder and remove items under **Variables** in the editor, or select the menu block and click **Edit them here instead**. A link can be a full address or a path on your site, such as `/pricing`.
 
 On small screens, the items collapse behind a menu button.

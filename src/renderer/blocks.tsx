@@ -412,8 +412,8 @@ const Popup: Block = ({ node, attrs, children, ctx }) => (
 );
 
 /**
- * Every slide stays mounted, so forms inside keep their values. In the editor they're
- * all shown, so each one can be selected and edited.
+ * Every slide stays mounted, so forms inside keep their values. The editor's step bar
+ * decides which slide it draws, so here it just shows whatever it's given.
  */
 const Carousel: Block = ({ node, attrs, children, ctx }) => {
   const count = children.length;

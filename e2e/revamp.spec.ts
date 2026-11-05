@@ -134,16 +134,16 @@ test('banners: popup is a banner style, and carousels rotate', async ({ page }) 
   await signUp(page);
   await page.goto('/banners');
   await page.getByRole('button', { name: 'New banner' }).first().click();
-  const dialog = page.getByRole('dialog');
   for (const style of ['Simple', 'Modern', 'Popup', 'Carousel']) {
-    await expect(dialog.getByRole('button', { name: style, exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: style, exact: true })).toBeVisible();
   }
-  await dialog.getByRole('button', { name: 'Popup', exact: true }).click();
-  await expect(dialog.getByRole('listitem')).toHaveCount(3);
-  await dialog.getByRole('button', { name: 'Carousel', exact: true }).click();
-  await dialog.getByRole('button', { name: /Rotating messages/ }).click();
+  await page.getByRole('button', { name: 'Popup', exact: true }).click();
+  await expect(page.getByRole('list', { name: 'Templates' }).getByRole('listitem')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Carousel', exact: true }).click();
+  await page.getByRole('button', { name: /^Use Rotating messages/ }).click();
   await page.getByRole('button', { name: /^Create / }).click();
   await expect(page.getByText(/is ready/)).toBeVisible();
+  await page.getByRole('button', { name: 'Back to project' }).click();
 
   const preview = page.frameLocator('iframe[title$="preview"]');
   await expect(preview.getByText('Free shipping over $50')).toBeVisible();
@@ -170,8 +170,8 @@ test('sidebar collapses to icons, and remembers', async ({ page }) => {
   await page.reload();
   await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
   await page.getByRole('complementary').getByRole('button', { name: 'Create new' }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/\/create$/);
+  await page.goBack();
   await page.getByRole('button', { name: 'Expand sidebar' }).click();
   await expect(page.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
 });
@@ -184,8 +184,7 @@ test('dashboard guides a new user, and updates as they progress', async ({ page 
   await expect(guide.getByText('0 of 4 done')).toBeVisible();
 
   await guide.getByRole('button', { name: 'Choose a template' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: /^Website/ }).click();
-  await page.getByRole('dialog').getByRole('button', { name: /Local business/ }).click();
+  await page.getByRole('button', { name: /^Use Local business/ }).click();
   await page.getByRole('button', { name: 'Create website' }).click();
   await expect(page.getByText(/is ready/)).toBeVisible();
 
@@ -243,13 +242,13 @@ test('templates come in many industries, with a filter', async ({ page }) => {
   expect(TEMPLATES.filter((t) => t.type === 'website').length).toBeGreaterThanOrEqual(15);
   await page.goto('/websites');
   await page.getByRole('button', { name: 'New website' }).first().click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByRole('button', { name: 'Health and wellness', exact: true }).click();
-  await expect(dialog.getByText('Medical clinic', { exact: true })).toBeVisible();
-  await expect(dialog.getByText('Law firm', { exact: true })).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'All', exact: true }).click();
-  await dialog.getByLabel('Search templates').fill('blog');
-  await expect(dialog.getByText('Blog', { exact: true })).toBeVisible();
+  const list = page.getByRole('list', { name: 'Templates' });
+  await page.getByRole('button', { name: 'Health and wellness', exact: true }).click();
+  await expect(list.getByText('Medical clinic', { exact: true })).toBeVisible();
+  await expect(list.getByText('Law firm', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await page.getByLabel('Search templates').fill('blog');
+  await expect(list.getByText('Blog', { exact: true })).toBeVisible();
 });
 
 for (const id of ['website-docs', 'website-blog', 'page-blog-article', 'page-docs-article', 'page-saas-landing', 'website-clinic']) {
@@ -265,7 +264,7 @@ for (const id of ['website-docs', 'website-blog', 'page-blog-article', 'page-doc
   });
 }
 
-test('linked fields name the detail they use, instead of showing code', async ({ page }) => {
+test('linked fields name the variable they use, instead of showing code', async ({ page }) => {
   await signUp(page);
   await openEditor(page, 'page-launch');
   const frame = canvas(page);
@@ -276,25 +275,25 @@ test('linked fields name the detail they use, instead of showing code', async ({
   await expect(page.getByText('Uses your Headline')).toBeVisible();
   await expect(page.locator('input[value*="{{"]')).toHaveCount(0);
 
-  // Double-click shows the real words. Pressing Enter unchanged keeps following the detail.
+  // Double-click shows the real words. Pressing Enter unchanged keeps following the variable.
   await heading.dblclick();
   const editor = frame.getByRole('textbox', { name: 'Edit text' });
   await expect(editor).toHaveValue(original!);
   await editor.press('Enter');
   await expect(page.getByText('Uses your Headline')).toBeVisible();
 
-  // Change it opens the details form, and the canvas follows.
+  // Change it opens Variables, and the canvas follows.
   await page.getByRole('button', { name: 'Change it' }).first().click();
-  await page.getByRole('tabpanel', { name: 'Details' }).getByLabel('Headline').fill('From the details form');
-  await expect(frame.getByRole('heading', { name: 'From the details form' })).toBeVisible();
+  await page.getByRole('tabpanel', { name: 'Variables' }).getByLabel('Headline').fill('From the variables');
+  await expect(frame.getByRole('heading', { name: 'From the variables' })).toBeVisible();
 
-  // Typing your own starts from the current words, and stops following the detail.
+  // Typing your own starts from the current words, and stops following the variable.
   await page.getByRole('tab', { name: 'Edit' }).click();
   await page.getByRole('button', { name: 'Type your own Text' }).click();
-  await expect(page.getByLabel('Text', { exact: true })).toHaveValue('From the details form');
+  await expect(page.getByLabel('Text', { exact: true })).toHaveValue('From the variables');
   await page.getByLabel('Text', { exact: true }).fill('My own words');
-  await page.getByRole('tab', { name: 'Details' }).click();
-  await page.getByRole('tabpanel', { name: 'Details' }).getByLabel('Headline').fill('Ignored now');
+  await page.getByRole('tab', { name: 'Variables' }).click();
+  await page.getByRole('tabpanel', { name: 'Variables' }).getByLabel('Headline').fill('Ignored now');
   await expect(frame.getByRole('heading', { name: 'My own words' })).toBeVisible();
 });
 

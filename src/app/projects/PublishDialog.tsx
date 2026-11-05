@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MODULES } from '../../core/modules';
+import { moduleNoun } from '../../core/modules';
 import { ProjectRecord } from '../../data/services';
 import { publicSitePath } from '../routes';
 import { useServices } from '../session';
-import { ErrorNote, errorMessage, inputClass, primaryButton, secondaryButton } from '../shared/ui';
+import { BusyLabel, ErrorNote, errorMessage, inputClass, primaryButton, secondaryButton } from '../shared/ui';
 
 const suggestSlug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
 
@@ -50,7 +50,7 @@ export const PublishDialog: React.FC<PublishDialogProps> = ({ project, beforePub
           publish.mutate();
         }}
       >
-        <h2 id="publish-title" className="text-lg font-bold">Publish {MODULES[project.type].label.toLowerCase()}</h2>
+        <h2 id="publish-title" className="text-lg font-bold">Publish {moduleNoun(project.type)}</h2>
         <ErrorNote message={publish.isError ? errorMessage(publish.error) : null} />
         <label className="block text-sm font-medium">Web address
           <div className="mt-1 flex items-center gap-1">
@@ -70,8 +70,8 @@ export const PublishDialog: React.FC<PublishDialogProps> = ({ project, beforePub
           <input className={`${inputClass} mt-1`} maxLength={500} value={summary} onChange={(event) => setSummary(event.target.value)} />
         </label>
         <div className="flex justify-end gap-2">
-          <button type="button" className={secondaryButton} onClick={onClose}>Cancel</button>
-          <button type="submit" className={primaryButton} disabled={publish.isPending}>{publish.isPending ? 'Publishing...' : 'Publish'}</button>
+          <button type="button" className={secondaryButton} disabled={publish.isPending} onClick={onClose}>Cancel</button>
+          <button type="submit" className={primaryButton} disabled={publish.isPending}><BusyLabel busy={publish.isPending} busyText="Publishing...">Publish</BusyLabel></button>
         </div>
       </form>
     </dialog>

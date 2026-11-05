@@ -1,4 +1,5 @@
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 import { Icon } from './Icon';
 
 export const inputClass =
@@ -50,8 +51,155 @@ export const EmptyState: React.FC<{ title: string; icon?: string; children?: Rea
   </div>
 );
 
+export const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <div aria-hidden="true" className={`animate-pulse rounded-lg bg-slate-200/80 dark:bg-slate-800 ${className}`} />
+);
+
+/** Announces loading once, while the skeleton shapes inside stay silent. */
+export const LoadingArea: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div role="status" aria-label="Loading" className={className}>{children}</div>
+);
+
 export const LoadingNote: React.FC = () => (
-  <p role="status" className="text-sm text-slate-500 dark:text-slate-400">Loading...</p>
+  <LoadingArea className="space-y-2.5">
+    <Skeleton className="h-4 w-1/3" />
+    <Skeleton className="h-4 w-2/3" />
+    <Skeleton className="h-4 w-1/2" />
+  </LoadingArea>
+);
+
+export const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
+  <LoadingArea>
+    <dl className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-5">
+      {[0, 1, 2, 3].map((n) => <Skeleton key={n} className="h-[74px] !rounded-xl" />)}
+    </dl>
+    <div className={`${cardClass} p-5 space-y-4`}>
+      <Skeleton className="h-8 w-64" />
+      {Array.from({ length: rows }, (_, n) => (
+        <div key={n} className="flex items-center gap-4">
+          <Skeleton className="w-8 h-8 shrink-0" />
+          <Skeleton className="h-4 flex-1" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      ))}
+    </div>
+  </LoadingArea>
+);
+
+export const CardsSkeleton: React.FC<{ count?: number; className?: string }> = ({ count = 6, className = 'grid gap-5 sm:grid-cols-2 lg:grid-cols-3' }) => (
+  <LoadingArea className={className}>
+    {Array.from({ length: count }, (_, n) => (
+      <div key={n} className={`${cardClass} overflow-hidden`}>
+        <Skeleton className="h-40 !rounded-none" />
+        <div className="p-4 space-y-2">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-3 w-full" />
+        </div>
+      </div>
+    ))}
+  </LoadingArea>
+);
+
+export const DashboardSkeleton: React.FC = () => (
+  <LoadingArea>
+    <dl className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-6">
+      {[0, 1, 2, 3].map((n) => <Skeleton key={n} className="h-[74px] !rounded-xl" />)}
+    </dl>
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className={`${cardClass} p-5 space-y-4`}>
+        {[0, 1, 2, 3, 4].map((n) => (
+          <div key={n} className="flex items-center gap-3">
+            <Skeleton className="w-8 h-8 shrink-0" />
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-5 w-14 !rounded-full" />
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2">{[0, 1, 2, 3, 4, 5].map((n) => <Skeleton key={n} className="h-11 !rounded-xl" />)}</div>
+    </div>
+  </LoadingArea>
+);
+
+export const ProjectSkeleton: React.FC = () => (
+  <LoadingArea>
+    <Skeleton className="h-4 w-48 mb-4" />
+    <div className="flex items-center gap-3 mb-6">
+      <Skeleton className="w-11 h-11 !rounded-xl" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-5 w-56" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+      <Skeleton className="h-9 w-28" />
+      <Skeleton className="h-9 w-24" />
+    </div>
+    <Skeleton className="h-8 w-96 mb-5" />
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <Skeleton className="h-[calc(100vh-280px)] min-h-[420px] !rounded-2xl" />
+      <div className="space-y-5">
+        <Skeleton className="h-36 !rounded-2xl" />
+        <Skeleton className="h-52 !rounded-2xl" />
+      </div>
+    </div>
+  </LoadingArea>
+);
+
+/** The editor's own layout, so opening a project doesn't jump when it arrives. */
+export const StudioSkeleton: React.FC = () => (
+  <LoadingArea className="h-screen flex flex-col bg-slate-100 dark:bg-slate-950">
+    <div className="h-14 shrink-0 flex items-center gap-3 px-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+      <Skeleton className="w-8 h-8" />
+      <Skeleton className="h-4 w-40" />
+      <Skeleton className="h-8 w-56 mx-auto" />
+      <Skeleton className="h-9 w-24" />
+      <Skeleton className="h-9 w-24" />
+    </div>
+    <div className="flex-1 min-h-0 flex">
+      <div className="w-[68px] shrink-0 p-2 space-y-2 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+        {[0, 1, 2, 3, 4].map((n) => <Skeleton key={n} className="h-12" />)}
+      </div>
+      <div className="w-[320px] shrink-0 p-4 space-y-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+        {[0, 1, 2, 3, 4, 5].map((n) => (
+          <div key={n} className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-9" />
+          </div>
+        ))}
+      </div>
+      <div className="flex-1 p-3"><Skeleton className="h-full bg-white dark:bg-slate-900" /></div>
+    </div>
+  </LoadingArea>
+);
+
+/** The app's layout, shown while the session and workspace load. */
+export const ShellSkeleton: React.FC = () => (
+  <LoadingArea className="h-screen flex bg-slate-50 dark:bg-slate-950">
+    <div className="w-60 shrink-0 p-3 space-y-3 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+      <Skeleton className="h-7 w-28" />
+      <Skeleton className="h-9" />
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((n) => <Skeleton key={n} className="h-8" />)}
+    </div>
+    <div className="flex-1 p-6 space-y-5">
+      <Skeleton className="h-8 w-64" />
+      <div className="grid gap-3 grid-cols-4">{[0, 1, 2, 3].map((n) => <Skeleton key={n} className="h-[74px] !rounded-xl" />)}</div>
+      <Skeleton className="h-96 !rounded-2xl" />
+    </div>
+  </LoadingArea>
+);
+
+/** The label of a button that starts work: a spinner and a present-tense word while it runs. */
+export const BusyLabel: React.FC<{ busy: boolean; busyText?: string; children: React.ReactNode }> = ({ busy, busyText, children }) => (
+  busy ? (
+    <>
+      <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden="true" />
+      {busyText ?? children}
+    </>
+  ) : <>{children}</>
+);
+
+/** For icon-only buttons: swaps the icon for a spinner while it runs. */
+export const BusyIcon: React.FC<{ busy: boolean; children: React.ReactNode; className?: string }> = ({ busy, children, className = 'w-4 h-4' }) => (
+  busy ? <Loader2 className={`${className} animate-spin`} aria-hidden="true" /> : <>{children}</>
 );
 
 export const errorMessage = (error: unknown): string =>

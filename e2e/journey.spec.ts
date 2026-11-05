@@ -8,9 +8,9 @@ test('full journey: template, details, editor, publish, live site, form response
 
   // Choose a template.
   await page.getByRole('complementary').getByRole('button', { name: 'Create new' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: /^Website/ }).click();
+  await page.getByRole('navigation', { name: 'What to create' }).getByRole('button', { name: 'Website' }).click();
   await page.getByRole('searchbox', { name: 'Search templates' }).fill('restaurant');
-  await page.getByRole('dialog').getByRole('button', { name: /Restaurant or cafe/ }).click();
+  await page.getByRole('button', { name: 'Use Restaurant or cafe' }).click();
 
   // Details appear in the preview as they're typed.
   const preview = page.frameLocator('iframe[title="Preview"]');
@@ -27,9 +27,9 @@ test('full journey: template, details, editor, publish, live site, form response
 
   await page.getByRole('button', { name: 'Create website' }).click();
   await expect(page.getByRole('heading', { name: 'Rosa Trattoria' })).toBeVisible();
-  await expect(page.getByText(/is ready\. Publish it now/)).toBeVisible();
+  await expect(page.getByText(/is ready\. Change anything/)).toBeVisible();
 
-  // Publish without opening the editor.
+  // Publish straight from the editor it opens in.
   const slug = `rosa-${Date.now()}`;
   await publish(page, slug);
   await expect(page.getByText('Published! Your changes are live.')).toBeVisible();
@@ -144,7 +144,7 @@ test('editor: changes per device only affect that device', async ({ page }) => {
   await heading.click();
   await page.getByRole('button', { name: 'Mobile' }).click();
   await page.getByRole('tab', { name: 'style' }).click();
-  await page.getByRole('textbox', { name: 'Size' }).fill('11px');
+  await page.getByRole('textbox', { name: 'Font size' }).fill('11px');
   await expect(heading).toHaveCSS('font-size', '11px');
   await page.getByRole('button', { name: 'Desktop' }).click();
   await expect(heading).not.toHaveCSS('font-size', '11px');

@@ -60,7 +60,7 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
 
   return (
     <div className={className} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', width: '100%' }}>
-      {delivery !== 'site' && interactive && (
+      {delivery !== 'site' && type !== 'faq' && type !== 'menu' && interactive && (
         <button
           type="button"
           onClick={() => setRunKey(runKey + 1)}

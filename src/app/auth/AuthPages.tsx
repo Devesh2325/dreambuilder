@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
+import { BusyLabel } from '../shared/ui';
 import { FullPageSpinner } from './RequireAuth';
 
 const emailField = z.string().trim().email('Enter a valid email address');
@@ -62,9 +63,9 @@ const SubmitButton: React.FC<{ busy: boolean; children: React.ReactNode }> = ({ 
   <button
     type="submit"
     disabled={busy}
-    className="w-full py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 rounded-lg transition-colors"
+    className="w-full py-2.5 inline-flex items-center justify-center gap-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 rounded-lg transition-colors"
   >
-    {busy ? 'Please wait...' : children}
+    <BusyLabel busy={busy} busyText="Please wait...">{children}</BusyLabel>
   </button>
 );
 

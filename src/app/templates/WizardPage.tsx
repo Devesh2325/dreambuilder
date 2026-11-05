@@ -3,17 +3,19 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Monitor, Smartphone, Tablet } from 'lucide-react';
 import { Theme } from '../../core/schema';
-import { MODULES } from '../../core/modules';
+import { moduleNoun, MODULES } from '../../core/modules';
 import { validateValues } from '../../core/validation';
 import { VariableValues } from '../../core/variables';
 import { DEVICE_WIDTHS, ProjectPreview } from '../../experience/ProjectPreview';
 import { pagesOf } from '../../experience/SiteView';
-import { applyBranding, getTemplate, initialValues, projectFromTemplate } from '../../templates';
+import { applyBranding, getTemplate, initialValues, projectFromTemplate, TEAM_TEMPLATE_PREFIX, TemplateDefinition } from '../../templates';
 import { ROUTES } from '../routes';
 import { useServices } from '../session';
 import { VariableForm } from '../shared/VariableForm';
-import { EmptyState, ErrorNote, errorMessage, inputClass, primaryButton } from '../shared/ui';
+import { BusyLabel, EmptyState, ErrorNote, errorMessage, inputClass, primaryButton, Skeleton, LoadingArea } from '../shared/ui';
 import { useWorkspace } from '../workspace';
+import { useTeamTemplates } from './CreatePage';
+import { CreateSteps } from './CreateSteps';
 
 const DEVICE_BUTTONS = [
   { device: 'desktop', label: 'Desktop', icon: Monitor },
@@ -23,8 +25,23 @@ const DEVICE_BUTTONS = [
 
 export const WizardPage: React.FC = () => {
   const { templateId } = useParams();
-  const template = templateId ? getTemplate(templateId) : undefined;
+  const team = useTeamTemplates();
+  const isTeam = Boolean(templateId?.startsWith(TEAM_TEMPLATE_PREFIX));
+  const template = !templateId ? undefined : isTeam ? team.templates.find((item) => item.id === templateId) : getTemplate(templateId);
 
+  if (isTeam && (team.isLoading || team.isPending) && !template) {
+    return (
+      <LoadingArea className="h-screen flex bg-slate-50 dark:bg-slate-950">
+        <div className="w-[400px] shrink-0 p-5 space-y-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-9" />
+          <Skeleton className="h-9" />
+          <Skeleton className="h-9" />
+        </div>
+        <div className="flex-1 p-4"><Skeleton className="h-full" /></div>
+      </LoadingArea>
+    );
+  }
   if (!template) {
     return (
       <div className="p-8">
@@ -35,11 +52,10 @@ export const WizardPage: React.FC = () => {
     );
   }
   // Keyed so going from one template to another starts with fresh values.
-  return <Wizard key={template.id} templateId={template.id} />;
+  return <Wizard key={template.id} template={template} />;
 };
 
-const Wizard: React.FC<{ templateId: string }> = ({ templateId }) => {
-  const template = getTemplate(templateId)!;
+const Wizard: React.FC<{ template: TemplateDefinition }> = ({ template }) => {
   const { projects } = useServices();
   const { workspace, can } = useWorkspace();
   const queryClient = useQueryClient();
@@ -70,21 +86,24 @@ const Wizard: React.FC<{ templateId: string }> = ({ templateId }) => {
     onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['project-details'] });
-      navigate(ROUTES.project(id), { state: { justCreated: true } });
+      navigate(ROUTES.studio(id), { state: { justCreated: true } });
     },
   });
 
   return (
     <div className="app-scroll h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
-      <header className="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <Link to={ROUTES.module(template.type)} aria-label={`Back to ${MODULES[template.type].plural}`} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
-        <div className="min-w-0">
-          <p className="text-xs text-slate-500 dark:text-slate-400">{MODULES[template.type].label} template</p>
-          <h1 className="text-sm font-semibold truncate">{template.title}</h1>
+      <header className="h-14 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link to={ROUTES.create(template.type)} aria-label="Back to templates" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-500 dark:text-slate-400">{MODULES[template.type].label} template</p>
+            <h1 className="text-sm font-semibold truncate">{template.title}</h1>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-1" role="group" aria-label="Preview size">
+        <CreateSteps current={2} />
+        <div className="justify-self-end flex items-center gap-1" role="group" aria-label="Preview size">
           {DEVICE_BUTTONS.map(({ device: value, label, icon: DeviceIcon }) => (
             <button
               key={value}
@@ -152,7 +171,7 @@ const Wizard: React.FC<{ templateId: string }> = ({ templateId }) => {
             <ErrorNote message={create.isError ? errorMessage(create.error) : null} />
             {can('create:project') ? (
               <button type="submit" disabled={create.isPending} className={`${primaryButton} w-full`}>
-                {create.isPending ? 'Creating...' : `Create ${MODULES[template.type].label.toLowerCase()}`}
+                <BusyLabel busy={create.isPending} busyText="Creating...">Create {moduleNoun(template.type)}</BusyLabel>
               </button>
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400">You have view-only access in this workspace.</p>

@@ -244,7 +244,27 @@ export interface PublicApi {
   trackEvents(projectId: string, events: TrackedEvent[]): Promise<void>;
 }
 
+export type LibraryKind = 'template' | 'section';
+
+export interface LibraryItem {
+  id: string;
+  kind: LibraryKind;
+  name: string;
+  category: string;
+  description: string;
+  definition: unknown;
+  createdAt: string;
+}
+
+/** Templates and sections a workspace saves for its team to reuse. */
+export interface LibraryRepository {
+  list(organizationId: string, kind: LibraryKind): Promise<LibraryItem[]>;
+  create(organizationId: string, item: Omit<LibraryItem, 'id' | 'createdAt'>): Promise<LibraryItem>;
+  remove(id: string): Promise<void>;
+}
+
 export interface AppServices {
+  library: LibraryRepository;
   auth: AuthGateway;
   workspaces: WorkspaceRepository;
   projects: ProjectRepository;

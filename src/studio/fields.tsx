@@ -2,9 +2,9 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { GOOGLE_FONTS } from '../renderer/css';
 
-export const labelClass = 'block text-xs font-medium text-slate-600 dark:text-slate-300';
+export const labelClass = 'block text-[13px] font-medium text-slate-700 dark:text-slate-200';
 export const fieldClass =
-  'w-full h-8 px-2 text-xs rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-60';
+  'w-full h-9 px-2.5 text-sm rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-60';
 
 export const slugFromTitle = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
 
@@ -37,7 +37,7 @@ export const ColorField: React.FC<ColorFieldProps> = ({ label, value, onChange, 
       <label htmlFor={id} className={`${labelClass} mb-1`}>{label}</label>
       <div className="flex items-center gap-1.5">
         <span
-          className="relative shrink-0 w-8 h-8 rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden"
+          className="relative shrink-0 w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
           style={{ background: value.startsWith('var(') && theme ? theme[THEME_SWATCHES.find((s) => s.value === value)?.swatch ?? 'primary'] : value || 'transparent' }}
         >
           <input

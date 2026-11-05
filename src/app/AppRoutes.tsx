@@ -8,6 +8,7 @@ import { DashboardPage } from './dashboard/DashboardPage';
 import { ProjectPage } from './projects/ProjectPage';
 import { ProjectsPage } from './projects/ProjectsPage';
 import { Shell } from './shell/Shell';
+import { CreatePage } from './templates/CreatePage';
 import { TemplatesPage } from './templates/TemplatesPage';
 import { WizardPage } from './templates/WizardPage';
 import { WorkspaceProvider } from './workspace';
@@ -45,6 +46,7 @@ export const AppRoutes: React.FC = () => (
 
     <Route element={<RequireAuth />}>
       <Route element={<WorkspaceLayout />}>
+        <Route path="create" element={<CreatePage />} />
         <Route path="new/:templateId" element={<WizardPage />} />
         <Route path="studio/:projectId" element={<StudioPage />} />
         <Route path="invite/:token" element={<AcceptInvitePage />} />

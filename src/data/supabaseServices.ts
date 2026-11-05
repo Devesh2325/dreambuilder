@@ -2,7 +2,7 @@ import { PostgrestError, User } from '@supabase/supabase-js';
 import { DEFAULT_THEME } from '../core/schema';
 import { createPublicApi } from './publicApi';
 import {
-  AppServices, AssetRecord, AssetRepository, AuthGateway, AuthUser, DocumentRecord, MemberRecord, ProjectRecord,
+  AppServices, AssetRecord, AssetRepository, AuthGateway, AuthUser, DocumentRecord, LibraryItem, LibraryRepository, MemberRecord, ProjectRecord,
   ProjectRepository, PublishingRepository, TeamRepository, WorkspaceMembership, WorkspaceRepository,
 } from './services';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabaseClient';
@@ -400,7 +400,50 @@ const team: TeamRepository = {
   },
 };
 
+const LIBRARY_COLUMNS = 'id, kind, name, category, description, definition, created_at';
+
+function toLibraryItem(row: Row): LibraryItem {
+  return {
+    id: row.id as string,
+    kind: row.kind as LibraryItem['kind'],
+    name: row.name as string,
+    category: row.category as string,
+    description: row.description as string,
+    definition: row.definition,
+    createdAt: row.created_at as string,
+  };
+}
+
+const library: LibraryRepository = {
+  async list(organizationId, kind) {
+    const { data, error } = await db()
+      .from('workspace_library')
+      .select(LIBRARY_COLUMNS)
+      .eq('organization_id', organizationId)
+      .eq('kind', kind)
+      .order('created_at', { ascending: false });
+    check(error);
+    return (data as Row[]).map(toLibraryItem);
+  },
+
+  async create(organizationId, item) {
+    const { data, error } = await db()
+      .from('workspace_library')
+      .insert({ organization_id: organizationId, ...item })
+      .select(LIBRARY_COLUMNS)
+      .single();
+    check(error);
+    return toLibraryItem(data as Row);
+  },
+
+  async remove(id) {
+    const { error } = await db().from('workspace_library').delete().eq('id', id);
+    check(error);
+  },
+};
+
 export const supabaseServices: AppServices = {
+  library,
   auth,
   workspaces,
   projects,

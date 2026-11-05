@@ -6,9 +6,9 @@ import { MODULE_LIST, MODULES } from '../../core/modules';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
 import { Icon } from '../shared/Icon';
-import { cardClass, ErrorNote, LoadingNote, secondaryButton, StatTile } from '../shared/ui';
+import { cardClass, DashboardSkeleton, ErrorNote, secondaryButton, StatTile } from '../shared/ui';
 import { StatusBadge } from '../projects/ProjectsPage';
-import { CreateButton } from '../templates/CreateDialog';
+import { CreateButton } from '../templates/CreateButton';
 import { useWorkspace } from '../workspace';
 
 const guideKey = (organizationId: string) => `fp_guide_dismissed_${organizationId}`;
@@ -142,7 +142,7 @@ export const DashboardPage: React.FC = () => {
         <CreateButton />
       </header>
 
-      {list.isLoading && <LoadingNote />}
+      {list.isLoading && <DashboardSkeleton />}
       {list.isError && <ErrorNote message="We couldn't load your projects. Please refresh the page." />}
 
       {list.isSuccess && !isDismissed && !isComplete && <GettingStarted steps={steps} onDismiss={dismiss} />}

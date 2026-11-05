@@ -56,22 +56,26 @@ There is **one renderer** for the editor, previews, public sites and the embed: 
 
 To add a block, add it to both `blockMeta.ts` and `BLOCK_RENDERERS`; a test checks they match. The properties panel is generated from `fields`. It only appears in a module's Add panel if listed in `BLOCK_GROUPS` in `src/studio/LeftPanel.tsx`.
 
-To add a module, update `PROJECT_TYPES`, `MODULES` and `PATHS` (`src/core/modules.ts`), the `projects.type` check in the migrations, `MODULE_COLUMNS` (`moduleColumns.tsx`), `BLOCK_GROUPS`, templates, and a docs guide. Each module has its own list page at `MODULES[type].path`. `ProjectsPage` and `ProjectPage` are shared by all modules, and what differs comes from `MODULE_COLUMNS`.
+To add a module, update `PROJECT_TYPES`, `MODULES` and `PATHS` (`src/core/modules.ts`), the `projects.type` check in the migrations, `MODULE_COLUMNS` (`moduleColumns.tsx`), `BLOCK_GROUPS`, templates, and a docs guide. Each module has its own list page at `MODULES[type].path`. `ProjectsPage` and `ProjectPage` are shared by all modules, and what differs comes from `MODULE_COLUMNS`. Creating goes `/create?type=` (choose a template), `/new/:templateId` (fill in details), then straight to the editor.
 
 ## Templates
 
-`src/templates/` defines templates with the `el()` helpers. Each declares `variables`, which also generate the wizard form (`VariableForm`). Values are stored per project, and nodes keep their tokens, so a change in **Details** updates everywhere. Typing over a token in the editor detaches only that spot.
+`src/templates/` defines templates with the `el()` helpers. Each declares `variables`, which also generate the wizard form (`VariableForm`). Values are stored per project, and nodes keep their tokens, so a change in **Variables** updates everywhere. Typing over a token in the editor detaches only that spot. A project's variables are its template's plus `settings.variableDefs` (`projectVariableDefs`), which holds ones added in the editor or carried from a team template.
 
-Files: `websites.ts` and `industries.ts` (websites, using `industrySite` for most), `pages.ts` and `experiences.ts` (landing pages and the other modules), `banners.ts`, and `assets.ts` (stock photos that were checked to load, and generated product screens for demos). A template's `category` drives the filter in the create dialog.
+Files: `websites.ts` and `industries.ts` (websites, using `industrySite` for most), `pages.ts`, `layouts.ts` and `experiences.ts` (landing pages and the other modules), `banners.ts`, `sections.ts` (the section library), `library.ts` (saving and reading team items), and `assets.ts` (stock photos that were checked to load, and generated product screens for demos). A template's `category` drives the filter on the create page.
 
-`src/test/core/templates.test.tsx` is a contract test over every template: tokens must be declared and used, defaults must validate, block nesting must be allowed, and nothing may render a leftover `{{`.
+Team templates and sections live in `workspace_library` (`LibraryRepository`). Team template ids start with `team:`, so `getTemplate` doesn't know them; `teamTemplate` validates a stored row into a `TemplateDefinition`, and its variables are copied to the project. A saved section stores the expanded tree with values filled in, so it needs no variables. A saved template keeps its tokens and never carries the webhook address.
+
+`src/test/core/templates.test.tsx` is a contract test over every template: tokens must be declared and used, defaults must validate, block nesting must be allowed, and nothing may render a leftover `{{`. `library.test.tsx` checks sections the same way.
 
 ## Editor
 
 `src/studio/store.ts` is a Zustand store.
 
 - All edits go through `editDocument` or `updateDraft`, which use immer `produceWithPatches` to record undo history. Edits with the same `key` within 1 second merge into one undo step.
-- There is one side panel, with the active tool in the store (`tool`). Clicking a block on the canvas opens `edit`, so the canvas gets the rest of the screen.
+- There is one side panel, with the active tool in the store (`tool`). Clicking a block on the canvas opens `edit`, so the canvas gets the rest of the screen. Clicking the open tool closes the panel.
+- Steps, demo screens, slides and form steps show one at a time. `steps.ts` finds them in the expanded tree, `activeStepKey` holds the choice, and `ctx.visibleStep` makes `RenderedNode` draw only that one, in edit mode only. Selecting a block in another step switches to it. Steps from a list variable are added and removed by editing that list.
+- Style values are strings, and a plain number means pixels (`declarations` in `css.ts`), except for `UNITLESS` properties. Every control in `StylePanel.tsx` is checked against computed style in `e2e/editor.spec.ts`.
 - A website canvas shows header + page + footer together, so actions find the owning document with `documentOfNode`.
 - Autosave is debounced. Each save sends the `revision` it loaded; a stale one matches no rows and returns `conflict`, which the UI resolves through `reloadFromServer` or `overwriteServer`.
 - `Canvas.tsx` attaches native listeners to the iframe's document, and draws the selection overlay inside the iframe with inline styles, since app CSS doesn't reach it. Elements there fail `instanceof` checks because they belong to another document.

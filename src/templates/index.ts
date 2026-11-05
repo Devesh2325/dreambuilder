@@ -1,23 +1,33 @@
-import { DEFAULT_THEME, DEFAULT_TRIGGERS, GLOBAL_FOOTER_SLUG, GLOBAL_HEADER_SLUG, ProjectType, Theme } from '../core/schema';
+import { DEFAULT_THEME, DEFAULT_TRIGGERS, GLOBAL_FOOTER_SLUG, GLOBAL_HEADER_SLUG, ProjectSettings, ProjectType, Theme } from '../core/schema';
 import { MODULES } from '../core/modules';
-import { defaultValues, VariableValues } from '../core/variables';
+import { defaultValues, VariableDef, VariableValues } from '../core/variables';
 import { NewProject } from '../data/services';
 import { OrganizationBranding } from '../types/auth';
 import { buildContent, el, TemplateDefinition, TemplatePage } from './dsl';
 import { BANNER_TEMPLATES } from './banners';
 import { EXPERIENCE_TEMPLATES } from './experiences';
 import { INDUSTRY_TEMPLATES } from './industries';
+import { LAYOUT_TEMPLATES } from './layouts';
 import { PAGE_TEMPLATES } from './pages';
 import { WEBSITE_TEMPLATES } from './websites';
 
 export * from './dsl';
 
+export const TEAM_TEMPLATE_PREFIX = 'team:';
+
 export const TEMPLATES: TemplateDefinition[] = [
-  ...WEBSITE_TEMPLATES, ...INDUSTRY_TEMPLATES, ...EXPERIENCE_TEMPLATES, ...PAGE_TEMPLATES, ...BANNER_TEMPLATES,
+  ...WEBSITE_TEMPLATES, ...INDUSTRY_TEMPLATES, ...EXPERIENCE_TEMPLATES, ...PAGE_TEMPLATES, ...LAYOUT_TEMPLATES, ...BANNER_TEMPLATES,
 ];
 
 export function getTemplate(id: string): TemplateDefinition | undefined {
   return TEMPLATES.find((template) => template.id === id);
+}
+
+/** A project's variables: those of its template, plus any added in the editor. */
+export function projectVariableDefs(templateId: string | null | undefined, settings: ProjectSettings): VariableDef[] {
+  const fromTemplate = templateId ? (getTemplate(templateId)?.variables ?? []) : [];
+  const own = settings.variableDefs ?? [];
+  return [...fromTemplate, ...own.filter((def) => !fromTemplate.some((other) => other.key === def.key))];
 }
 
 export function templatesFor(type: ProjectType): TemplateDefinition[] {
@@ -59,7 +69,8 @@ export function projectFromTemplate(
     description: template.description,
     variables: values,
     theme,
-    settings: structuredClone(template.settings ?? {}),
+    // Team templates aren't in the built-in list, so their variables travel with the project.
+    settings: { ...structuredClone(template.settings ?? {}), ...(template.id.startsWith(TEAM_TEMPLATE_PREFIX) ? { variableDefs: template.variables } : {}) },
     templateId: template.id,
     templateVersion: template.version,
     documents: structuredClone(template.pages),

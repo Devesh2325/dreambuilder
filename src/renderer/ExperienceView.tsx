@@ -2,10 +2,14 @@ import React from 'react';
 import { DocContent, Theme } from '../core/schema';
 import { expandContent, RenderNode, VariableValues } from '../core/variables';
 import { BLOCK_RENDERERS } from './blocks';
-import { BASE_CSS, generateNodeCss, nodeClass, themeCssVariables } from './css';
+import { BASE_CSS, fontsUrl, generateNodeCss, nodeClass, nodeFonts, themeCssVariables } from './css';
 import { RenderContext } from './types';
 
-export const RenderedNode: React.FC<{ node: RenderNode; ctx: RenderContext }> = ({ node, ctx }) => {
+export const RenderedNode: React.FC<{ node: RenderNode; ctx: RenderContext }> = ({ node: fullNode, ctx }) => {
+  const step = ctx.visibleStep;
+  const node = step && fullNode.key === step.parentKey
+    ? { ...fullNode, children: fullNode.children.filter((child) => child.type !== step.stepType || child.key === step.key) }
+    : fullNode;
   const Block = BLOCK_RENDERERS[node.type];
   const attrs = {
     className: nodeClass(node.key),
@@ -26,14 +30,20 @@ export const RenderedNode: React.FC<{ node: RenderNode; ctx: RenderContext }> = 
   );
 };
 
-export const StyleTag: React.FC<{ theme: Theme; trees: (RenderNode | null)[] }> = ({ theme, trees }) => (
-  <style
-    // Node values are filtered by safeCssValue. A </style> can't get through, since < is rejected.
-    dangerouslySetInnerHTML={{
-      __html: `.fp-root{${themeCssVariables(theme)}}${BASE_CSS}${trees.map(generateNodeCss).join('')}`,
-    }}
-  />
-);
+export const StyleTag: React.FC<{ theme: Theme; trees: (RenderNode | null)[] }> = ({ theme, trees }) => {
+  const blockFonts = fontsUrl(trees.flatMap(nodeFonts));
+  return (
+    <>
+      {blockFonts && <link rel="stylesheet" href={blockFonts} />}
+      <style
+        // Node values are filtered by safeCssValue. A </style> can't get through, since < is rejected.
+        dangerouslySetInnerHTML={{
+          __html: `.fp-root{${themeCssVariables(theme)}}${BASE_CSS}${trees.map(generateNodeCss).join('')}`,
+        }}
+      />
+    </>
+  );
+};
 
 export interface ExperienceViewProps {
   /** Rendered in order: for websites that is header, page, footer. */

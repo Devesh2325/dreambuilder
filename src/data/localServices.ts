@@ -1,7 +1,7 @@
 import { DEFAULT_THEME, PROJECT_TYPES } from '../core/schema';
 import { PLAN_LIMITS } from '../types/auth';
 import {
-  AnalyticsRow, AppServices, AssetRecord, AuthUser, DocumentRecord, InvitationRecord, MemberRecord, ProjectRecord,
+  AnalyticsRow, AppServices, AssetRecord, AuthUser, DocumentRecord, InvitationRecord, LibraryItem, MemberRecord, ProjectRecord,
   PublishedSnapshot, SubmissionRecord, VersionRecord, WorkspaceMembership,
 } from './services';
 
@@ -39,6 +39,7 @@ interface LocalState {
   submissions: (SubmissionRecord & { projectId: string })[];
   events: LocalEvent[];
   invitations: (InvitationRecord & { organizationId: string; token: string; accepted: boolean })[];
+  library: (LibraryItem & { organizationId: string })[];
 }
 
 const STORAGE_KEY = 'flowpilot_local_backend';
@@ -55,6 +56,7 @@ const emptyState = (): LocalState => ({
   submissions: [],
   events: [],
   invitations: [],
+  library: [],
 });
 
 function load(): LocalState {
@@ -494,6 +496,24 @@ export function createLocalServices(): AppServices {
           if (!invite || !user || invite.email !== user.email) throw new Error('This invitation is invalid or has expired');
           invite.accepted = true;
           state.members.push({ organizationId: invite.organizationId, userId: user.id, role: invite.role });
+        });
+      },
+    },
+
+    library: {
+      async list(organizationId, kind) {
+        return load().library.filter((item) => item.organizationId === organizationId && item.kind === kind);
+      },
+      async create(organizationId, item) {
+        return update((state) => {
+          const record = { ...item, id: uuid(), createdAt: now(), organizationId };
+          state.library.unshift(record);
+          return record;
+        });
+      },
+      async remove(id) {
+        update((state) => {
+          state.library = state.library.filter((item) => item.id !== id);
         });
       },
     },

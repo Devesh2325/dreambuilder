@@ -44,3 +44,6 @@ export const MODULES: Record<ProjectType, ModuleInfo> = {
 };
 
 export const MODULE_LIST = Object.values(MODULES);
+
+/** The module's name for use inside a sentence. */
+export const moduleNoun = (type: ProjectType): string => (MODULES[type].label === 'FAQ' ? 'FAQ' : MODULES[type].label.toLowerCase());

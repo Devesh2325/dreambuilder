@@ -21,6 +21,7 @@ export const DOC_SECTIONS: { title: string; slugs: string[] }[] = [
   { title: 'Start here', slugs: ['getting-started', 'install'] },
   { title: 'Main modules', slugs: ['website', 'page', 'tour', 'form'] },
   { title: 'More modules', slugs: ['demo', 'banner', 'menu', 'faq'] },
+  { title: 'Your team', slugs: ['library'] },
   { title: 'Reference', slugs: ['api', 'webhooks', 'troubleshooting'] },
 ];
 

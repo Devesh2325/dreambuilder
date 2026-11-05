@@ -1,15 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, CloudOff, Eye, Loader2, Monitor, Redo2, Smartphone, Tablet, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Check, CloudOff, Eye, LayoutTemplate, Loader2, Monitor, Redo2, Smartphone, Tablet, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { PublishDialog } from '../app/projects/PublishDialog';
 import { ROUTES } from '../app/routes';
 import { useServices } from '../app/session';
-import { EmptyState, primaryButton, secondaryButton } from '../app/shared/ui';
+import { BusyIcon, EmptyState, primaryButton, secondaryButton, StudioSkeleton } from '../app/shared/ui';
 import { useWorkspace } from '../app/workspace';
+import { moduleNoun } from '../core/modules';
 import { ProjectPreview } from '../experience/ProjectPreview';
+import { projectVariableDefs } from '../templates';
+import { templateFromProject } from '../templates/library';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
+import { SaveToLibrary } from './SaveToLibrary';
 import { handleStudioShortcut } from './shortcuts';
 import { useStudio } from './store';
 
@@ -19,7 +23,8 @@ const DEVICE_BUTTONS = [
   { device: 'mobile', label: 'Mobile', icon: Smartphone },
 ] as const;
 
-const iconButton = 'p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30';
+const iconButton = 'p-1.5 rounded-md text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30';
+const toolGroup = 'flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800';
 
 const SaveIndicator: React.FC = () => {
   const status = useStudio((s) => s.status);
@@ -27,7 +32,7 @@ const SaveIndicator: React.FC = () => {
   const { saveNow } = useStudio.getState();
 
   return (
-    <div role="status" className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 min-w-[70px]">
+    <div role="status" className="flex items-center gap-1 text-[13px] text-slate-500 dark:text-slate-400 min-w-[70px]">
       {status === 'saved' && <><Check className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />Saved</>}
       {status === 'dirty' && 'Unsaved'}
       {status === 'saving' && <><Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />Saving</>}
@@ -75,7 +80,12 @@ const Editor: React.FC = () => {
   const { undo, redo, setDevice, setZoom, saveNow } = useStudio.getState();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const arrival = location.state as { justCreated?: boolean; buildingTemplate?: boolean } | null;
+  const [welcome, setWelcome] = useState(() => (arrival?.justCreated ? 'created' : arrival?.buildingTemplate ? 'template' : null));
 
   useEffect(() => {
     window.addEventListener('keydown', handleStudioShortcut);
@@ -98,42 +108,52 @@ const Editor: React.FC = () => {
 
   return (
     <div className="app-scroll h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
-      <header className="h-12 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+      <header className="h-14 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2 min-w-0">
         <button
           type="button"
           aria-label="Back to project"
-          className={iconButton}
+          disabled={isLeaving}
+          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60"
           onClick={async () => {
+            setIsLeaving(true);
             await saveNow();
             navigate(ROUTES.project(project.id));
           }}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <BusyIcon busy={isLeaving}><ArrowLeft className="w-4 h-4" /></BusyIcon>
         </button>
-        <h1 className="text-sm font-semibold truncate max-w-[220px]">{draft.title}</h1>
+        <h1 className="text-[15px] font-semibold truncate max-w-[240px]">{draft.title}</h1>
         {readOnly ? <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">View only</span> : <SaveIndicator />}
         </div>
 
-        <div className="flex items-center gap-1">
-          <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} className={iconButton} onClick={undo}><Undo2 className="w-4 h-4" /></button>
-          <button type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} className={iconButton} onClick={redo}><Redo2 className="w-4 h-4" /></button>
-          <span className="w-px h-5 mx-1 bg-slate-200 dark:bg-slate-700" />
-          <div role="group" aria-label="Device" className="flex items-center gap-0.5">
+        <div className="flex items-center gap-2">
+          <div className={toolGroup}>
+            <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} className={iconButton} onClick={undo}><Undo2 className="w-4 h-4" /></button>
+            <button type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} className={iconButton} onClick={redo}><Redo2 className="w-4 h-4" /></button>
+          </div>
+          <div role="group" aria-label="Device" className={toolGroup}>
             {DEVICE_BUTTONS.map(({ device: value, label, icon: DeviceIcon }) => (
               <button key={value} type="button" aria-label={label} aria-pressed={device === value} onClick={() => setDevice(value)}
-                className={`p-1.5 rounded-lg ${device === value ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                className={`p-1.5 rounded-md ${device === value ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700'}`}>
                 <DeviceIcon className="w-4 h-4" />
               </button>
             ))}
           </div>
-          <span className="w-px h-5 mx-1 bg-slate-200 dark:bg-slate-700" />
-          <button type="button" aria-label="Zoom out" className={iconButton} onClick={() => setZoom(zoom - 10)}><ZoomOut className="w-4 h-4" /></button>
-          <button type="button" aria-label="Reset zoom" className="text-xs w-10 tabular-nums" onClick={() => setZoom(100)}>{zoom}%</button>
-          <button type="button" aria-label="Zoom in" className={iconButton} onClick={() => setZoom(zoom + 10)}><ZoomIn className="w-4 h-4" /></button>
+          <div className={toolGroup}>
+            <button type="button" aria-label="Zoom out" className={iconButton} onClick={() => setZoom(zoom - 10)}><ZoomOut className="w-4 h-4" /></button>
+            <button type="button" aria-label="Reset zoom" className="text-[13px] w-11 tabular-nums" onClick={() => setZoom(100)}>{zoom}%</button>
+            <button type="button" aria-label="Zoom in" className={iconButton} onClick={() => setZoom(zoom + 10)}><ZoomIn className="w-4 h-4" /></button>
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          {!readOnly && (
+            <button type="button" aria-label="Save as template" title="Save as template" className={`${secondaryButton} !px-2.5 !py-1.5`} onClick={() => setIsSavingTemplate(true)}>
+              <LayoutTemplate className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden 2xl:inline">Save as template</span>
+            </button>
+          )}
           <button type="button" className={`${secondaryButton} !py-1.5`} onClick={() => setIsPreviewing(true)}>
             <Eye className="w-4 h-4" aria-hidden="true" />
             Preview
@@ -143,6 +163,15 @@ const Editor: React.FC = () => {
       </header>
 
       <ConflictBanner />
+
+      {welcome && (
+        <div role="status" className="shrink-0 flex items-center justify-center gap-3 px-4 py-2 text-sm bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
+          {welcome === 'created'
+            ? `Your ${moduleNoun(project.type)} is ready. Change anything you like, then publish.`
+            : 'Build your template from sections and blocks, then choose Save as template at the top.'}
+          <button type="button" aria-label="Dismiss" className="p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10" onClick={() => setWelcome(null)}><X className="w-3.5 h-3.5" /></button>
+        </div>
+      )}
 
       {isPreviewing ? (
         <div className="flex-1 min-h-0 flex flex-col p-4 gap-2">
@@ -166,6 +195,27 @@ const Editor: React.FC = () => {
           <LeftPanel />
           <Canvas />
         </div>
+      )}
+
+      {isSavingTemplate && (
+        <SaveToLibrary
+          kind="template"
+          initialName={draft.title}
+          buildDefinition={async () => {
+            await saveNow();
+            const state = useStudio.getState();
+            const current = state.draft!;
+            return templateFromProject({
+              type: project.type,
+              theme: current.theme,
+              variables: current.variables,
+              settings: current.settings,
+              defs: projectVariableDefs(project.templateId, current.settings),
+              documents: state.documents,
+            });
+          }}
+          onClose={() => setIsSavingTemplate(false)}
+        />
       )}
 
       {isPublishing && (
@@ -236,7 +286,7 @@ export const StudioPage: React.FC = () => {
     );
   }
   if (!loadedId || loadedId !== projectId) {
-    return <div role="status" className="h-screen flex items-center justify-center text-sm text-slate-500 bg-slate-50 dark:bg-slate-950">Loading editor...</div>;
+    return <StudioSkeleton />;
   }
   return <Editor />;
 };

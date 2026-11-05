@@ -19,11 +19,19 @@ export async function waitForSaved(page: Page) {
   await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible({ timeout: 10_000 });
 }
 
-/** Creates a project from a template with its default details, ending on the project page. */
-export async function createFromTemplate(page: Page, templateId: string) {
+/** Creates a project from a template with its default details, which opens the editor. */
+export async function createInEditor(page: Page, templateId: string) {
   await page.goto(`${BASE}/new/${templateId}`);
   await page.getByRole('button', { name: /^Create / }).click();
-  await expect(page.getByText(/is ready\. Publish it now/)).toBeVisible();
+  await expect(page.getByTestId('canvas-stage')).toBeVisible();
+  await expect(page.getByText(/is ready\. Change anything/)).toBeVisible();
+}
+
+/** The same, ending on the project page. */
+export async function createFromTemplate(page: Page, templateId: string) {
+  await createInEditor(page, templateId);
+  await page.getByRole('button', { name: 'Back to project' }).click();
+  await expect(page.getByRole('tablist', { name: 'Project sections' })).toBeVisible();
 }
 
 export async function publish(page: Page, slug: string) {

@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '../routes';
 import { useSession } from '../session';
+import { ShellSkeleton } from '../shared/ui';
 
 export const FullPageSpinner: React.FC = () => (
   <div className="h-screen w-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -9,11 +10,12 @@ export const FullPageSpinner: React.FC = () => (
   </div>
 );
 
+
 export const RequireAuth: React.FC = () => {
   const { user, isLoading } = useSession();
   const location = useLocation();
 
-  if (isLoading) return <FullPageSpinner />;
+  if (isLoading) return <ShellSkeleton />;
   if (!user) {
     // The return path is kept in router state rather than the URL, so a crafted
     // link can't send someone to another site after they log in.

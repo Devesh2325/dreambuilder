@@ -10,7 +10,8 @@ const openEditor = async (page: Page, templateId: string) => {
 const openBlank = async (page: Page, plural: string, label: string) => {
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: plural, exact: true }).click();
   await page.getByRole('button', { name: `New ${label}` }).first().click();
-  await page.getByRole('button', { name: 'Create blank' }).click();
+  await page.getByRole('button', { name: /Start blank/ }).click();
+  await page.getByRole('button', { name: 'Create and open editor' }).click();
   await expect(page.getByTestId('canvas-stage')).toBeVisible();
 };
 
@@ -127,7 +128,7 @@ test('menu editor: add Home, About and Blog, reorder, and create a page for an i
   await expect(page.getByRole('button', { name: 'Blog /blog' })).toBeVisible();
 });
 
-test('menu module: template items are edited in details, or taken over in the block', async ({ page }) => {
+test('menu module: template items are edited in variables, or taken over in the block', async ({ page }) => {
   await signUp(page);
   await openEditor(page, 'menu-product');
   const nav = canvas(page).getByRole('navigation', { name: 'Main' });

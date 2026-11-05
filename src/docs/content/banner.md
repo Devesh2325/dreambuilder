@@ -35,4 +35,4 @@ If you set more than one, the first to happen wins. Show popups sparingly, becau
 
 ## Carousels
 
-Edit the slides under **Details**. Select the carousel block to change how many seconds each slide shows and whether arrows appear. Rotation pauses while the mouse is over it, and stops for visitors who have asked their device to reduce motion.
+Edit the slides under **Variables**. Use the step bar above the canvas to move between them. Select the carousel block to change how many seconds each slide shows and whether arrows appear. Rotation pauses while the mouse is over it, and stops for visitors who have asked their device to reduce motion.

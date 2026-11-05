@@ -7,7 +7,7 @@ import { AssetRecord } from '../../data/services';
 import { PLAN_LIMITS, UserRole } from '../../types/auth';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
-import { cardClass, dangerButton, EmptyState, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton } from '../shared/ui';
+import { BusyIcon, BusyLabel, cardClass, CardsSkeleton, dangerButton, EmptyState, ErrorNote, errorMessage, inputClass, LoadingArea, LoadingNote, PageHeader, primaryButton, secondaryButton, Skeleton } from '../shared/ui';
 import { useWorkspace } from '../workspace';
 
 // ---- Assets -----------------------------------------------------------------
@@ -39,7 +39,7 @@ export const AssetsPage: React.FC = () => {
         subtitle="Images for your projects. PNG, JPEG, WebP and GIF, up to 10 MB each."
         actions={can('edit:project') && (
           <label className={`${primaryButton} cursor-pointer`}>
-            <Upload className="w-4 h-4" aria-hidden="true" />
+            <BusyIcon busy={upload.isPending}><Upload className="w-4 h-4" aria-hidden="true" /></BusyIcon>
             {upload.isPending ? 'Uploading...' : 'Upload'}
             <input
               type="file"
@@ -56,7 +56,7 @@ export const AssetsPage: React.FC = () => {
         )}
       />
       <ErrorNote message={upload.isError ? errorMessage(upload.error) : remove.isError ? errorMessage(remove.error) : null} />
-      {query.isLoading && <LoadingNote />}
+      {query.isLoading && <CardsSkeleton count={8} className="mt-4 grid gap-4 grid-cols-2 md:grid-cols-4" />}
       {query.isError && <ErrorNote message="We couldn't load your assets." />}
       {query.isSuccess && query.data.length === 0 && <EmptyState title="No assets yet">Upload your logo and images to reuse them across projects.</EmptyState>}
       <ul className="mt-4 grid gap-4 grid-cols-2 md:grid-cols-4">
@@ -78,10 +78,10 @@ export const AssetsPage: React.FC = () => {
                   {copiedId === asset.id ? 'Copied' : 'Copy link'}
                 </button>
                 {can('edit:project') && (
-                  <button type="button" aria-label={`Delete ${asset.name}`} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
+                  <button type="button" aria-label={`Delete ${asset.name}`} disabled={remove.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
                     if (window.confirm(`Delete ${asset.name}? Published pages using it will show a broken image.`)) remove.mutate(asset);
                   }}>
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <BusyIcon busy={remove.isPending && remove.variables?.id === asset.id} className="w-3.5 h-3.5"><Trash2 className="w-3.5 h-3.5" /></BusyIcon>
                   </button>
                 )}
               </div>
@@ -164,7 +164,7 @@ export const AnalyticsPage: React.FC = () => {
           {projectList.data?.map((project) => <option key={project.id} value={project.id}>{project.title} ({MODULES[project.type].label})</option>)}
         </select>
       </div>
-      {summary.isLoading && <LoadingNote />}
+      {summary.isLoading && <LoadingArea className="grid gap-5 md:grid-cols-2"><Skeleton className="h-64 !rounded-2xl" /><Skeleton className="h-64 !rounded-2xl" /></LoadingArea>}
       {summary.isError && <ErrorNote message="We couldn't load analytics." />}
       {summary.isSuccess && total === 0 && <EmptyState title="No activity yet">Numbers appear once visitors reach a published project.</EmptyState>}
       {total > 0 && (
@@ -262,7 +262,7 @@ export const TeamPage: React.FC = () => {
             <select aria-label="Role" className={`${inputClass} !w-auto`} value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
               {roles.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
-            <button type="submit" className={primaryButton} disabled={invite.isPending}>Create invite link</button>
+            <button type="submit" className={primaryButton} disabled={invite.isPending}><BusyLabel busy={invite.isPending} busyText="Creating...">Create invite link</BusyLabel></button>
           </form>
           {inviteLink && (
             <div role="status" className="mt-3 text-sm">
@@ -292,6 +292,7 @@ export const TeamPage: React.FC = () => {
                 {editable ? (
                   <select
                     aria-label={`Role for ${member.email}`}
+                    disabled={updateRole.isPending}
                     className={`${inputClass} !w-auto !py-1`}
                     value={member.role}
                     onChange={(e) => updateRole.mutate({ userId: member.userId, next: e.target.value as UserRole })}
@@ -300,10 +301,10 @@ export const TeamPage: React.FC = () => {
                   </select>
                 ) : <span className="capitalize text-slate-500 dark:text-slate-400">{member.role}</span>}
                 {editable && (
-                  <button type="button" aria-label={`Remove ${member.email}`} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
+                  <button type="button" aria-label={`Remove ${member.email}`} disabled={removeMember.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
                     if (window.confirm(`Remove ${member.email} from this workspace?`)) removeMember.mutate(member.userId);
                   }}>
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <BusyIcon busy={removeMember.isPending && removeMember.variables === member.userId} className="w-3.5 h-3.5"><Trash2 className="w-3.5 h-3.5" /></BusyIcon>
                   </button>
                 )}
               </li>
@@ -319,7 +320,7 @@ export const TeamPage: React.FC = () => {
             {invitations.data?.map((invitation) => (
               <li key={invitation.id} className="py-2 flex items-center justify-between gap-3 text-sm">
                 <span className="truncate">{invitation.email} <span className="capitalize text-slate-500 dark:text-slate-400">({invitation.role})</span></span>
-                <button type="button" className={dangerButton} onClick={() => revoke.mutate(invitation.id)}>Cancel invite</button>
+                <button type="button" className={dangerButton} disabled={revoke.isPending} onClick={() => revoke.mutate(invitation.id)}><BusyLabel busy={revoke.isPending && revoke.variables === invitation.id} busyText="Cancelling...">Cancel invite</BusyLabel></button>
               </li>
             ))}
           </ul>
@@ -352,7 +353,7 @@ export const AcceptInvitePage: React.FC = () => {
         <p className="text-sm text-slate-500 dark:text-slate-400">The invitation only works for the email it was sent to.</p>
         <ErrorNote message={accept.isError ? errorMessage(accept.error) : null} />
         <button type="button" className={primaryButton} disabled={accept.isPending} onClick={() => accept.mutate()}>
-          {accept.isPending ? 'Joining...' : 'Accept invitation'}
+          <BusyLabel busy={accept.isPending} busyText="Joining...">Accept invitation</BusyLabel>
         </button>
       </div>
     </main>
@@ -433,7 +434,7 @@ export const BrandPage: React.FC = () => {
         </fieldset>
         {canEdit && (
           <div className="flex items-center gap-3">
-            <button type="submit" className={primaryButton} disabled={save.isPending}>Save brand kit</button>
+            <button type="submit" className={primaryButton} disabled={save.isPending}><BusyLabel busy={save.isPending} busyText="Saving...">Save brand kit</BusyLabel></button>
             {isSaved && <span role="status" className="text-sm text-emerald-700 dark:text-emerald-400">Saved</span>}
           </div>
         )}
@@ -490,7 +491,7 @@ export const SettingsPage: React.FC = () => {
                 setIsSaved(false);
               }} />
             </label>
-            <button type="submit" className={primaryButton} disabled={rename.isPending}>Save</button>
+            <button type="submit" className={primaryButton} disabled={rename.isPending}><BusyLabel busy={rename.isPending} busyText="Saving...">Save</BusyLabel></button>
             {isSaved && <span role="status" className="ml-3 text-sm text-emerald-700 dark:text-emerald-400">Saved</span>}
           </fieldset>
         </form>
@@ -515,7 +516,7 @@ export const SettingsPage: React.FC = () => {
           <label className="block text-sm font-medium">Workspace name
             <input required maxLength={120} className={`${inputClass} mt-1`} value={newWorkspace} onChange={(e) => setNewWorkspace(e.target.value)} />
           </label>
-          <button type="submit" className={secondaryButton} disabled={create.isPending}>Create workspace</button>
+          <button type="submit" className={secondaryButton} disabled={create.isPending}><BusyLabel busy={create.isPending} busyText="Creating...">Create workspace</BusyLabel></button>
         </form>
       </div>
     </>

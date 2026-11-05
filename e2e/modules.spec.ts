@@ -19,7 +19,7 @@ test('removed modules are gone everywhere', async ({ page }) => {
 });
 
 for (const module of MODULE_LIST) {
-  test(`${module.plural}: own page, own templates in the dialog`, async ({ page }) => {
+  test(`${module.plural}: own page, own templates on the create page`, async ({ page }) => {
     await signUp(page);
     await nav(page).getByRole('link', { name: module.plural, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${module.path}$`));
@@ -27,19 +27,22 @@ for (const module of MODULE_LIST) {
     await expect(page.getByRole('heading', { name: `No ${module.plural.toLowerCase()} yet` })).toBeVisible();
 
     await page.getByRole('button', { name: `New ${module.label.toLowerCase()}` }).first().click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('heading', { name: `New ${module.label.toLowerCase()}` })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/create\\?type=${module.type}$`));
+    await expect(page.getByRole('heading', { name: module.plural, level: 2 })).toBeVisible();
 
-    // Only this module's templates are offered.
+    // Only this module's templates are offered, plus starting blank.
     const templates = templatesFor(module.type);
-    await expect(dialog.getByRole('listitem')).toHaveCount(templates.length);
-    for (const template of templates.slice(0, 4)) await expect(dialog.getByText(template.title, { exact: true })).toBeVisible();
+    const list = page.getByRole('list', { name: 'Templates' });
+    await expect(list.getByRole('listitem')).toHaveCount(templates.length + 1);
+    for (const template of templates.slice(0, 4)) await expect(list.getByText(template.title, { exact: true })).toBeVisible();
 
-    await dialog.getByText(templates[0].title, { exact: true }).click();
+    await page.getByRole('button', { name: `Use ${templates[0].title}`, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/new/${templates[0].id}$`));
     await page.getByRole('button', { name: /^Create / }).click();
-    await expect(page.getByText(/is ready\. Publish it now/)).toBeVisible();
+    await expect(page.getByTestId('canvas-stage')).toBeVisible();
+    await expect(page.getByText(/is ready\. Change anything/)).toBeVisible();
 
+    await page.getByRole('button', { name: 'Back to project' }).click();
     await nav(page).getByRole('link', { name: module.plural, exact: true }).click();
     await expect(page.getByRole('table')).toBeVisible();
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
@@ -153,21 +156,24 @@ test('responses are counted in the form table', async ({ page }) => {
   await expect(row.getByRole('cell', { name: '1', exact: true })).toBeVisible();
 });
 
-test('sidebar create dialog starts by choosing a type, and can start blank with a name', async ({ page }) => {
+test('the create page switches type, searches, and can start blank with a name', async ({ page }) => {
   await signUp(page);
   await page.getByRole('complementary').getByRole('button', { name: 'Create new' }).click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('heading', { name: 'What do you want to create?' })).toBeVisible();
-  await expect(dialog.getByRole('button')).toHaveCount(MODULE_LIST.length + 1);
+  await expect(page).toHaveURL(/\/create$/);
+  await expect(page.getByRole('list', { name: 'Steps' }).getByRole('listitem')).toHaveCount(3);
+  const types = page.getByRole('navigation', { name: 'What to create' });
+  await expect(types.getByRole('button')).toHaveCount(MODULE_LIST.length);
+  const list = page.getByRole('list', { name: 'Templates' });
 
-  await dialog.getByRole('button', { name: /^Product tour/ }).click();
-  await dialog.getByLabel('Search templates').fill('feature');
-  await expect(dialog.getByRole('listitem')).toHaveCount(1);
-  await dialog.getByRole('button', { name: 'Back to all types' }).click();
-  await dialog.getByRole('button', { name: /^Form/ }).click();
+  await types.getByRole('button', { name: 'Product tour' }).click();
+  await page.getByLabel('Search templates').fill('feature');
+  await expect(list.getByRole('listitem')).toHaveCount(1);
 
-  await dialog.getByLabel('Or start blank:').fill('My signup form');
-  await dialog.getByRole('button', { name: 'Create blank' }).click();
+  await types.getByRole('button', { name: 'Form', exact: true }).click();
+  await expect(page.getByLabel('Search templates')).toHaveValue('');
+  await page.getByRole('button', { name: /Start blank/ }).click();
+  await page.getByRole('dialog').getByLabel('Name').fill('My signup form');
+  await page.getByRole('button', { name: 'Create and open editor' }).click();
   await expect(page.getByRole('heading', { name: 'My signup form' })).toBeVisible();
   await expect(page.getByTestId('canvas-stage')).toBeVisible();
 
@@ -185,14 +191,24 @@ test('wizard project name is used in the table', async ({ page }) => {
   await expect(page.getByRole('rowheader', { name: 'Dashboard intro' })).toBeVisible();
 });
 
-test('dialog closes with Escape and the close button', async ({ page }) => {
+test('a template can be previewed full screen before choosing it', async ({ page }) => {
   await signUp(page);
-  await page.goto('/forms');
-  await page.getByRole('button', { name: 'New form' }).first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.goto('/create?type=form');
+  await page.getByRole('button', { name: 'Preview Contact form', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Contact form' })).toBeVisible();
+  await expect(dialog.frameLocator('iframe').getByLabel(/Email/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Mobile' }).click();
+  await expect(dialog.locator('iframe')).toHaveJSProperty('offsetWidth', 390);
+
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.getByRole('button', { name: 'New form' }).first().click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Preview Contact form', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Close preview' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Preview Contact form', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Use this template' }).click();
+  await expect(page).toHaveURL(/\/new\/form-contact$/);
+  await expect(page.getByRole('list', { name: 'Steps' }).getByRole('listitem').nth(1)).toHaveAttribute('aria-current', 'step');
 });

@@ -4,7 +4,7 @@ A website has several pages, with a shared header and footer, hosted at its own 
 
 ## Create one
 
-Choose a website template, fill in your details, then **Create website**. You can edit everything later under **Details** in the editor.
+Choose a website template, fill in your details, then **Create website**. It opens in the editor, where you can change everything under **Variables**.
 
 ## Pages
 

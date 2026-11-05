@@ -174,8 +174,8 @@ const tourTemplates = [
 
 // ---- Forms ------------------------------------------------------------------
 
-const formPage = (submitText: string, success: string, children: El[]): TemplatePage =>
-  experience([el('Form', { props: { submitText, successMessage: success } }, children)], { padding: '24px', maxWidth: '640px', marginLeft: 'auto', marginRight: 'auto' });
+export const formPage = (submitText: string, success: string, children: El[]): TemplatePage =>
+  experience([el('Form', { props: { submitText, successMessage: success } }, children)], { padding: '32px max(24px, calc((100% - 640px) / 2))' });
 
 export const field = (name: string, label: string, inputType = 'text', required = true, optionsText = ''): El =>
   el('FormField', { props: { name, label, inputType, required, optionsText } });
@@ -332,7 +332,7 @@ const faqPage = (intro: boolean): TemplatePage =>
     heading('{{title}}', 'h2', { marginBottom: '12px' }),
     ...(intro ? [text('{{intro}}', { color: 'var(--fp-muted)', marginBottom: '12px' }, 'intro')] : []),
     el('Accordion', { repeat: { list: 'questions', as: 'item' }, props: { question: '{{item.question}}', answer: '{{item.answer}}' } }),
-  ], { padding: '24px', maxWidth: '760px', marginLeft: 'auto', marginRight: 'auto' });
+  ], { padding: '32px max(24px, calc((100% - 760px) / 2))' });
 
 const questionFields: VariableDef[] = [
   { key: 'question', label: 'Question', type: 'text', required: true },

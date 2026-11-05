@@ -8,6 +8,8 @@ import { ExperienceView } from '../renderer/ExperienceView';
 import { Frame } from '../renderer/Frame';
 import { RenderContext } from '../renderer/types';
 import { handleStudioShortcut } from './shortcuts';
+import { StepBar } from './StepBar';
+import { findSteps, stepOfNode } from './steps';
 import { useStudio } from './store';
 
 /** The prop that double-clicking edits. */
@@ -16,7 +18,7 @@ const INLINE_PROP: Record<string, string> = {
 };
 
 const DEVICE_LOGICAL_WIDTH = { tablet: 768, mobile: 390 } as const;
-const STAGE_PADDING = 20;
+const STAGE_PADDING = 12;
 // Desktop always renders at least this wide, staying above the tablet breakpoint, and
 // is scaled to fit. Otherwise a small screen would show phone styles in Desktop view.
 const DESKTOP_FIT_WIDTH = 1100;
@@ -26,6 +28,8 @@ const DESKTOP_MIN_WIDTH = 1000;
 // they couldn't be seen, clicked or dropped on. None of this reaches published pages.
 const CANVAS_CSS = `
 html{scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.45) transparent}
+.fp-root{min-height:100vh}
+.fp-page:has(>.fp-step),.fp-page:has(>.fp-popup){min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px;background:color-mix(in srgb,var(--fp-text) 8%,var(--fp-background))}
 *{user-select:none}
 a:not([draggable=true]),img:not([draggable=true]){-webkit-user-drag:none}
 [draggable=true]{cursor:grab}
@@ -105,7 +109,7 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
     const state = useStudio.getState();
     const payload = state.dragging;
     if (!payload) return null;
-    const movingType = payload.kind === 'block' ? payload.type : state.getNode(payload.id)?.type;
+    const movingType = payload.kind === 'block' ? payload.type : payload.kind === 'nodes' ? payload.nodes[payload.rootId]?.type : state.getNode(payload.id)?.type;
     if (!movingType) return null;
 
     let element = closestNode(event.target);
@@ -243,7 +247,7 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
     const onDragOver = (event: DragEvent) => {
       if (!useStudio.getState().dragging) return;
       event.preventDefault();
-      if (event.dataTransfer) event.dataTransfer.dropEffect = useStudio.getState().dragging?.kind === 'block' ? 'copy' : 'move';
+      if (event.dataTransfer) event.dataTransfer.dropEffect = useStudio.getState().dragging?.kind === 'node' ? 'move' : 'copy';
       const target = computeDrop(event);
       dropRef.current = target;
       setDropTarget(target);
@@ -255,6 +259,7 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
       const target = dropRef.current;
       if (payload && target) {
         if (payload.kind === 'block') state.addBlock(payload.type, target.parentId, target.index);
+        else if (payload.kind === 'nodes') state.addNodes(payload.rootId, payload.nodes, target.parentId, target.index);
         else state.moveBlock(payload.id, target.parentId, target.index);
       }
       dropRef.current = null;
@@ -401,7 +406,7 @@ const Breadcrumbs: React.FC = () => {
   const { documentOfNode, select } = useStudio.getState();
   const owner = selectedId ? documentOfNode(selectedId) : null;
   if (!owner || !selectedId || !owner.content.nodes[selectedId]) {
-    return <p className="text-xs text-slate-400 dark:text-slate-500">Click a block to edit it. Double-click text to type.</p>;
+    return <p className="text-[13px] text-slate-500 dark:text-slate-400">Click a block to edit it. Double-click text to type.</p>;
   }
   const path = [...getAncestors(owner.content, selectedId), selectedId];
   return (
@@ -419,7 +424,7 @@ const Breadcrumbs: React.FC = () => {
                 select(id);
                 useStudio.getState().setTool('edit');
               }}
-              className={`shrink-0 px-1.5 py-0.5 rounded text-xs ${isLast ? 'font-semibold text-indigo-700 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+              className={`shrink-0 px-1.5 py-0.5 rounded text-[13px] ${isLast ? 'font-semibold text-indigo-700 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
             >
               {node.name ?? BLOCK_META[node.type]?.label ?? node.type}
             </button>
@@ -436,6 +441,8 @@ export const Canvas: React.FC = () => {
   const activeDocumentId = useStudio((s) => s.activeDocumentId);
   const device = useStudio((s) => s.device);
   const zoom = useStudio((s) => s.zoom);
+  const selectedId = useStudio((s) => s.selectedId);
+  const activeStepKey = useStudio((s) => s.activeStepKey);
   const [doc, setDoc] = useState<Document | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ width: 0, height: 0 });
@@ -453,10 +460,26 @@ export const Canvas: React.FC = () => {
   const visible = useMemo(() => useStudio.getState().visibleDocuments(), [documents, activeDocumentId]); // eslint-disable-line react-hooks/exhaustive-deps
   const contents = useMemo(() => visible.map((d) => d.content), [visible]);
   const active = documents.find((d) => d.id === activeDocumentId);
+  const variables = draft?.variables;
+  const stepSet = useMemo(() => (active && variables ? findSteps(active.content, variables) : null), [active, variables]);
+  const activeStep = stepSet ? (stepSet.steps.find((step) => step.key === activeStepKey) ?? stepSet.steps[0] ?? null) : null;
+  const visibleStepKey = activeStep?.key;
   const ctx = useMemo<RenderContext>(
-    () => ({ mode: 'edit', navLinks: buildNavLinks(documents, active?.slug ?? '') }),
-    [documents, active?.slug],
+    () => ({
+      mode: 'edit',
+      navLinks: buildNavLinks(documents, active?.slug ?? ''),
+      visibleStep: stepSet && visibleStepKey ? { parentKey: stepSet.parentKey, stepType: stepSet.stepType, key: visibleStepKey } : undefined,
+    }),
+    [documents, active?.slug, stepSet, visibleStepKey],
   );
+
+  // Choosing a block in another step, from Layers for example, shows that step.
+  useEffect(() => {
+    if (!selectedId || !stepSet || !active || !active.content.nodes[selectedId]) return;
+    const owner = stepOfNode(active.content, stepSet, selectedId);
+    // Repeated steps share one stored block, so the one on screen already counts.
+    if (owner && owner.sourceId !== activeStep?.sourceId) useStudio.getState().setActiveStep(owner.key);
+  }, [selectedId, stepSet, active, activeStep?.sourceId]);
 
   if (!draft) return null;
 
@@ -474,6 +497,7 @@ export const Canvas: React.FC = () => {
 
   return (
     <div className="flex-1 min-w-0 flex flex-col">
+      <StepBar set={stepSet} active={activeStep} />
       <div
         ref={stageRef}
         data-testid="canvas-stage"
@@ -502,7 +526,7 @@ export const Canvas: React.FC = () => {
           </div>
         )}
       </div>
-      <div className="h-8 shrink-0 flex items-center px-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+      <div className="h-9 shrink-0 flex items-center px-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
         <Breadcrumbs />
       </div>
     </div>
