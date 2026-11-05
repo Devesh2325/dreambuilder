@@ -5,6 +5,7 @@ import { StudioPage } from '../studio/StudioPage';
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SignUpPage } from './auth/AuthPages';
 import { FullPageSpinner, RedirectIfAuthenticated, RequireAuth } from './auth/RequireAuth';
 import { DashboardPage } from './dashboard/DashboardPage';
+import { LandingPage } from './landing/LandingPage';
 import { ProjectPage } from './projects/ProjectPage';
 import { ProjectsPage } from './projects/ProjectsPage';
 import { Shell } from './shell/Shell';
@@ -41,6 +42,8 @@ export const AppRoutes: React.FC = () => (
     {/* Must stay reachable while logged in: the email link creates a session. */}
     <Route path="reset-password" element={<ResetPasswordPage />} />
 
+    {/* Also reachable when logged in, where the home address is the dashboard. */}
+    <Route path="welcome" element={<LandingPage />} />
     <Route path="docs" element={docsElement} />
     <Route path="docs/:slug" element={docsElement} />
 

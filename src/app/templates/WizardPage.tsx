@@ -62,7 +62,12 @@ const Wizard: React.FC<{ template: TemplateDefinition }> = ({ template }) => {
   const navigate = useNavigate();
   const branding = workspace?.branding ?? {};
 
-  const [values, setValues] = useState<VariableValues>(() => initialValues(template, branding));
+  // Templates can use the workspace's global variables, which aren't on the form.
+  const [values, setValues] = useState<VariableValues>(() => ({
+    ...Object.fromEntries((branding.globalVariables ?? []).map((item) => [item.key, item.value])),
+    ...initialValues(template, branding),
+  }));
+  const questions = useMemo(() => template.variables.filter((def) => def.askOnCreate !== false), [template]);
   const [themeIndex, setThemeIndex] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [device, setDevice] = useState<keyof typeof DEVICE_WIDTHS>('desktop');
@@ -140,7 +145,7 @@ const Wizard: React.FC<{ template: TemplateDefinition }> = ({ template }) => {
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Only you see this, in your project list.</p>
             </div>
 
-            <VariableForm defs={template.variables} values={values} errors={errors} onChange={setValues} />
+            <VariableForm defs={questions} values={values} errors={errors} onChange={setValues} />
 
             <section aria-label="Look and feel">
               <h2 className="text-sm font-bold mb-3">Look and feel</h2>

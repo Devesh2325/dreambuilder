@@ -2,7 +2,7 @@
 
 FlowPilot lets you build websites, forms, product tours and other experiences from templates. There are three steps:
 
-1. **Choose a template.** Go to **Create new** and pick one.
+1. **Choose a template.** On the dashboard, click **Choose a template** and pick what to make. Or open a module from the left menu, and click its **New** button.
 2. **Fill in your details.** The preview updates as you type. Your details are stored as variables, so changing one later updates it everywhere it appears.
 3. **Edit and publish.** Your project opens in the editor, where you can change anything. Every project gets a web address when you publish it.
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { LandingPage } from '../landing/LandingPage';
 import { ROUTES } from '../routes';
 import { useSession } from '../session';
 import { ShellSkeleton } from '../shared/ui';
@@ -16,6 +17,8 @@ export const RequireAuth: React.FC = () => {
   const location = useLocation();
 
   if (isLoading) return <ShellSkeleton />;
+  // People who haven't signed in see what this is, rather than a login form.
+  if (!user && location.pathname === ROUTES.home && !endedThisVisit) return <LandingPage />;
   if (!user) {
     // The return path is kept in router state rather than the URL, so a crafted
     // link can't send someone to another site after they log in. It's only for people

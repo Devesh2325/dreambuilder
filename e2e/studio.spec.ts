@@ -215,7 +215,7 @@ test('layers can be reordered by dragging', async ({ page }) => {
   const before = await texts.nth(0).evaluate((el) => el.tagName);
   expect(before).toBe('H1');
 
-  await panel.getByRole('button', { name: 'Button', exact: true }).dragTo(panel.getByRole('button', { name: 'Heading', exact: true }).first(), {
+  await panel.getByRole('button', { name: 'Button', exact: true }).first().dragTo(panel.getByRole('button', { name: 'Heading', exact: true }).first(), {
     targetPosition: { x: 20, y: 1 },
   });
   await expect(texts.nth(0)).toHaveClass(/fp-btn/);

@@ -522,7 +522,32 @@ const Carousel: Block = ({ node, attrs, children, ctx }) => {
   );
 };
 
+/**
+ * Two copies side by side make the loop seamless. The second is only there for the look,
+ * so it's hidden from screen readers and the keyboard. In the editor it stays still,
+ * so every item can be clicked.
+ */
+const Marquee: Block = ({ node, attrs, children, ctx }) => {
+  if (ctx.mode === 'edit') {
+    return (
+      <div {...withClass(attrs, 'fp-marquee')} data-editing="true">
+        <div className="fp-marquee-track">{children}</div>
+      </div>
+    );
+  }
+  const seconds = Math.max(5, Number(node.props.speed) || 30);
+  return (
+    <div {...withClass(attrs, 'fp-marquee')}>
+      <div className="fp-marquee-track" data-reverse={node.props.reverse === true || undefined} style={{ animationDuration: `${seconds}s` }}>
+        <div className="fp-marquee-set">{children}</div>
+        <div className="fp-marquee-set" aria-hidden="true" inert>{children}</div>
+      </div>
+    </div>
+  );
+};
+
 export const BLOCK_RENDERERS: Record<string, Block> = {
+  Marquee,
   Carousel,
   Slide: container('fp-box fp-slide'),
   Root: container('fp-page'),

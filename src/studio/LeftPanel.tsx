@@ -16,10 +16,11 @@ import { VariablesPanel } from './VariablesPanel';
 const LAYOUT = ['Section', 'Container', 'Box', 'Card', 'Grid', 'Row'];
 const CONTENT = ['Heading', 'Text', 'Button', 'Image', 'Video', 'Divider', 'Spacer'];
 const FORM = ['Form', 'FormStep', 'FormField', 'ScaleField'];
+const MOVING = ['Marquee', 'Carousel', 'Slide'];
 
 const BLOCK_GROUPS: Record<ProjectType, { title: string; types: string[] }[]> = {
-  website: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion'] }, { title: 'Forms', types: FORM }],
-  page: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion'] }, { title: 'Forms', types: FORM }],
+  website: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion'] }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
+  page: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion'] }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
   tour: [{ title: 'Tour', types: ['TourStep'] }, { title: 'Inside a step', types: ['Heading', 'Text', 'Button', 'Image', 'Video', 'Row'] }],
   form: [{ title: 'Form', types: FORM }, { title: 'Content', types: ['Heading', 'Text', 'Image', 'Divider', 'Spacer'] }],
   demo: [{ title: 'Demo', types: ['DemoScreen', 'DemoHotspot'] }],
@@ -449,7 +450,7 @@ export const LeftPanel: React.FC = () => {
       {tool && active && (
         <div role="tabpanel" aria-label={active.label} className="w-[320px] flex flex-col min-h-0">
           {tool !== 'edit' && <h2 className="shrink-0 px-3 pt-3 pb-1 text-base font-semibold">{active.label}</h2>}
-          <div className="relative flex-1 overflow-y-auto min-h-0">
+          <div className="relative flex-1 overflow-y-auto overflow-x-hidden min-h-0">
             {tool === 'edit' && <SettingsPanel />}
             {tool === 'add' && <AddPanel />}
             {tool === 'layers' && <LayersPanel />}

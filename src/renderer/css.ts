@@ -227,6 +227,14 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-demo-dots{display:flex;gap:6px}
 :where(.fp-root) .fp-demo-dots span{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--fp-text) 18%,transparent)}
 :where(.fp-root) .fp-demo-dots span[data-active=true]{background:var(--fp-primary)}
+:where(.fp-root) .fp-marquee{overflow:hidden;width:100%;display:block}
+:where(.fp-root) .fp-marquee-track{display:flex;width:max-content;animation:fp-marquee 30s linear infinite}
+:where(.fp-root) .fp-marquee-track[data-reverse]{animation-direction:reverse}
+:where(.fp-root) .fp-marquee:hover .fp-marquee-track{animation-play-state:paused}
+:where(.fp-root) .fp-marquee-set{display:flex;flex-shrink:0;align-items:center;justify-content:space-around;gap:48px;padding-right:48px;min-width:100vw}
+:where(.fp-root) .fp-marquee[data-editing] .fp-marquee-track{width:auto;flex-wrap:wrap;justify-content:center;gap:12px 48px;animation:none}
+@keyframes fp-marquee{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){:where(.fp-root) .fp-marquee-track{animation:none;width:auto;flex-wrap:wrap}:where(.fp-root) .fp-marquee-set[aria-hidden]{display:none}:where(.fp-root) .fp-marquee-set{min-width:0;flex-wrap:wrap;justify-content:center}}
 :where(.fp-root) .fp-carousel{position:relative;width:100%}
 :where(.fp-root) .fp-slide{min-width:0}
 :where(.fp-root) .fp-carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:rgba(15,23,42,.55);color:#fff;font-size:1.25rem;line-height:1;cursor:pointer}

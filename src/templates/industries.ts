@@ -22,6 +22,10 @@ interface IndustrySite {
   about: { title: string; text: string; image: PhotoName };
   contact: { title: string; intro: string; button: string };
   hours?: string;
+  /** Short phrases for a scrolling strip under the hero. */
+  strip?: string[];
+  /** Shows the testimonials one at a time, instead of side by side. */
+  quotesCarousel?: boolean;
 }
 
 const list = (key: string, label: string, group: string, items: Item[], fields: VariableDef[]): VariableDef => ({
@@ -81,6 +85,24 @@ const serviceCards = (): El =>
     heading('{{service.title}}', 'h3'),
     text('{{service.description}}', { color: 'var(--fp-muted)' }, 'service.description'),
   ])]);
+
+const scrollingStrip = (): El =>
+  section([
+    el('Marquee', { props: { speed: 30 } }, [
+      el('Text', { repeat: { list: 'strip', as: 'mark' }, props: { text: '{{mark.text}}' }, styles: { fontWeight: 700, fontSize: '1.125rem', color: 'var(--fp-muted)', whiteSpace: 'nowrap' } }),
+    ]),
+  ], { paddingTop: '24px', paddingBottom: '24px', background: 'var(--fp-surface)' });
+
+const quotesRotating = (): El =>
+  section([
+    sectionTitle('What people say'),
+    el('Carousel', { props: { interval: 6, showArrows: true }, styles: { maxWidth: '760px', marginLeft: 'auto', marginRight: 'auto', width: '100%' } }, [
+      el('Slide', { repeat: { list: 'testimonials', as: 'person' }, styles: { alignItems: 'center', textAlign: 'center', gap: '12px', padding: '16px 48px' } }, [
+        text('"{{person.quote}}"', { fontSize: '1.375rem', fontWeight: 500 }),
+        text('{{person.name}}', { fontWeight: 700, color: 'var(--fp-primary)' }),
+      ]),
+    ]),
+  ], { background: 'var(--fp-surface)' });
 
 const quotes = (): El =>
   section([
@@ -162,6 +184,9 @@ function industrySite(site: IndustrySite): TemplateDefinition {
     { key: 'contact.hours', label: 'Opening hours', type: 'text', group: 'Contact details', default: site.hours ?? '' },
   ];
   if (!site.stats) variables.find((def) => def.key === 'stats')!.minItems = 0;
+  if (site.strip) {
+    variables.splice(8, 0, list('strip', 'Scrolling strip', 'Scrolling strip', site.strip.map((value) => ({ text: value })), [{ key: 'text', label: 'Text', type: 'text', required: true }]));
+  }
 
   const pages: TemplatePage[] = [
     {
@@ -169,9 +194,10 @@ function industrySite(site: IndustrySite): TemplateDefinition {
       seo: { title: '{{brand.name}} | {{brand.tagline}}', description: '{{hero.subheadline}}' },
       content: buildContent('p', [
         heroFor(site.hero.style),
+        ...(site.strip ? [scrollingStrip()] : []),
         statsBand(),
         section([sectionTitle(site.services.heading), serviceCards()]),
-        quotes(),
+        site.quotesCarousel ? quotesRotating() : quotes(),
         faqSection(),
         ctaBand(),
       ]),
@@ -233,6 +259,92 @@ const who = (quote: string, name: string) => ({ quote, name });
 const num = (value: string, label: string) => ({ value, label });
 
 const SITES: IndustrySite[] = [
+  {
+    id: 'accounting', title: 'Accounting firm', description: 'Tax, bookkeeping and advice for small businesses.', category: 'Finance and insurance', tags: ['accountant', 'tax', 'bookkeeping', 'finance'],
+    theme: THEME_MONO, brand: ['Ledger & Co', 'Clear numbers, calm decisions'], strip: ['Fixed monthly fees', 'Tax returns done on time', 'Free first meeting', 'Cloud bookkeeping', 'Small business experts'], quotesCarousel: true,
+    hero: { headline: 'Know exactly where your business stands', sub: 'Bookkeeping, tax and straightforward advice, for one fixed monthly fee.', image: 'dashboard', cta: 'Book a free call', style: 'split' },
+    services: { heading: 'Everything your finances need', pageTitle: 'Services', items: [svc('Bookkeeping', 'Always up to date, with no shoebox of receipts.'), svc('Tax returns', 'Filed on time, with every allowance claimed.'), svc('Business advice', 'Plain answers before the big decisions.')] },
+    stats: [num('500+', 'Businesses helped'), num('15', 'Years in practice'), num('100%', 'Returns on time')],
+    testimonials: [who('They took a huge worry off my plate.', 'Rachel B.'), who('The first accountant who explained things so I understood.', 'Dev P.')],
+    faq: [q('How much does it cost?', 'A fixed monthly fee, agreed up front. Replace this with your own pricing.'), q('Can I switch to you mid-year?', 'Yes. We handle the move from your old accountant.')],
+    about: { title: 'About us', text: 'We started this firm because small businesses deserve advice in plain English.', image: 'meeting' },
+    contact: { title: 'Book a free call', intro: 'Tell us about your business, and we will show you how we can help.', button: 'Request a call' }, hours: 'Mon to Fri, 9am to 5:30pm',
+  },
+  {
+    id: 'insurance', title: 'Insurance agency', description: 'Explain your cover simply, and collect quote requests.', category: 'Finance and insurance', tags: ['insurance', 'broker', 'cover'],
+    theme: THEME_OCEAN, brand: ['Evergreen Cover', 'Protection in plain English'], strip: ['Quotes in two minutes', 'Claims help 24 hours', 'No hidden extras', 'Home, car and life', 'Local advisors'], quotesCarousel: true,
+    hero: { headline: 'Cover you can actually understand', sub: 'Compare options with a real advisor, and only pay for what you need.', image: 'meeting', cta: 'Get a free quote', style: 'overlay' },
+    services: { heading: 'Cover for what matters', pageTitle: 'Our cover', items: [svc('Home', 'Your home and belongings, properly protected.'), svc('Car', 'From the basics up to fully comprehensive.'), svc('Life', 'Peace of mind for the people you love.')] },
+    stats: [num('30k', 'Customers covered'), num('48h', 'Average claim decision'), num('4.8/5', 'Customer rating')],
+    testimonials: [who('My claim was settled in days, not months.', 'Ruth A.'), who('They explained what I was paying for.', 'Sam B.')],
+    faq: [q('How long does a quote take?', 'About two minutes.'), q('Can I change my cover later?', 'Yes, at any time.')],
+    about: { title: 'About us', text: 'An independent agency, working for our customers rather than for any one insurer.', image: 'office' },
+    contact: { title: 'Get a free quote', intro: 'Tell us what you need covered.', button: 'Request my quote' }, hours: 'Mon to Sat, 8am to 8pm',
+  },
+  {
+    id: 'wedding-planner', title: 'Wedding and event planner', description: 'Show your style, your packages and how to get in touch.', category: 'Events', tags: ['wedding', 'events', 'planner', 'party'],
+    theme: THEME_CORAL, brand: ['Golden Hour Events', 'Beautiful days, calmly planned'], strip: ['Full planning', 'Day-of coordination', 'Trusted suppliers', 'Any budget', 'Destination weddings'], quotesCarousel: true,
+    hero: { headline: 'Enjoy your day. We\u2019ll handle the rest.', sub: 'From the first idea to the last dance, we take care of every detail.', image: 'event', cta: 'Check my date', style: 'overlay' },
+    services: { heading: 'Plan as much or as little as you like', pageTitle: 'Packages', items: [svc('Full planning', 'We look after everything, from budget to clean-up.'), svc('Partial planning', 'You have started, and we help you finish.'), svc('On the day', 'You relax, while we run the day to plan.')] },
+    stats: [num('200+', 'Events planned'), num('12', 'Years of experience'), num('5.0', 'Average review')],
+    testimonials: [who('We didn\u2019t worry about a single thing all day.', 'Maya and Sam'), who('Every guest asked who planned it.', 'Joanna R.')],
+    faq: [q('How far ahead should we book?', 'Most couples book 9 to 12 months ahead, but do ask.'), q('Do you travel?', 'Yes, anywhere you are celebrating.')],
+    about: { title: 'About us', text: 'We are a small team who love a good party, and a well-kept spreadsheet.', image: 'team' },
+    contact: { title: 'Check my date', intro: 'Tell us your date and your plans.', button: 'Send my enquiry' },
+  },
+  {
+    id: 'dental', title: 'Dental practice', description: 'Treatments, friendly faces and easy appointment requests.', category: 'Health and wellness', tags: ['dentist', 'dental', 'orthodontics'],
+    theme: THEME_OCEAN, brand: ['Bright Smile Dental', 'Gentle care for every age'], strip: ['New patients welcome', 'Nervous patients welcome', 'Emergency appointments', 'Payment plans', 'Family friendly'], quotesCarousel: true,
+    hero: { headline: 'A dentist you won\u2019t dread visiting', sub: 'Gentle, modern dental care for the whole family.', image: 'doctor', cta: 'Book a check-up', style: 'split' },
+    services: { heading: 'Care for every smile', pageTitle: 'Treatments', items: [svc('Check-ups', 'Regular care that keeps problems small.'), svc('Whitening', 'A brighter smile in a single visit.'), svc('Braces and aligners', 'Straighter teeth, for children and adults.')] },
+    stats: [num('20+', 'Years in practice'), num('8k', 'Happy patients'), num('Same day', 'Emergency care')],
+    testimonials: [who('I used to be terrified. Now I actually come.', 'Liam F.'), who('So gentle with our kids.', 'Hana T.')],
+    faq: [q('Do you take new patients?', 'Yes, of all ages.'), q('What if I am nervous?', 'Tell us. We go at your pace.')],
+    about: { title: 'About our practice', text: 'A friendly neighborhood practice, using modern equipment and plenty of patience.', image: 'clinic' },
+    contact: { title: 'Book a check-up', intro: 'Tell us what works for you, and we will find a time.', button: 'Request appointment' }, hours: 'Mon to Sat, 8am to 6pm',
+  },
+  {
+    id: 'photographer', title: 'Photographer', description: 'Let your work do the talking, then take bookings.', category: 'Creative', tags: ['photography', 'portrait', 'wedding', 'studio'],
+    theme: THEME_MIDNIGHT, brand: ['Sam Rivera Photo', 'Honest pictures of real moments'], strip: ['Weddings', 'Portraits', 'Brands', 'Events', 'Available worldwide'], quotesCarousel: true,
+    hero: { headline: 'Pictures you\u2019ll want to keep forever', sub: 'Natural, unposed photography for weddings, families and brands.', image: 'camera', cta: 'Check availability', style: 'overlay' },
+    services: { heading: 'How we can work together', pageTitle: 'Packages', items: [svc('Weddings', 'The whole day, told as a story.'), svc('Portraits', 'Relaxed sessions, wherever you feel at home.'), svc('Brands', 'Pictures that show what makes you different.')] },
+    testimonials: [who('We cried when we saw the pictures.', 'Anna and Joe'), who('Sam made everyone feel at ease.', 'Priya M.')],
+    faq: [q('How soon will I get my pictures?', 'Usually within four weeks.'), q('Do you travel?', 'Yes, travel is part of the fun.')],
+    about: { title: 'About me', text: 'I have spent ten years learning to disappear, and catch what happens when nobody is posing.', image: 'design' },
+    contact: { title: 'Check availability', intro: 'Tell me about your day or your project.', button: 'Send enquiry' },
+  },
+  {
+    id: 'coworking', title: 'Coworking space', description: 'Show your space, your plans and how to book a tour.', category: 'Property and construction', tags: ['coworking', 'office', 'workspace', 'rental'],
+    theme: THEME_EMERALD, brand: ['The Common Desk', 'Good work, good company'], strip: ['Day passes', 'Private offices', 'Meeting rooms', 'Fast internet', 'Great coffee'], quotesCarousel: true,
+    hero: { headline: 'A better place to get things done', sub: 'Flexible desks and private offices in the middle of town. No long contracts.', image: 'office', cta: 'Book a free tour', style: 'center' },
+    services: { heading: 'Space that fits how you work', pageTitle: 'Plans', items: [svc('Day pass', 'A desk for the day, whenever you need it.'), svc('Dedicated desk', 'Your own spot, ready every morning.'), svc('Private office', 'A door that closes, for you and your team.')] },
+    stats: [num('120', 'Desks'), num('6', 'Meeting rooms'), num('24/7', 'Member access')],
+    testimonials: [who('I get more done here in a morning than in a week at home.', 'Isaac W.'), who('I found my last two clients at the coffee machine.', 'Nora P.')],
+    faq: [q('Is there a minimum contract?', 'No. Plans run month to month.'), q('Can I bring my dog?', 'Friendly dogs are welcome.')],
+    about: { title: 'About us', text: 'We built the place we wanted to work in, then opened the doors to everyone else.', image: 'team' },
+    contact: { title: 'Book a free tour', intro: 'Come and see it, and have a coffee on us.', button: 'Book my tour' }, hours: 'Staffed Mon to Fri, 8am to 6pm',
+  },
+  {
+    id: 'travel-agency', title: 'Travel agency', description: 'Inspire people with destinations, and collect trip enquiries.', category: 'Hospitality and travel', tags: ['travel', 'tours', 'holiday', 'agency'],
+    theme: THEME_OCEAN, brand: ['Harbor Journeys', 'Small trips, done properly'], strip: ['Small groups', 'Local guides', 'Tailor-made trips', 'Free cancellation', 'Support while you travel'], quotesCarousel: true,
+    hero: { headline: 'Go somewhere that stays with you', sub: 'Small-group trips and tailor-made journeys, planned by people who have been there.', image: 'travel', cta: 'Plan my trip', style: 'overlay' },
+    services: { heading: 'Ways to travel with us', pageTitle: 'Trips', items: [svc('Small-group tours', 'Twelve people at most, and always a local guide.'), svc('Tailor-made', 'Your dates, your pace and your ideas.'), svc('Weekend escapes', 'Three days away, with nothing to organize.')] },
+    stats: [num('40', 'Countries'), num('12', 'People per group, at most'), num('98%', 'Would travel again')],
+    testimonials: [who('The most relaxing week we have had in years.', 'Nina and Paul'), who('Every detail was thought through.', 'Claire D.')],
+    faq: [q('What if I need to cancel?', 'Cancel free of charge up to 30 days before you leave.'), q('Do you handle flights?', 'Yes, or book your own. Whichever you prefer.')],
+    about: { title: 'About us', text: 'We have been planning trips for twenty years, and we still go on every one first.', image: 'hotel' },
+    contact: { title: 'Plan my trip', intro: 'Tell us where you would like to go.', button: 'Send my ideas' }, hours: 'Mon to Sat, 9am to 6pm',
+  },
+  {
+    id: 'bakery', title: 'Bakery or coffee shop', description: 'Share what is fresh today, and take orders for special occasions.', category: 'Hospitality and travel', tags: ['bakery', 'coffee', 'cafe', 'cakes'],
+    theme: THEME_TERRACOTTA, brand: ['Crumb & Co', 'Baked this morning'], strip: ['Fresh every morning', 'Custom cakes', 'Local coffee', 'Vegan options', 'Catering available'], quotesCarousel: true,
+    hero: { headline: 'Good things come from early mornings', sub: 'Bread, pastries and coffee, made here every day. Come by before they\u2019re gone.', image: 'dessert', cta: 'Order a cake', style: 'split' },
+    services: { heading: 'From our kitchen', pageTitle: 'Menu', items: [svc('Bread and pastries', 'Baked fresh from 5am, every single day.'), svc('Custom cakes', 'Birthdays, weddings and everything in between.'), svc('Coffee', 'Roasted nearby, and made with care.')] },
+    testimonials: [who('The cinnamon buns have ruined all others for me.', 'Theo G.'), who('They made my wedding cake, and people still talk about it.', 'Amelia S.')],
+    faq: [q('How far ahead should I order a cake?', 'Two weeks is ideal, but do ask.'), q('Do you have vegan options?', 'Yes, every day.')],
+    about: { title: 'Our story', text: 'What started as a market stall is now the best-smelling shop on the street.', image: 'food' },
+    contact: { title: 'Order a cake', intro: 'Tell us the date and what you have in mind.', button: 'Send my order' }, hours: 'Tue to Sun, 7am to 3pm',
+  },
   {
     id: 'clinic', title: 'Medical clinic', description: 'Services, doctors and appointment requests for a healthcare practice.', category: 'Health and wellness', tags: ['doctor', 'healthcare', 'clinic', 'dental'],
     theme: THEME_OCEAN, brand: ['Riverside Clinic', 'Caring for your family'],

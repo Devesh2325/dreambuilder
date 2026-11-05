@@ -202,6 +202,14 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     ],
   },
 
+  Marquee: {
+    type: 'Marquee', label: 'Scrolling strip', category: 'interactive', icon: 'GalleryHorizontal', isContainer: true,
+    defaultProps: { speed: 30, reverse: false },
+    fields: [
+      { key: 'speed', label: 'Seconds for one full loop', type: 'number', help: 'A bigger number scrolls more slowly.' },
+      { key: 'reverse', label: 'Scroll the other way', type: 'boolean' },
+    ],
+  },
   Carousel: {
     type: 'Carousel', label: 'Carousel', category: 'interactive', icon: 'GalleryHorizontal', isContainer: true,
     defaultProps: { interval: 5, showArrows: true },

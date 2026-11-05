@@ -7,7 +7,9 @@ import { buildContent, el, TemplateDefinition, TemplatePage } from './dsl';
 import { BANNER_TEMPLATES } from './banners';
 import { EXPERIENCE_TEMPLATES } from './experiences';
 import { INDUSTRY_TEMPLATES } from './industries';
+import { INDUSTRY_PAGE_TEMPLATES } from './industryPages';
 import { LAYOUT_TEMPLATES } from './layouts';
+import { PAGE_INDUSTRY, PAGE_PARTS, withSections } from './pageSections';
 import { PAGE_TEMPLATES } from './pages';
 import { WEBSITE_TEMPLATES } from './websites';
 
@@ -15,9 +17,15 @@ export * from './dsl';
 
 export const TEAM_TEMPLATE_PREFIX = 'team:';
 
+const withPageExtras = (template: TemplateDefinition): TemplateDefinition => {
+  if (template.type !== 'page') return template;
+  const parts = PAGE_PARTS[template.id];
+  return { ...(parts ? withSections(template, parts) : template), category: PAGE_INDUSTRY[template.id] ?? template.category };
+};
+
 export const TEMPLATES: TemplateDefinition[] = [
-  ...WEBSITE_TEMPLATES, ...INDUSTRY_TEMPLATES, ...EXPERIENCE_TEMPLATES, ...PAGE_TEMPLATES, ...LAYOUT_TEMPLATES, ...BANNER_TEMPLATES,
-];
+  ...WEBSITE_TEMPLATES, ...INDUSTRY_TEMPLATES, ...EXPERIENCE_TEMPLATES, ...PAGE_TEMPLATES, ...LAYOUT_TEMPLATES, ...INDUSTRY_PAGE_TEMPLATES, ...BANNER_TEMPLATES,
+].map(withPageExtras);
 
 export function getTemplate(id: string): TemplateDefinition | undefined {
   return TEMPLATES.find((template) => template.id === id);

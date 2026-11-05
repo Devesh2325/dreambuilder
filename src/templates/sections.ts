@@ -6,7 +6,7 @@ import { buildContent, button, el, El, heading, image, section, text } from './d
 export interface LibrarySection {
   id: string;
   title: string;
-  category: 'Hero' | 'Features' | 'Social proof' | 'Pricing' | 'Call to action' | 'Content' | 'Contact' | 'Footer' | 'Layout';
+  category: 'Hero' | 'Moving' | 'Features' | 'Social proof' | 'Pricing' | 'Call to action' | 'Content' | 'Contact' | 'Footer' | 'Layout';
   element: El;
 }
 
@@ -36,7 +36,95 @@ const stat = (value: string, label: string): El =>
 
 const column = (children: El[] = []): El => el('Box', { styles: { minHeight: '120px' } }, children);
 
+const slide = (title: string, words: string, background: string): El =>
+  el('Slide', { styles: { padding: '96px 48px', alignItems: 'center', textAlign: 'center', gap: '16px', background } }, [
+    heading(title, 'h1', { color: '#ffffff' }),
+    text(words, { color: 'rgba(255,255,255,.88)', fontSize: '1.125rem' }),
+    el('Button', { props: { text: 'Learn more', href: '#', variant: 'primary', action: 'link' }, styles: { background: '#ffffff', color: '#0f172a' } }),
+  ]);
+
+const strip = (items: string[]): El[] => items.map((value) => text(value, { fontWeight: 700, fontSize: '1.125rem', color: 'var(--fp-muted)', whiteSpace: 'nowrap' }));
+
 export const SECTION_LIBRARY: LibrarySection[] = [
+  {
+    id: 'hero-carousel', title: 'Hero carousel', category: 'Hero',
+    element: el('Section', { styles: { padding: '0' } }, [
+      el('Carousel', { props: { interval: 6, showArrows: true } }, [
+        slide('Your first big message', 'A short line that makes people want to know more.', 'linear-gradient(135deg, #0f172a, #4338ca)'),
+        slide('Your second big message', 'Another reason to choose you, said simply.', 'linear-gradient(135deg, #065f46, #0ea5e9)'),
+        slide('Your third big message', 'End on what you most want people to do.', 'linear-gradient(135deg, #7c2d12, #e11d48)'),
+      ]),
+    ]),
+  },
+  {
+    id: 'marquee-text', title: 'Scrolling text strip', category: 'Moving',
+    element: section([el('Marquee', { props: { speed: 30 } }, strip(['Free delivery', 'Easy returns', 'Loved by customers', 'Friendly support', 'New every week']))], { paddingTop: '20px', paddingBottom: '20px', background: 'var(--fp-surface)' }),
+  },
+  {
+    id: 'marquee-bold', title: 'Bold scrolling banner', category: 'Moving',
+    element: section([el('Marquee', { props: { speed: 20 } }, ['Now open', 'Book today', 'Limited places', 'Now open', 'Book today', 'Limited places'].map((value) => text(value, { fontWeight: 800, fontSize: '2.5rem', color: '#ffffff', whiteSpace: 'nowrap' })))], { paddingTop: '20px', paddingBottom: '20px', background: 'var(--fp-primary)' }),
+  },
+  {
+    id: 'marquee-logos', title: 'Trusted-by strip', category: 'Moving',
+    element: section([
+      text('Trusted by teams at', { ...muted, textAlign: 'center', fontWeight: 600 }),
+      el('Marquee', { props: { speed: 35 } }, strip(['Northwind', 'Harbor', 'Evergreen', 'Riverside', 'Keystone', 'Brightpath'])),
+    ], { paddingTop: '32px', paddingBottom: '32px' }),
+  },
+  {
+    id: 'quotes-carousel', title: 'Quotes carousel', category: 'Social proof',
+    element: section([
+      titleBlock('What people say'),
+      el('Carousel', { props: { interval: 6, showArrows: true }, styles: { ...narrow, width: '100%' } }, [
+        el('Slide', { styles: { ...center, padding: '16px 48px' } }, [text('"This changed how our whole team works."', { fontSize: '1.375rem', fontWeight: 500 }), text('Jordan P.', { fontWeight: 700 })]),
+        el('Slide', { styles: { ...center, padding: '16px 48px' } }, [text('"Easy to set up and even easier to love."', { fontSize: '1.375rem', fontWeight: 500 }), text('Aisha K.', { fontWeight: 700 })]),
+        el('Slide', { styles: { ...center, padding: '16px 48px' } }, [text('"The best decision we made this year."', { fontSize: '1.375rem', fontWeight: 500 }), text('Tom W.', { fontWeight: 700 })]),
+      ]),
+    ], { background: 'var(--fp-surface)' }),
+  },
+  {
+    id: 'features-6', title: 'Six features', category: 'Features',
+    element: section([
+      titleBlock('Everything you need', 'A short line that introduces what you offer.'),
+      el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }, responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+        feature('Fast', 'Say what makes this quick.'), feature('Simple', 'Say what makes this easy.'), feature('Reliable', 'Say why people can count on it.'),
+        feature('Flexible', 'Say how it fits different needs.'), feature('Secure', 'Say how you keep things safe.'), feature('Supported', 'Say how you help people.'),
+      ]),
+    ]),
+  },
+  {
+    id: 'faq-split', title: 'Questions beside a heading', category: 'Content',
+    element: section([
+      el('Grid', { styles: { gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)', gap: '48px' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+        el('Box', { styles: { gap: '10px' } }, [heading('Questions?'), text('If yours isn\u2019t here, just ask.', muted)]),
+        el('Box', { styles: { gap: '0' } }, [
+          el('Accordion', { props: { question: 'How do I get started?', answer: 'Create an account and follow the steps.' } }),
+          el('Accordion', { props: { question: 'Can I cancel any time?', answer: 'Yes. There are no long-term contracts.' } }),
+          el('Accordion', { props: { question: 'How can I contact support?', answer: 'Email us and we will reply within one day.' } }),
+        ]),
+      ]),
+    ]),
+  },
+  {
+    id: 'cta-split', title: 'Call to action with image', category: 'Call to action',
+    element: section([
+      el('Grid', { styles: { alignItems: 'center', gap: '48px' } }, [
+        el('Box', { styles: { gap: '16px', alignItems: 'flex-start' } }, [heading('Ready when you are'), text('One last reason to take the next step.', muted), button('Get started')]),
+        image(photo('meeting'), 'People working together', { height: '320px' }),
+      ]),
+    ], { background: 'var(--fp-surface)' }),
+  },
+  {
+    id: 'footer-columns', title: 'Footer with columns', category: 'Footer',
+    element: section([
+      el('Grid', { styles: { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '32px' }, responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+        el('Box', { styles: { gap: '8px' } }, [heading('Your brand', 'h4'), text('A short line about what you do.', muted)]),
+        el('Box', { styles: { gap: '8px', alignItems: 'flex-start' } }, [heading('Product', 'h4'), button('Features', '#', 'link'), button('Pricing', '#', 'link')]),
+        el('Box', { styles: { gap: '8px', alignItems: 'flex-start' } }, [heading('Company', 'h4'), button('About', '#', 'link'), button('Careers', '#', 'link')]),
+        el('Box', { styles: { gap: '8px', alignItems: 'flex-start' } }, [heading('Contact', 'h4'), text('hello@example.com'), text('+1 555 123 4567')]),
+      ]),
+    ], { paddingTop: '56px', paddingBottom: '56px', background: 'var(--fp-surface)' }),
+  },
   {
     id: 'hero-center', title: 'Centered hero', category: 'Hero',
     element: section([

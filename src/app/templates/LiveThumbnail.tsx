@@ -33,9 +33,10 @@ export const LazyPreview: React.FC<PreviewProps & { boxClassName?: string; scale
   );
 };
 
-export const LiveThumbnail: React.FC<{ template: TemplateDefinition; className?: string }> = ({ template, className = 'h-48' }) => (
+export const LiveThumbnail: React.FC<{ template: TemplateDefinition; className?: string; scale?: number }> = ({ template, className = 'h-48', scale }) => (
   <LazyPreview
     boxClassName={className}
+    scale={scale}
     type={template.type}
     documents={template.pages.map((page, position) => ({ ...page, position }))}
     theme={template.themes[0].theme}

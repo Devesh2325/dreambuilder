@@ -3,12 +3,24 @@ import { applyPatches, Draft, enablePatches, Patch, produceWithPatches } from 'i
 import { Device, DocContent, DocNode, GLOBAL_FOOTER_SLUG, GLOBAL_HEADER_SLUG, ProjectSettings, SeoSettings, Theme } from '../core/schema';
 import { MODULES } from '../core/modules';
 import { duplicateNode, findParentId, insertSubtree, moveNode, newNodeId, removeNode } from '../core/tree';
-import { VariableValues } from '../core/variables';
+import { VariableDef, VariableValues } from '../core/variables';
 import { AppServices, DocumentRecord, ProjectRecord } from '../data/services';
 import { BLOCK_META, canContain } from '../renderer/blockMeta';
 import { pagesOf } from '../experience/SiteView';
+import { projectVariableDefs } from '../templates';
+import { GlobalVariable } from '../types/auth';
 
 enablePatches();
+
+const slugForKey = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'value';
+
+/** Keys end up inside {{tokens}}, so they only use the characters tokens allow. */
+export function variableKey(label: string, taken: string[], prefix = 'my'): string {
+  const base = `${prefix}.${slugForKey(label)}`;
+  let key = base;
+  for (let n = 2; taken.includes(key); n += 1) key = `${base}_${n}`;
+  return key;
+}
 
 export interface ProjectDraft {
   title: string;
@@ -103,6 +115,11 @@ interface StudioState {
   /** Sets a grid's columns. 0 means automatic. Setting them for desktop also makes smaller screens stack. */
   setGridColumns: (id: string, count: number) => void;
   clearDeviceStyles: (id: string, device: Device) => void;
+  /** Turns text or a picture into a variable, keeping what it says now as the value. */
+  promoteToVariable: (documentId: string, nodeId: string, prop: string, label: string, type: VariableDef['type']) => void;
+  /** The workspace's shared variables. Their values are kept in the project, so publishing includes them. */
+  globals: GlobalVariable[];
+  syncGlobals: (globals: GlobalVariable[]) => void;
   /** A step made by clicking something on the customer's own site. */
   addTourStep: (step: { selector: string; text: string; path: string }) => void;
 
@@ -166,6 +183,7 @@ const initialState = {
   tool: 'variables' as StudioTool | null,
   inspectorTab: 'content' as const,
   activeStepKey: null,
+  globals: [] as GlobalVariable[],
 };
 
 export const useStudio = create<StudioState>((set, get) => {
@@ -496,6 +514,34 @@ export const useStudio = create<StudioState>((set, get) => {
       editDocument(doc.id, (content) => {
         delete content.nodes[id].responsive?.[device];
       });
+    },
+
+    promoteToVariable: (documentId, nodeId, prop, label, type) => {
+      const state = get();
+      const doc = state.documents.find((d) => d.id === documentId);
+      const value = doc?.content.nodes[nodeId]?.props[prop];
+      if (!doc || typeof value !== 'string' || !state.draft) return;
+      const taken = [...projectVariableDefs(state.project?.templateId, state.draft.settings).map((def) => def.key), ...state.globals.map((item) => item.key)];
+      const key = variableKey(label, taken);
+      state.updateDraft((d) => {
+        d.settings.variableDefs = [...(d.settings.variableDefs ?? []), { key, label, type, group: 'Your variables' }];
+        d.variables[key] = value;
+      });
+      editDocument(documentId, (content) => {
+        content.nodes[nodeId].props[prop] = `{{${key}}}`;
+      });
+    },
+
+    syncGlobals: (globals) => {
+      const { draft, readOnly } = get();
+      set({ globals });
+      if (!draft) return;
+      const stale = globals.filter((item) => draft.variables[item.key] !== item.value);
+      if (stale.length === 0) return;
+      set({ draft: { ...draft, variables: { ...draft.variables, ...Object.fromEntries(stale.map((item) => [item.key, item.value])) } } });
+      if (readOnly) return;
+      set((state) => ({ isProjectDirty: true, status: state.status === 'conflict' ? 'conflict' : 'dirty' }));
+      scheduleSave();
     },
 
     addTourStep: ({ selector, text, path }) => {

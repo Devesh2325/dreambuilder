@@ -411,7 +411,7 @@ export const ProjectPage: React.FC = () => {
         )}
       </header>
 
-      <div role="tablist" aria-label="Project sections" className="flex gap-5 mt-5 mb-5 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
+      <div role="tablist" aria-label="Project sections" className="no-scrollbar flex gap-5 mt-5 mb-5 pb-px border-b border-slate-200 dark:border-slate-800 overflow-x-auto overflow-y-hidden">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -419,7 +419,7 @@ export const ProjectPage: React.FC = () => {
             type="button"
             aria-selected={tab === item.id}
             onClick={() => setTab(item.id)}
-            className={`pb-2.5 -mb-px whitespace-nowrap text-sm font-medium border-b-2 transition-colors ${tab === item.id ? 'border-indigo-600 text-indigo-700 dark:text-indigo-300' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+            className={`pb-2.5 whitespace-nowrap text-sm font-medium border-b-2 transition-colors ${tab === item.id ? 'border-indigo-600 text-indigo-700 dark:text-indigo-300' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
           >
             {item.label}
           </button>

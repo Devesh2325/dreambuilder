@@ -101,7 +101,7 @@ export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error
     const atMax = def.maxItems !== undefined && items.length >= def.maxItems;
 
     return (
-      <fieldset>
+      <fieldset className="min-w-0">
         <legend className={def.group === def.label ? 'sr-only' : 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2'}>{def.label}</legend>
         <div className="space-y-3">
           {items.map((item, index) => (

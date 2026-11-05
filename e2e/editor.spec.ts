@@ -105,7 +105,7 @@ test.describe('variables', () => {
 
     await panel.getByRole('button', { name: 'New variable' }).click();
     await panel.getByLabel('What is it called?').fill('Phone number');
-    await panel.getByRole('button', { name: 'Add variable' }).click();
+    await panel.getByRole('button', { name: 'Save variable' }).click();
     await panel.getByRole('textbox', { name: 'Phone number' }).fill('555-0100');
 
     // Add a text block, then use the variable in it.
@@ -145,7 +145,7 @@ test.describe('variables', () => {
     const panel = page.getByRole('tabpanel', { name: 'Variables' });
     await panel.getByRole('button', { name: 'New variable' }).click();
     await panel.getByLabel('What is it called?').fill('Sale ends');
-    await panel.getByRole('button', { name: 'Add variable' }).click();
+    await panel.getByRole('button', { name: 'Save variable' }).click();
     await expect(panel.getByRole('textbox', { name: 'Sale ends' })).toBeVisible();
   });
 
@@ -415,7 +415,7 @@ test.describe('section library', () => {
     const panel = await sections(page);
 
     await panel.getByRole('button', { name: 'Add Call to action band' }).click();
-    const added = frame.getByRole('heading', { name: 'Ready to get started?' });
+    const added = frame.getByRole('heading', { name: 'Ready to get started?' }).first();
     await expect(added).toBeVisible();
     const all = frame.locator('.fp-section');
     const indexOfAdded = await all.evaluateAll((items) => items.findIndex((item) => item.textContent?.includes('Ready to get started?')));
@@ -478,7 +478,7 @@ test.describe('team templates', () => {
     const variables = page.getByRole('tabpanel', { name: 'Variables' });
     await variables.getByRole('button', { name: 'New variable' }).click();
     await variables.getByLabel('What is it called?').fill('Offer');
-    await variables.getByRole('button', { name: 'Add variable' }).click();
+    await variables.getByRole('button', { name: 'Save variable' }).click();
     await variables.getByRole('textbox', { name: 'Offer' }).fill('Half price');
 
     await page.getByRole('tab', { name: 'Add' }).click();
@@ -503,8 +503,8 @@ test.describe('team templates', () => {
     await page.getByRole('button', { name: 'Use Campaign page', exact: true }).click();
 
     // Its variables become the form, with the saved value to start from.
-    await expect(page.getByLabel('Offer')).toHaveValue('Half price');
-    await page.getByLabel('Offer').fill('Two for one');
+    await expect(page.getByRole('textbox', { name: 'Offer' })).toHaveValue('Half price');
+    await page.getByRole('textbox', { name: 'Offer' }).fill('Two for one');
     await page.getByRole('button', { name: /^Create / }).click();
     await expect(page.getByTestId('canvas-stage')).toBeVisible();
     await expect(canvas(page).getByRole('heading', { name: 'Two for one' })).toBeVisible();

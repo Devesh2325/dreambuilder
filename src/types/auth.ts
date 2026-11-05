@@ -1,3 +1,5 @@
+import type { VariableType } from '../core/variables';
+
 export type UserRole = 'owner' | 'admin' | 'editor' | 'viewer';
 
 export interface UserProfile {
@@ -10,7 +12,16 @@ export interface UserProfile {
 
 export type SubscriptionPlan = 'free' | 'starter' | 'pro' | 'agency' | 'enterprise';
 
+/** A value every project in a workspace can use. */
+export interface GlobalVariable {
+  key: string;
+  label: string;
+  type: VariableType;
+  value: string | number | boolean;
+}
+
 export interface OrganizationBranding {
+  globalVariables?: GlobalVariable[];
   primaryColor: string;
   logoUrl?: string;
   companyName: string;

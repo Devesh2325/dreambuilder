@@ -19,6 +19,8 @@ export interface VariableDef {
   /** For lists. */
   minItems?: number;
   maxItems?: number;
+  /** False leaves it off the form when creating from a template. It can still be changed in the editor. */
+  askOnCreate?: boolean;
 }
 
 export type VariableValues = Record<string, unknown>;

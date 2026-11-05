@@ -36,8 +36,14 @@ describe('authentication', () => {
   afterEach(cleanup);
 
   describe('route guard', () => {
-    it('sends logged-out visitors to the login page', async () => {
+    it('shows logged-out visitors the landing page at the home address', async () => {
       renderApp('/');
+      expect(await screen.findByRole('heading', { level: 1, name: /Build it in minutes/ })).toBeTruthy();
+      cleanup();
+    });
+
+    it('sends logged-out visitors to the login page', async () => {
+      renderApp('/team');
       expect(await screen.findByRole('heading', { name: 'Log in' })).toBeTruthy();
       expect(screen.getByTestId('path').textContent).toBe('/login');
     });

@@ -8,13 +8,11 @@ import { useServices } from '../app/session';
 import { BusyIcon, BusyLabel, EmptyState, primaryButton, secondaryButton, StudioSkeleton } from '../app/shared/ui';
 import { useWorkspace } from '../app/workspace';
 import { moduleNoun } from '../core/modules';
-import { projectVariableDefs } from '../templates';
-import { templateFromProject } from '../templates/library';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
 import { useLiveSite } from './liveSite';
 import { PreviewMode } from './PreviewMode';
-import { SaveToLibrary } from './SaveToLibrary';
+import { SaveTemplateDialog } from './TemplateVariables';
 import { handleStudioShortcut } from './shortcuts';
 import { useStudio } from './store';
 
@@ -44,6 +42,17 @@ const SaveIndicator: React.FC = () => {
         </button>
       )}
     </div>
+  );
+};
+
+/** Saving is automatic, and this is for anyone who wants to be sure. */
+const SaveButton: React.FC = () => {
+  const status = useStudio((s) => s.status);
+  const { saveNow } = useStudio.getState();
+  return (
+    <button type="button" title="Save now (Ctrl+S)" disabled={status === 'saved' || status === 'saving' || status === 'conflict'} className="h-8 px-3 text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 disabled:opacity-40 disabled:hover:border-slate-200 transition-colors" onClick={() => void saveNow()}>
+      Save
+    </button>
   );
 };
 
@@ -119,6 +128,11 @@ const Editor: React.FC = () => {
   const [isLeaving, setIsLeaving] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { workspace } = useWorkspace();
+  const globals = workspace?.branding.globalVariables;
+  useEffect(() => {
+    useStudio.getState().syncGlobals(globals ?? []);
+  }, [globals]);
   const arrival = location.state as { justCreated?: boolean; buildingTemplate?: boolean } | null;
   const [welcome, setWelcome] = useState(() => (arrival?.justCreated ? 'created' : arrival?.buildingTemplate ? 'template' : null));
 
@@ -157,6 +171,7 @@ const Editor: React.FC = () => {
         </button>
         <h1 className="text-[15px] font-semibold truncate max-w-[240px]">{draft.title}</h1>
         {readOnly ? <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">View only</span> : <SaveIndicator />}
+        {!readOnly && <SaveButton />}
         </div>
 
         <div className="flex items-center gap-2">
@@ -213,26 +228,7 @@ const Editor: React.FC = () => {
 
       {isPreviewing && <PreviewMode onClose={() => setIsPreviewing(false)} />}
 
-      {isSavingTemplate && (
-        <SaveToLibrary
-          kind="template"
-          initialName={draft.title}
-          buildDefinition={async () => {
-            await saveNow();
-            const state = useStudio.getState();
-            const current = state.draft!;
-            return templateFromProject({
-              type: project.type,
-              theme: current.theme,
-              variables: current.variables,
-              settings: current.settings,
-              defs: projectVariableDefs(project.templateId, current.settings),
-              documents: state.documents,
-            });
-          }}
-          onClose={() => setIsSavingTemplate(false)}
-        />
-      )}
+      {isSavingTemplate && <SaveTemplateDialog onClose={() => setIsSavingTemplate(false)} />}
 
       {isPublishing && (
         <PublishDialog

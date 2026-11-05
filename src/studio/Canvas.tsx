@@ -38,8 +38,8 @@ html{scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.45) transparent}
 a:not([draggable=true]),img:not([draggable=true]){-webkit-user-drag:none}
 [draggable=true]{cursor:grab}
 .fp-hotspot{cursor:move;animation:none}
-.fp-section:empty,.fp-container:empty,.fp-box:empty,.fp-grid:empty,.fp-row:empty,.fp-page:empty{min-height:88px;display:flex;align-items:center;justify-content:center;border:1.5px dashed rgba(99,102,241,.4);border-radius:8px;background:rgba(99,102,241,.04)}
-.fp-section:empty::after,.fp-container:empty::after,.fp-box:empty::after,.fp-grid:empty::after,.fp-row:empty::after,.fp-page:empty::after{content:'Empty: drag blocks here';font:500 13px system-ui,sans-serif;color:rgba(79,70,229,.8)}
+.fp-section:empty,.fp-container:empty,.fp-box:empty,.fp-grid:empty,.fp-row:empty,.fp-page:empty,.fp-marquee-track:empty,.fp-carousel:empty{min-height:88px;display:flex;align-items:center;justify-content:center;border:1.5px dashed rgba(99,102,241,.4);border-radius:8px;background:rgba(99,102,241,.04)}
+.fp-section:empty::after,.fp-container:empty::after,.fp-box:empty::after,.fp-grid:empty::after,.fp-row:empty::after,.fp-page:empty::after,.fp-marquee-track:empty::after,.fp-carousel:empty::after{content:'Empty: drag blocks here';font:500 13px system-ui,sans-serif;color:rgba(79,70,229,.8)}
 `;
 
 interface Box {
@@ -483,6 +483,11 @@ export const Canvas: React.FC = () => {
     }),
     [documents, active?.slug, stepSet, visibleStepKey, tourLabel, tourSettings?.showClose],
   );
+
+  // A slide can be far down a long page, so choosing one brings it into view.
+  useEffect(() => {
+    if (activeStepKey) doc?.querySelector(`[data-fp-key="${CSS.escape(activeStepKey)}"]`)?.scrollIntoView({ block: 'center' });
+  }, [activeStepKey, doc]);
 
   // Choosing a block in another step, from Layers for example, shows that step.
   useEffect(() => {

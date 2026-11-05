@@ -186,7 +186,8 @@ const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
 
       <div className="flex-1 min-h-0 flex">
         {categories.length > 1 && (
-          <nav aria-label="Filter templates" className="no-scrollbar relative w-56 shrink-0 overflow-y-auto p-3 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+          <nav aria-label="Filter templates" className="no-scrollbar relative w-64 shrink-0 overflow-y-auto p-3 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+            <h2 className="px-2.5 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{type === 'website' || type === 'page' ? 'Your industry' : 'Style'}</h2>
             <ul className="space-y-0.5">{[null, ...categories].map(filter)}</ul>
           </nav>
         )}

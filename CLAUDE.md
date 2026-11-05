@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-FlowPilot builds websites, pages, tours, forms, demos, banners, menus and FAQs from variable-driven templates. Popups and carousels are styles of the banner module, not modules of their own. It is a React 19 + TypeScript + Vite + Tailwind 3 app with a Supabase backend, and has no server code of its own.
+FlowPilot builds websites, pages, tours, forms, demos, banners, menus and FAQs from variable-driven templates. Logged-out visitors at `/` see `src/app/landing/LandingPage.tsx`. Popups and carousels are styles of the banner module, not modules of their own. It is a React 19 + TypeScript + Vite + Tailwind 3 app with a Supabase backend, and has no server code of its own.
 
 ## Commands
 
@@ -63,6 +63,8 @@ To add a module, update `PROJECT_TYPES`, `MODULES` and `PATHS` (`src/core/module
 `src/templates/` defines templates with the `el()` helpers. Each declares `variables`, which also generate the wizard form (`VariableForm`). Values are stored per project, and nodes keep their tokens, so a change in **Variables** updates everywhere. Typing over a token in the editor detaches only that spot. A project's variables are its template's plus `settings.variableDefs` (`projectVariableDefs`), which holds ones added in the editor or carried from a team template.
 
 Files: `websites.ts` and `industries.ts` (websites, using `industrySite` for most), `pages.ts`, `layouts.ts` and `experiences.ts` (landing pages and the other modules), `banners.ts`, `sections.ts` (the section library), `library.ts` (saving and reading team items), and `assets.ts` (stock photos that were checked to load, and generated product screens for demos). A template's `category` drives the filter on the create page.
+
+Global variables live in `organizations.branding.globalVariables` with keys starting `global.`. `syncGlobals` copies their values into each project's variables when it's opened, so a published snapshot contains them. A template def with `askOnCreate: false` stays off the wizard's form.
 
 Team templates and sections live in `workspace_library` (`LibraryRepository`). Team template ids start with `team:`, so `getTemplate` doesn't know them; `teamTemplate` validates a stored row into a `TemplateDefinition`, and its variables are copied to the project. A saved section stores the expanded tree with values filled in, so it needs no variables. A saved template keeps its tokens and never carries the webhook address.
 

@@ -21,7 +21,39 @@ const NO_SETTINGS = {};
 const useTemplateVariables = (): VariableDef[] => {
   const templateId = useStudio((s) => s.project?.templateId);
   const settings = useStudio((s) => s.draft?.settings ?? NO_SETTINGS);
-  return projectVariableDefs(templateId, settings);
+  const globals = useStudio((s) => s.globals);
+  return [...projectVariableDefs(templateId, settings), ...globals.map((item) => ({ key: item.key, label: item.label, type: item.type }))];
+};
+
+/** Turns what a field says now into a variable, which is the easiest way to make one. */
+const MakeVariable: React.FC<{ node: DocNode; field: BlockField }> = ({ node, field }) => {
+  const [name, setName] = useState<string | null>(null);
+  const doc = useStudio.getState().documentOfNode(node.id);
+  if (!doc) return null;
+  if (name === null) {
+    return (
+      <button type="button" className="mt-1 block text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => setName(field.label)}>
+        Make this a variable
+      </button>
+    );
+  }
+  return (
+    <div className="mt-1 flex items-center gap-1">
+      <input aria-label="Name for this variable" autoFocus className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
+      <button
+        type="button"
+        disabled={!name.trim()}
+        className="h-9 px-3 shrink-0 text-[13px] font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+        onClick={() => {
+          useStudio.getState().promoteToVariable(doc.id, node.id, field.key, name.trim(), field.type === 'longtext' ? 'longtext' : field.type === 'image' ? 'image' : field.type === 'url' ? 'url' : 'text');
+          setName(null);
+        }}
+      >
+        Save
+      </button>
+      <button type="button" className="h-9 px-2 shrink-0 text-[13px] rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setName(null)}>Cancel</button>
+    </div>
+  );
 };
 
 interface MenuItem {
@@ -355,7 +387,8 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
           <span>Shows: {toFriendly(String(resolveString(text.replace(TOKEN_PATTERN, (match, key: string) => (key in draftVariables ? match : `[${names.find((item) => item.key === key)?.label ?? key}]`)), draftVariables)), names)}</span>
         </p>
       )}
-      {textual && usable.length > 0 && !readOnly && (
+      {(textual || field.type === 'image') && !readOnly && !linked && text.trim() !== '' && field.key !== 'selector' && <MakeVariable node={node} field={field} />}
+      {textual && names.length > 0 && !readOnly && (
         <select
           aria-label={`Insert a variable into ${field.label}`}
           className="mt-1 w-full text-[13px] bg-transparent text-indigo-600 dark:text-indigo-400 focus:outline-none"

@@ -11,10 +11,12 @@ interface SaveToLibraryProps {
   /** Called when saving, so it captures the latest edits. */
   buildDefinition: () => Promise<unknown>;
   onClose: () => void;
+  /** More to decide before saving. */
+  extra?: React.ReactNode;
 }
 
 /** Names a template or section, and adds it to the team's library. */
-export const SaveToLibrary: React.FC<SaveToLibraryProps> = ({ kind, initialName, buildDefinition, onClose }) => {
+export const SaveToLibrary: React.FC<SaveToLibraryProps> = ({ kind, initialName, buildDefinition, onClose, extra }) => {
   const { library } = useServices();
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
@@ -43,7 +45,7 @@ export const SaveToLibrary: React.FC<SaveToLibraryProps> = ({ kind, initialName,
   });
 
   return (
-    <dialog ref={dialogRef} onClose={onClose} aria-labelledby="library-title" className="rounded-2xl p-6 w-full max-w-md bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 backdrop:bg-slate-900/60">
+    <dialog ref={dialogRef} onClose={onClose} aria-labelledby="library-title" className="rounded-2xl p-6 w-full max-w-xl max-h-[calc(100vh-32px)] overflow-y-auto bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 backdrop:bg-slate-900/60">
       <form
         className="space-y-4"
         onSubmit={(event) => {
@@ -73,7 +75,8 @@ export const SaveToLibrary: React.FC<SaveToLibraryProps> = ({ kind, initialName,
             </label>
           </>
         )}
-        <div className="flex justify-end gap-2">
+        {extra}
+        <div className="sticky -bottom-6 -mx-6 -mb-6 px-6 py-4 flex justify-end gap-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
           <button type="button" className={secondaryButton} onClick={onClose}>Cancel</button>
           <button type="submit" className={primaryButton} disabled={save.isPending}>
             <BusyLabel busy={save.isPending} busyText="Saving...">Save to library</BusyLabel>

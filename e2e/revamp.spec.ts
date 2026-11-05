@@ -347,7 +347,7 @@ test('dragging works from every starting point', async ({ page }) => {
   // From the Layers panel.
   await page.getByRole('tab', { name: 'Layers' }).click();
   const panel = page.getByRole('tabpanel', { name: 'Layers' });
-  await panel.getByRole('button', { name: 'Button', exact: true }).dragTo(panel.getByRole('button', { name: 'Heading', exact: true }).first(), { targetPosition: { x: 20, y: 1 } });
+  await panel.getByRole('button', { name: 'Button', exact: true }).first().dragTo(panel.getByRole('button', { name: 'Heading', exact: true }).first(), { targetPosition: { x: 20, y: 1 } });
   await expect(firstChild()).toHaveClass(/fp-btn/);
 });
 

@@ -91,7 +91,7 @@ test.describe('left menu', () => {
     expect(box.y).toBeLessThan(56);
     await button.click();
     await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
-    expect((await page.getByRole('complementary').boundingBox())!.width).toBeLessThan(70);
+    await expect.poll(async () => (await page.getByRole('complementary').boundingBox())!.width).toBeLessThan(70);
   });
 
   test('creating starts from the guide or a module, not a global button', async ({ page }) => {
@@ -519,7 +519,7 @@ test.describe('variables for everyone', () => {
     await panel.getByRole('button', { name: 'New variable' }).click();
     await panel.getByLabel('What is it called?').fill('Opening hours');
     await panel.getByLabel('What is its value?').fill('9 to 5');
-    await panel.getByRole('button', { name: 'Add variable' }).click();
+    await panel.getByRole('button', { name: 'Save variable' }).click();
     await expect(panel.getByRole('textbox', { name: 'Opening hours' })).toHaveValue('9 to 5');
     await expect(panel.getByRole('status').filter({ hasText: 'Insert a variable' })).toBeVisible();
     await expect(panel.getByText('Not used yet')).toBeVisible();
