@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowUp, BookmarkPlus, Crosshair, EyeOff, Link2, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, BookmarkPlus, Crosshair, EyeOff, Link2, Loader2, Plus, Trash2 } from 'lucide-react';
 import { DEFAULT_TRIGGERS, DEVICES, DocNode, Triggers } from '../core/schema';
 import { MODULES } from '../core/modules';
 import { getAncestors } from '../core/tree';
@@ -40,6 +40,7 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
   const isWebsite = useStudio((s) => s.project?.type === 'website');
   const { updateProps, addPage } = useStudio.getState();
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingPage, setIsCreatingPage] = useState(false);
   // Only one item is expanded, so a long menu doesn't push everything else out of reach.
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const pages = pagesOf(documents);
@@ -90,11 +91,14 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
       return;
     }
     setError(null);
+    setIsCreatingPage(true);
     try {
       await addPage(item.label, slug, { open: false });
       setItems(items.map((other, i) => (i === index ? { ...other, href: `/${slug}` } : other)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the page.');
+    } finally {
+      setIsCreatingPage(false);
     }
   };
 
@@ -130,7 +134,7 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
                 {openIndex === index && pages.length > 0 && (
                   <select
                     aria-label={`Menu item ${index + 1} goes to`}
-                    disabled={readOnly}
+                    disabled={readOnly || isCreatingPage}
                     className={fieldClass}
                     value={isPage ? item.href : CUSTOM}
                     onChange={(e) => {
@@ -152,6 +156,12 @@ const MenuEditor: React.FC<{ node: DocNode; fieldKey: string }> = ({ node, field
             );
           })}
         </ul>
+      )}
+      {isCreatingPage && (
+        <p role="status" className="mt-1 flex items-center gap-1.5 text-[13px] text-slate-500 dark:text-slate-400">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+          Creating the page...
+        </p>
       )}
       {error && <p role="alert" className="mt-1 text-[13px] text-rose-600 dark:text-rose-400">{error}</p>}
       {!readOnly && (

@@ -5,7 +5,7 @@ import { ArrowLeft, Check, CloudOff, Eye, LayoutTemplate, Loader2, Monitor, Redo
 import { PublishDialog } from '../app/projects/PublishDialog';
 import { ROUTES } from '../app/routes';
 import { useServices } from '../app/session';
-import { BusyIcon, EmptyState, primaryButton, secondaryButton, StudioSkeleton } from '../app/shared/ui';
+import { BusyIcon, BusyLabel, EmptyState, primaryButton, secondaryButton, StudioSkeleton } from '../app/shared/ui';
 import { useWorkspace } from '../app/workspace';
 import { moduleNoun } from '../core/modules';
 import { ProjectPreview } from '../experience/ProjectPreview';
@@ -49,19 +49,31 @@ const SaveIndicator: React.FC = () => {
 const ConflictBanner: React.FC = () => {
   const status = useStudio((s) => s.status);
   const { reloadFromServer, overwriteServer } = useStudio.getState();
+  const [busy, setBusy] = useState<'reload' | 'overwrite' | null>(null);
   if (status !== 'conflict') return null;
+  const run = async (which: 'reload' | 'overwrite', action: () => Promise<void>) => {
+    setBusy(which);
+    try {
+      await action();
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
     <div role="alert" className="flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">
       Someone else changed this project while you were editing.
-      <button type="button" className="font-semibold underline" onClick={() => reloadFromServer()}>Load their version</button>
+      <button type="button" disabled={busy !== null} className="inline-flex items-center gap-1 font-semibold underline disabled:opacity-60" onClick={() => run('reload', reloadFromServer)}>
+        <BusyLabel busy={busy === 'reload'}>Load their version</BusyLabel>
+      </button>
       <button
         type="button"
-        className="font-semibold underline"
+        disabled={busy !== null}
+        className="inline-flex items-center gap-1 font-semibold underline disabled:opacity-60"
         onClick={() => {
-          if (window.confirm('Replace their changes with yours? Their changes will be lost.')) overwriteServer();
+          if (window.confirm('Replace their changes with yours? Their changes will be lost.')) void run('overwrite', overwriteServer);
         }}
       >
-        Keep my version
+        <BusyLabel busy={busy === 'overwrite'}>Keep my version</BusyLabel>
       </button>
     </div>
   );
