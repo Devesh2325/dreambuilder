@@ -1,14 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Copy, Trash2, Upload } from 'lucide-react';
-import { MODULES } from '../../core/modules';
 import { AssetRecord } from '../../data/services';
-import { FontSelect } from '../../studio/fields';
-import { PLAN_LIMITS, UserRole } from '../../types/auth';
+import { ColorField, FontSelect } from '../../studio/fields';
+import { UserRole } from '../../types/auth';
+import { useCurrentPlan } from '../account/PlansPage';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
-import { BusyIcon, BusyLabel, cardClass, CardsSkeleton, dangerButton, EmptyState, ErrorNote, errorMessage, inputClass, LoadingArea, LoadingNote, PageHeader, primaryButton, secondaryButton, Skeleton } from '../shared/ui';
+import { FlowPilotBanner } from '../shared/FlowPilotBanner';
+import { BusyIcon, BusyLabel, cardClass, CardsSkeleton, dangerButton, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton } from '../shared/ui';
 import { useWorkspace } from '../workspace';
 
 // ---- Assets -----------------------------------------------------------------
@@ -59,7 +60,13 @@ export const AssetsPage: React.FC = () => {
       <ErrorNote message={upload.isError ? errorMessage(upload.error) : remove.isError ? errorMessage(remove.error) : null} />
       {query.isLoading && <CardsSkeleton count={8} className="mt-4 grid gap-4 grid-cols-2 md:grid-cols-4" />}
       {query.isError && <ErrorNote message="We couldn't load your assets." />}
-      {query.isSuccess && query.data.length === 0 && <EmptyState title="No assets yet">Upload your logo and images to reuse them across projects.</EmptyState>}
+      {query.isSuccess && query.data.length === 0 && (
+        <FlowPilotBanner
+          title="No assets yet"
+          text="Upload your logo and images once, then use them in every project. Use the Upload button at the top of this page."
+          steps={['Upload your logo and photos', 'Open a project in the editor', 'Choose them from your assets']}
+        />
+      )}
       <ul className="mt-4 grid gap-4 grid-cols-2 md:grid-cols-4">
         {query.data?.map((asset) => (
           <li key={asset.id} className={`${cardClass} overflow-hidden`}>
@@ -90,115 +97,6 @@ export const AssetsPage: React.FC = () => {
           </li>
         ))}
       </ul>
-    </>
-  );
-};
-
-// ---- Analytics --------------------------------------------------------------
-
-const EVENT_LABELS: Record<string, string> = {
-  impression: 'Shown',
-  page_viewed: 'Page views',
-  cta_clicked: 'Button clicks',
-  form_submitted: 'Form submissions',
-  tour_step_viewed: 'Tour steps viewed',
-  tour_step_completed: 'Tour steps completed',
-  tour_step_skipped: 'Tour steps skipped (missing target)',
-  tour_completed: 'Tours completed',
-  tour_skipped: 'Tours closed early',
-  demo_step_viewed: 'Demo screens viewed',
-  demo_completed: 'Demos completed',
-  faq_expanded: 'Questions opened',
-  checklist_item_completed: 'Checklist items done',
-  checklist_completed: 'Checklists finished',
-  banner_dismissed: 'Banners closed',
-};
-
-export const AnalyticsPage: React.FC = () => {
-  const { analytics, projects } = useServices();
-  const { workspace } = useWorkspace();
-  const organizationId = workspace?.organizationId;
-  const [days, setDays] = useState(30);
-  const [projectFilter, setProjectFilter] = useState('');
-
-  const summary = useQuery({
-    queryKey: ['analytics', organizationId, days],
-    queryFn: () => analytics.summary(organizationId!, days),
-    enabled: Boolean(organizationId),
-  });
-  const projectList = useQuery({
-    queryKey: ['projects', organizationId],
-    queryFn: () => projects.list(organizationId!),
-    enabled: Boolean(organizationId),
-  });
-
-  const rows = useMemo(
-    () => (summary.data ?? []).filter((row) => !projectFilter || row.projectId === projectFilter),
-    [summary.data, projectFilter],
-  );
-
-  const totals = useMemo(() => {
-    const byEvent = new Map<string, number>();
-    for (const row of rows) byEvent.set(row.eventType, (byEvent.get(row.eventType) ?? 0) + row.events);
-    return [...byEvent.entries()].sort((a, b) => b[1] - a[1]);
-  }, [rows]);
-
-  const byDay = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const row of rows) map.set(row.day, (map.get(row.day) ?? 0) + row.events);
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [rows]);
-  const peak = Math.max(1, ...byDay.map(([, count]) => count));
-  const total = totals.reduce((sum, [, count]) => sum + count, 0);
-
-  return (
-    <>
-      <PageHeader title="Analytics" subtitle="Real activity from your published sites and embeds." />
-      <div className="flex flex-wrap gap-2 mb-5">
-        <select aria-label="Period" className={`${inputClass} !w-auto`} value={days} onChange={(e) => setDays(Number(e.target.value))}>
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-          <option value={90}>Last 90 days</option>
-        </select>
-        <select aria-label="Project" className={`${inputClass} !w-auto`} value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-          <option value="">All projects</option>
-          {projectList.data?.map((project) => <option key={project.id} value={project.id}>{project.title} ({MODULES[project.type].label})</option>)}
-        </select>
-      </div>
-      {summary.isLoading && <LoadingArea className="grid gap-5 md:grid-cols-2"><Skeleton className="h-64 !rounded-2xl" /><Skeleton className="h-64 !rounded-2xl" /></LoadingArea>}
-      {summary.isError && <ErrorNote message="We couldn't load analytics." />}
-      {summary.isSuccess && total === 0 && <EmptyState title="No activity yet">Numbers appear once visitors reach a published project.</EmptyState>}
-      {total > 0 && (
-        <div className="grid gap-5 md:grid-cols-2">
-          <section aria-labelledby="activity-title" className={`${cardClass} p-5`}>
-            <h2 id="activity-title" className="font-semibold">Activity per day</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{total.toLocaleString()} events</p>
-            <ul className="mt-4 flex items-end gap-1 h-40" aria-label="Events per day">
-              {byDay.map(([day, count]) => (
-                <li key={day} className="flex-1 min-w-[3px] h-full flex items-end" title={`${day}: ${count} events`}>
-                  <span className="w-full rounded-t bg-indigo-500" style={{ height: `${Math.max(3, (count / peak) * 100)}%` }}>
-                    <span className="sr-only">{day}: {count} events</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section aria-labelledby="events-title" className={`${cardClass} p-5`}>
-            <h2 id="events-title" className="font-semibold mb-2">By event</h2>
-            <table className="w-full text-sm">
-              <thead className="sr-only"><tr><th scope="col">Event</th><th scope="col">Count</th></tr></thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {totals.map(([type, count]) => (
-                  <tr key={type}>
-                    <td className="py-1.5">{EVENT_LABELS[type] ?? type}</td>
-                    <td className="py-1.5 text-right font-semibold tabular-nums">{count.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        </div>
-      )}
     </>
   );
 };
@@ -244,11 +142,12 @@ export const TeamPage: React.FC = () => {
   const removeMember = useMutation({ mutationFn: (userId: string) => team.removeMember(organizationId!, userId), onSuccess: refresh });
   const revoke = useMutation({ mutationFn: (id: string) => team.revokeInvitation(id), onSuccess: refresh });
   const failure = [invite, updateRole, removeMember, revoke].find((mutation) => mutation.isError);
-  const limit = workspace ? PLAN_LIMITS[workspace.plan].teamMembersLimit : 0;
+  const plan = useCurrentPlan();
+  const limit = plan?.maxMembers ?? 0;
 
   return (
     <>
-      <PageHeader title="Team" subtitle={`Your ${workspace?.plan ?? ''} plan includes up to ${limit} ${limit === 1 ? 'member' : 'members'}.`} />
+      <PageHeader title="Team" subtitle={plan ? `Your ${plan.label} plan includes up to ${limit} ${limit === 1 ? 'member' : 'members'}.` : undefined} />
       <ErrorNote message={failure ? errorMessage(failure.error) : null} />
 
       {canManage && (
@@ -418,12 +317,10 @@ export const BrandPage: React.FC = () => {
           <label className="block text-sm font-medium">Logo address
             <input type="url" className={`${inputClass} mt-1`} placeholder="Upload in Assets, then paste the link" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
           </label>
-          <label className="block text-sm font-medium">Main color
-            <span className="mt-1 flex gap-2">
-              <input type="color" aria-label="Main color picker" className="h-9 w-12 rounded border border-slate-300 dark:border-slate-700" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} />
-              <input pattern="#[0-9a-fA-F]{6}" className={inputClass} value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} />
-            </span>
-          </label>
+          <ColorField label="Main color" value={primaryColor} disabled={!canEdit} onChange={(color) => {
+            setPrimaryColor(color);
+            setIsSaved(false);
+          }} />
           <FontSelect label="Font" value={fontFamily} defaultLabel="Use the template's font" onChange={(font) => {
             setFontFamily(font);
             setIsSaved(false);
@@ -469,7 +366,7 @@ export const SettingsPage: React.FC = () => {
       select(id);
     },
   });
-  const limits = workspace ? PLAN_LIMITS[workspace.plan] : null;
+  const plan = useCurrentPlan();
 
   return (
     <>
@@ -493,14 +390,14 @@ export const SettingsPage: React.FC = () => {
           </fieldset>
         </form>
 
-        {limits && (
+        {plan && (
           <section aria-labelledby="plan-title" className={`${cardClass} p-6`}>
-            <h2 id="plan-title" className="font-semibold capitalize">{workspace?.plan} plan</h2>
+            <h2 id="plan-title" className="font-semibold">{plan.label} plan</h2>
             <dl className="mt-2 text-sm grid grid-cols-2 gap-y-1">
-              <dt className="text-slate-500 dark:text-slate-400">Projects</dt><dd>{limits.maxProjects.toLocaleString()}</dd>
-              <dt className="text-slate-500 dark:text-slate-400">Team members</dt><dd>{limits.teamMembersLimit.toLocaleString()}</dd>
+              <dt className="text-slate-500 dark:text-slate-400">Projects</dt><dd>{plan.maxProjects.toLocaleString()}</dd>
+              <dt className="text-slate-500 dark:text-slate-400">Team members</dt><dd>{plan.maxMembers.toLocaleString()}</dd>
             </dl>
-            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Online upgrades aren't available yet. Contact us to change your plan.</p>
+            <Link to={ROUTES.plans} className="mt-3 inline-block text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">See plans and usage</Link>
           </section>
         )}
 

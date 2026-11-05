@@ -30,7 +30,7 @@ export const RenderedNode: React.FC<{ node: RenderNode; ctx: RenderContext }> = 
   );
 };
 
-export const StyleTag: React.FC<{ theme: Theme; trees: (RenderNode | null)[] }> = ({ theme, trees }) => {
+export const StyleTag: React.FC<{ theme: Theme; trees: (RenderNode | null)[]; scopeId?: string }> = ({ theme, trees, scopeId }) => {
   const blockFonts = fontsUrl(trees.flatMap(nodeFonts));
   return (
     <>
@@ -38,7 +38,7 @@ export const StyleTag: React.FC<{ theme: Theme; trees: (RenderNode | null)[] }> 
       <style
         // Node values are filtered by safeCssValue. A </style> can't get through, since < is rejected.
         dangerouslySetInnerHTML={{
-          __html: `.fp-root{${themeCssVariables(theme)}}${BASE_CSS}${trees.map(generateNodeCss).join('')}`,
+          __html: `.fp-root${scopeId ? `.fp-scope-${scopeId}` : ''}{${themeCssVariables(theme)}}${BASE_CSS}${trees.map(generateNodeCss).join('')}`,
         }}
       />
     </>

@@ -4,6 +4,10 @@ import { MODULE_LIST } from '../core/modules';
 import { StudioPage } from '../studio/StudioPage';
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SignUpPage } from './auth/AuthPages';
 import { FullPageSpinner, RedirectIfAuthenticated, RequireAuth } from './auth/RequireAuth';
+import { PlansPage } from './account/PlansPage';
+import { ProfilePage } from './account/ProfilePage';
+import { SupportPage } from './account/SupportPage';
+import { AdminPage } from './admin/AdminPage';
 import { DashboardPage } from './dashboard/DashboardPage';
 import { LandingPage } from './landing/LandingPage';
 import { ProjectPage } from './projects/ProjectPage';
@@ -13,7 +17,8 @@ import { CreatePage } from './templates/CreatePage';
 import { TemplatesPage } from './templates/TemplatesPage';
 import { WizardPage } from './templates/WizardPage';
 import { WorkspaceProvider } from './workspace';
-import { AcceptInvitePage, AnalyticsPage, AssetsPage, BrandPage, SettingsPage, TeamPage } from './workspace/WorkspacePages';
+import { AnalyticsPage } from './workspace/AnalyticsPage';
+import { AcceptInvitePage, AssetsPage, BrandPage, SettingsPage, TeamPage } from './workspace/WorkspacePages';
 
 // Loaded on demand: the Markdown renderer is only needed here.
 const DocsPage = React.lazy(() => import('../docs/DocsPage'));
@@ -65,6 +70,10 @@ export const AppRoutes: React.FC = () => (
           <Route path="team" element={<TeamPage />} />
           <Route path="brand" element={<BrandPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="plans" element={<PlansPage />} />
+          <Route path="support" element={<SupportPage />} />
+          <Route path="admin" element={<AdminPage />} />
           <Route path="*" element={<DashboardPage />} />
         </Route>
       </Route>

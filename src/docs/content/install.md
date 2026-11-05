@@ -4,6 +4,8 @@ The script is about 21 KB when compressed, loads with `defer` so it doesn't dela
 
 Add it once per project. To use several projects on a page, add one script tag for each.
 
+Each project's **Share and install** tab has these steps with your code filled in, including WordPress, Shopify, Webflow, Wix, Squarespace and Google Tag Manager. Websites and pages don't need the script, since they're hosted for you. To show one of your forms or demos in a website you built here, see [Use your projects inside a page](embedding).
+
 ## Plain HTML
 
 Paste before the closing `</body>` tag:

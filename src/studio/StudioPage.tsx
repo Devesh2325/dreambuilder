@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, CloudOff, Eye, LayoutTemplate, Loader2, Monitor, Redo2, Smartphone, Tablet, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { useDraftEmbedLoader } from '../app/projects/embedLoader';
 import { PublishDialog } from '../app/projects/PublishDialog';
+import { AppTour, useAppTour } from '../app/tours/AppTour';
 import { ROUTES } from '../app/routes';
 import { useServices } from '../app/session';
 import { BusyIcon, BusyLabel, EmptyState, primaryButton, secondaryButton, StudioSkeleton } from '../app/shared/ui';
 import { useWorkspace } from '../app/workspace';
+import { EmbedLoaderContext } from '../experience/EmbeddedProject';
 import { moduleNoun } from '../core/modules';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
@@ -126,6 +129,7 @@ const Editor: React.FC = () => {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const tour = useAppTour('editor', !readOnly);
   const navigate = useNavigate();
   const location = useLocation();
   const { workspace } = useWorkspace();
@@ -179,7 +183,7 @@ const Editor: React.FC = () => {
             <button type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} className={iconButton} onClick={undo}><Undo2 className="w-4 h-4" /></button>
             <button type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} className={iconButton} onClick={redo}><Redo2 className="w-4 h-4" /></button>
           </div>
-          <div role="group" aria-label="Device" className={toolGroup}>
+          <div role="group" aria-label="Device" data-tour="devices" className={toolGroup}>
             {DEVICE_BUTTONS.map(({ device: value, label, icon: DeviceIcon }) => (
               <button key={value} type="button" aria-label={label} aria-pressed={device === value} onClick={() => setDevice(value)}
                 className={`p-1.5 rounded-md ${device === value ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-700'}`}>
@@ -194,7 +198,7 @@ const Editor: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
+        <div data-tour="publish" className="flex items-center justify-end gap-2">
           {!readOnly && (
             <button type="button" aria-label="Save as template" title="Save as template" className={`${secondaryButton} !px-2.5 !py-1.5`} onClick={() => setIsSavingTemplate(true)}>
               <LayoutTemplate className="w-4 h-4" aria-hidden="true" />
@@ -222,9 +226,11 @@ const Editor: React.FC = () => {
       )}
 
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        <LeftPanel />
+        <LeftPanel onStartTour={tour.start} />
         <Canvas />
       </div>
+
+      {tour.isOpen && <AppTour id="editor" onDone={tour.finish} />}
 
       {isPreviewing && <PreviewMode onClose={() => setIsPreviewing(false)} />}
 
@@ -252,6 +258,7 @@ export const StudioPage: React.FC = () => {
   const { can, isLoading: isLoadingWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
   const loadedId = useStudio((s) => s.project?.id);
+  const embedLoader = useDraftEmbedLoader();
 
   const query = useQuery({
     queryKey: ['studio', projectId],
@@ -301,5 +308,9 @@ export const StudioPage: React.FC = () => {
   if (!loadedId || loadedId !== projectId) {
     return <StudioSkeleton />;
   }
-  return <Editor />;
+  return (
+    <EmbedLoaderContext.Provider value={embedLoader}>
+      <Editor />
+    </EmbedLoaderContext.Provider>
+  );
 };

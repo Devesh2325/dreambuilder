@@ -1,6 +1,8 @@
 import { BlockField, BlockMeta } from './types';
 
 const text = (key: string, label: string, help?: string): BlockField => ({ key, label, type: 'text', help });
+/** A technical name, typed by hand. Variables make no sense here. */
+const name = (key: string, label: string, help: string): BlockField => ({ key, label, type: 'text', help, plain: true });
 const longtext = (key: string, label: string): BlockField => ({ key, label, type: 'longtext' });
 const url = (key: string, label: string): BlockField => ({ key, label, type: 'url' });
 
@@ -14,7 +16,7 @@ const BUTTON_ACTIONS = [
 // Kept apart from the renderers so the editor can list blocks without importing them.
 export const BLOCK_META: Record<string, BlockMeta> = {
   Root: { type: 'Root', label: 'Page', category: 'layout', icon: 'LayoutTemplate', isContainer: true, defaultProps: {}, fields: [] },
-  Section: { type: 'Section', label: 'Section', category: 'layout', icon: 'RectangleHorizontal', isContainer: true, defaultProps: {}, fields: [text('anchor', 'Anchor name', 'Lets links jump here with #name.')] },
+  Section: { type: 'Section', label: 'Section', category: 'layout', icon: 'RectangleHorizontal', isContainer: true, defaultProps: {}, fields: [{ key: 'anchor', label: 'Jump link name (optional)', type: 'text', plain: true, slug: true, help: 'Most people can leave this empty. Give this section a one-word name, such as pricing. Then a menu item or button linking to #pricing scrolls here. Visitors never see the name.' }] },
   Container: { type: 'Container', label: 'Container', category: 'layout', icon: 'Square', isContainer: true, defaultProps: {}, fields: [] },
   Box: { type: 'Box', label: 'Box', category: 'layout', icon: 'Box', isContainer: true, defaultProps: {}, fields: [] },
   Card: { type: 'Card', label: 'Card', category: 'layout', icon: 'CreditCard', isContainer: true, defaultProps: {}, fields: [] },
@@ -67,6 +69,29 @@ export const BLOCK_META: Record<string, BlockMeta> = {
       text('title', 'Description (for screen readers)'),
     ],
   },
+  PaymentButton: {
+    type: 'PaymentButton', label: 'Pay button', category: 'content', icon: 'CreditCard',
+    defaultProps: { text: 'Buy now', price: '', provider: 'stripe', url: '' },
+    fields: [
+      text('text', 'Button label'),
+      text('price', 'Price shown beside it', 'Optional. For example: $19, or $19 a month.'),
+      {
+        key: 'provider', label: 'Who takes the payment', type: 'select',
+        options: [
+          { label: 'Stripe', value: 'stripe' },
+          { label: 'Razorpay', value: 'razorpay' },
+          { label: 'PayPal', value: 'paypal' },
+          { label: 'Another provider', value: 'other' },
+        ],
+      },
+      { key: 'url', label: 'Payment link', type: 'url', help: 'The link your payment provider gives you. It must start with https://.', plain: true },
+    ],
+  },
+  ProjectEmbed: {
+    type: 'ProjectEmbed', label: 'Your project', category: 'content', icon: 'Blocks',
+    defaultProps: { projectId: '' },
+    fields: [{ key: 'projectId', label: 'Which project', type: 'project', help: 'Shows one of your forms, demos, banners, FAQs, menus or tours in this page. Publish it too, or visitors will not see it.' }],
+  },
   Divider: { type: 'Divider', label: 'Divider', category: 'content', icon: 'Minus', defaultProps: {}, fields: [] },
   Spacer: {
     type: 'Spacer', label: 'Spacer', category: 'content', icon: 'MoveVertical',
@@ -115,7 +140,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     defaultProps: { name: 'field', label: 'Label', inputType: 'text', required: false, placeholder: '', optionsText: '' },
     fields: [
       text('label', 'Label'),
-      text('name', 'Field name', 'Identifies this answer in submissions and webhooks.'),
+      name('name', 'Column name for answers', 'A short name for this answer in your responses and exports. Use one word, such as email.'),
       {
         key: 'inputType', label: 'Type', type: 'select',
         options: ['text', 'email', 'tel', 'number', 'url', 'date', 'textarea', 'select', 'radio', 'checkbox']
@@ -131,7 +156,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     defaultProps: { name: 'score', label: 'How likely are you to recommend us?', min: 0, max: 10, required: true },
     fields: [
       text('label', 'Question'),
-      text('name', 'Field name'),
+      name('name', 'Column name for answers', 'A short name for this answer in your responses and exports. Use one word, such as score.'),
       { key: 'min', label: 'Lowest', type: 'number' },
       { key: 'max', label: 'Highest', type: 'number' },
       { key: 'required', label: 'Required', type: 'boolean' },
@@ -151,7 +176,7 @@ export const BLOCK_META: Record<string, BlockMeta> = {
           { label: 'Side panel, for longer guides', value: 'sidebar' },
         ],
       },
-      text('selector', 'Element to point at', 'Choose it with Pick on my site. Only tooltips use this.'),
+      name('selector', 'Element to point at', 'Choose it with Pick on my site. Only tooltips use this.'),
       { key: 'placement', label: 'Position and arrow', type: 'placement' },
       {
         key: 'size', label: 'Size', type: 'select',

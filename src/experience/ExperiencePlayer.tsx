@@ -29,6 +29,8 @@ export interface ExperiencePlayerProps {
   settings: ProjectSettings;
   host: PlayerHost;
   mode?: 'preview' | 'live';
+  /** Set when playing inside another page, so its theme stays its own. */
+  scopeId?: string;
 }
 
 const EMPTY_TOUR: TourSettings = {};
@@ -316,7 +318,7 @@ const DemoPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
 };
 
 /** Plays any published experience. The embed, hosted links and previews all use this. */
-export const ExperiencePlayer: React.FC<ExperiencePlayerProps> = ({ type, content, theme, variables, settings, host, mode = 'live' }) => {
+export const ExperiencePlayer: React.FC<ExperiencePlayerProps> = ({ type, content, theme, variables, settings, host, mode = 'live', scopeId }) => {
   const [isClosed, setIsClosed] = useState(false);
   const tree = useMemo(() => expandContent(content, variables), [content, variables]);
   const trees = useMemo(() => [tree], [tree]);
@@ -378,8 +380,8 @@ export const ExperiencePlayer: React.FC<ExperiencePlayerProps> = ({ type, conten
   }
 
   return (
-    <div className="fp-root" style={delivery === 'overlay' ? { background: 'transparent' } : undefined}>
-      <StyleTag theme={theme} trees={trees} />
+    <div className={scopeId ? `fp-root fp-scope-${scopeId}` : 'fp-root'} style={delivery === 'overlay' ? { background: 'transparent' } : undefined}>
+      <StyleTag theme={theme} trees={trees} scopeId={scopeId} />
       {body}
     </div>
   );

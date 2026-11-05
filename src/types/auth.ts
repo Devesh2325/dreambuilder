@@ -105,6 +105,18 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
   },
 };
 
+export const PLAN_LABELS: Record<SubscriptionPlan, string> = {
+  free: 'Free', starter: 'Starter', pro: 'Pro', agency: 'Agency', enterprise: 'Enterprise',
+};
+
+export const PLAN_DESCRIPTIONS: Record<SubscriptionPlan, string> = {
+  free: 'For trying things out.',
+  starter: 'For one business, getting started.',
+  pro: 'For growing teams.',
+  agency: 'For agencies with many clients.',
+  enterprise: 'For large organizations.',
+};
+
 // Permission matrix:
 // Actions: 'create:project', 'edit:project', 'delete:project', 'publish', 'manage:billing', 'manage:team', 'manage:integrations'
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {

@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { BarChart3, BookOpen, Image, LayoutDashboard, LayoutTemplate, Loader2, LogOut, Moon, PanelLeft, Palette, Settings, Sun, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Crown, Image, LayoutDashboard, LayoutTemplate, LifeBuoy, Loader2, LogOut, Moon, PanelLeft, Palette, Settings, ShieldCheck, Sun, Users } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
 import { isLocalBackend } from '../../data';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
 import { Icon } from '../shared/Icon';
 import { DashboardSkeleton } from '../shared/ui';
+import { useIsSuperAdmin } from '../admin/AdminPage';
+import { initials } from '../shared/format';
 import { useTheme } from '../theme';
+import { NudgeBanner } from './NudgeBanner';
 import { useWorkspace } from '../workspace';
 
 const STORAGE_KEY = 'fp_sidebar_collapsed';
@@ -58,6 +61,7 @@ export const Shell: React.FC = () => {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const superAdmin = useIsSuperAdmin();
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -119,8 +123,9 @@ export const Shell: React.FC = () => {
           </div>
         )}
 
-        <nav aria-label="Main" className={`no-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden ${collapsed ? 'px-2' : 'px-3'} pb-3`}>
+        <nav aria-label="Main" data-tour="nav" className={`no-scrollbar flex-1 min-h-0 overflow-y-auto overflow-x-hidden ${collapsed ? 'px-2' : 'px-3'} pb-3`}>
           <SideLink to={ROUTES.home} end collapsed={collapsed} label="Dashboard" icon={<LayoutDashboard className={iconSize} aria-hidden="true" />} />
+          {superAdmin.data && <SideLink to={ROUTES.admin} collapsed={collapsed} label="Super admin" icon={<ShieldCheck className={iconSize} aria-hidden="true" />} />}
           <Group label="Build" collapsed={collapsed}>
             {MODULE_LIST.filter((m) => m.primary).map((m) => <SideLink key={m.type} to={m.path} collapsed={collapsed} label={m.plural} icon={<Icon name={m.icon} className={iconSize} />} />)}
           </Group>
@@ -135,25 +140,36 @@ export const Shell: React.FC = () => {
           <Group label="Workspace" collapsed={collapsed}>
             <SideLink to={ROUTES.analytics} collapsed={collapsed} label="Analytics" icon={<BarChart3 className={iconSize} aria-hidden="true" />} />
             <SideLink to={ROUTES.team} collapsed={collapsed} label="Team" icon={<Users className={iconSize} aria-hidden="true" />} />
+            <SideLink to={ROUTES.plans} collapsed={collapsed} label="Plans" icon={<Crown className={iconSize} aria-hidden="true" />} />
             <SideLink to={ROUTES.settings} collapsed={collapsed} label="Settings" icon={<Settings className={iconSize} aria-hidden="true" />} />
+          </Group>
+          <Group label="Help" collapsed={collapsed}>
             <SideLink to={ROUTES.docs} collapsed={collapsed} label="Docs" icon={<BookOpen className={iconSize} aria-hidden="true" />} />
+            <SideLink to={ROUTES.support} collapsed={collapsed} label="Support" icon={<LifeBuoy className={iconSize} aria-hidden="true" />} />
           </Group>
         </nav>
 
-        <div className={`shrink-0 border-t border-slate-200 dark:border-slate-800 ${collapsed ? 'p-2 space-y-1' : 'p-3'}`}>
+        <div className={`shrink-0 border-t border-slate-200 dark:border-slate-800 ${collapsed ? 'p-2 space-y-1' : 'p-2'}`}>
           {isLocalBackend && !collapsed && (
-            <p role="note" title="Everything is saved only in this browser. Connect Supabase to go live." className="mb-2 px-2 py-1 rounded-md text-[11px] font-medium text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-500/10">
+            <p role="note" title="Everything is saved only in this browser. Connect Supabase to go live." className="mb-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-500/10">
               Demo mode: saved in this browser only
             </p>
           )}
-          {!collapsed && <p className="px-1 mb-1 text-xs truncate text-slate-500 dark:text-slate-400">{user?.email}</p>}
-          <div className={collapsed ? 'flex flex-col items-center gap-1' : 'flex items-center gap-1'}>
-            <button type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} title={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+          <div className={collapsed ? 'flex flex-col items-center gap-1' : 'flex items-center gap-0.5'}>
+            <Link to={ROUTES.profile} data-tour="profile" aria-label="Your profile" title={collapsed ? 'Your profile' : undefined} className={`flex items-center gap-2 min-w-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${collapsed ? 'p-1' : 'flex-1 p-1.5'}`}>
+              <span aria-hidden="true" className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[11px] font-bold text-white bg-gradient-to-br from-indigo-500 to-fuchsia-500">{initials(user?.fullName, user?.email)}</span>
+              {!collapsed && (
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold truncate">{user?.fullName || 'Your profile'}</span>
+                  <span className="block text-[11px] truncate text-slate-500 dark:text-slate-400">{user?.email}</span>
+                </span>
+              )}
+            </Link>
+            <button type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} title={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button type="button" disabled={isSigningOut} onClick={handleSignOut} aria-label={collapsed ? 'Log out' : undefined} title={collapsed ? 'Log out' : undefined} className={`flex items-center justify-center gap-1.5 p-2 text-sm rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60 ${collapsed ? '' : 'flex-1'}`}>
+            <button type="button" disabled={isSigningOut} onClick={handleSignOut} aria-label="Log out" title="Log out" className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 disabled:opacity-60">
               {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <LogOut className="w-4 h-4" aria-hidden="true" />}
-              {!collapsed && 'Log out'}
             </button>
           </div>
         </div>
@@ -161,6 +177,7 @@ export const Shell: React.FC = () => {
 
       <main className="relative flex-1 min-w-0 overflow-y-auto">
         <div className="px-6 py-6">
+          <NudgeBanner />
           {isLoading ? <DashboardSkeleton /> : <Outlet />}
         </div>
       </main>

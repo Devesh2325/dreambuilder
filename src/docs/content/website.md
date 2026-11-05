@@ -18,7 +18,11 @@ Click **Publish** and choose a web address. Your site goes live at `{{ORIGIN}}/s
 
 ## Links between pages
 
-A link starting with `/` goes to a page in your site. For example, `/contact` opens your Contact page, and `#services` jumps to a section whose **Anchor name** is `services`.
+A link starting with `/` goes to a page in your site. For example, `/contact` opens your Contact page, and `#services` jumps to a section whose **Jump link name** is `services`. Select the section to set one. Most sections don't need it.
+
+## Take payments and add your other projects
+
+Add a **Pay button** to sell something. See [Take payments](payments). To show a form, demo, banner or FAQ you've already made, see [Use your projects inside a page](embedding).
 
 ## Search engines
 

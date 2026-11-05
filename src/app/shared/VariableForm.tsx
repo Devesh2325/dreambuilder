@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2, Upload } from 'lucide-react';
 import { defaultValues, VariableDef, VariableValues } from '../../core/variables';
 import { useServices } from '../session';
 import { useWorkspace } from '../workspace';
+import { ColorField } from '../../studio/fields';
 import { BusyIcon, errorMessage, inputClass } from './ui';
 
 export const ImageInput: React.FC<{
@@ -74,10 +75,12 @@ interface FieldProps {
   errorPrefix: string;
   /** A short note, such as how many places use this. */
   hint?: string;
+  /** Offers a button beside the note that shows where this is used. */
+  onShow?: () => void;
   onChange: (value: unknown) => void;
 }
 
-export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error, errors, errorPrefix, hint, onChange }) => {
+export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error, errors, errorPrefix, hint, onShow, onChange }) => {
   const describedBy = error ? `${fieldId}-error` : def.help ? `${fieldId}-help` : undefined;
   const text = value === undefined || value === null ? '' : String(value);
   const common = { id: fieldId, 'aria-invalid': Boolean(error), 'aria-describedby': describedBy };
@@ -90,7 +93,12 @@ export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error
   const notes = (
     <>
       {def.help && !error && <p id={`${fieldId}-help`} className="mt-1 text-xs text-slate-500 dark:text-slate-400">{def.help}</p>}
-      {hint && !error && <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{hint}</p>}
+      {hint && !error && (
+        <p className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <span>{hint}</span>
+          {onShow && <button type="button" title={`Show where ${def.label} is used`} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={onShow}>Show on page</button>}
+        </p>
+      )}
       {error && <p id={`${fieldId}-error`} className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</p>}
     </>
   );
@@ -185,12 +193,7 @@ export const VariableField: React.FC<FieldProps> = ({ def, fieldId, value, error
       </select>
     );
   } else if (def.type === 'color') {
-    control = (
-      <div className="flex gap-2">
-        <input type="color" aria-label={`${def.label} picker`} className="h-9 w-12 rounded border border-slate-300 dark:border-slate-700" value={/^#[0-9a-fA-F]{6}$/.test(text) ? text : '#000000'} onChange={(e) => onChange(e.target.value)} />
-        <input {...common} className={inputClass} value={text} onChange={(e) => onChange(e.target.value)} />
-      </div>
-    );
+    control = <ColorField id={fieldId} hideLabel label={def.label} value={text} onChange={onChange} />;
   } else {
     const inputType = def.type === 'email' ? 'email' : def.type === 'url' ? 'url' : def.type === 'number' ? 'number' : 'text';
     control = <input {...common} type={inputType} className={inputClass} value={text} placeholder={def.placeholder} onChange={(e) => onChange(e.target.value)} />;
@@ -210,11 +213,12 @@ interface VariableFormProps {
   values: VariableValues;
   errors?: Record<string, string>;
   hints?: Record<string, string>;
+  onShow?: (key: string) => void;
   onChange: (values: VariableValues) => void;
 }
 
 /** Generated from a template's variables. Used by the wizard and the editor. */
-export const VariableForm: React.FC<VariableFormProps> = ({ defs, values, errors = {}, hints, onChange }) => {
+export const VariableForm: React.FC<VariableFormProps> = ({ defs, values, errors = {}, hints, onShow, onChange }) => {
   const groups = new Map<string, VariableDef[]>();
   for (const def of defs) {
     const group = def.group ?? 'Details';
@@ -228,17 +232,19 @@ export const VariableForm: React.FC<VariableFormProps> = ({ defs, values, errors
           <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{group}</h2>
           <div className="space-y-4">
             {groupDefs.map((def) => (
-              <VariableField
-                key={def.key}
-                def={def}
-                fieldId={`var-${def.key.replace(/\W/g, '-')}`}
-                value={values[def.key]}
-                error={errors[def.key]}
-                errors={errors}
-                errorPrefix={def.key}
-                hint={hints?.[def.key]}
-                onChange={(next) => onChange({ ...values, [def.key]: next })}
-              />
+              <div key={def.key} data-var={def.key}>
+                <VariableField
+                  def={def}
+                  fieldId={`var-${def.key.replace(/\W/g, '-')}`}
+                  value={values[def.key]}
+                  error={errors[def.key]}
+                  errors={errors}
+                  errorPrefix={def.key}
+                  hint={hints?.[def.key]}
+                  onShow={onShow && hints?.[def.key]?.startsWith('Used') ? () => onShow(def.key) : undefined}
+                  onChange={(next) => onChange({ ...values, [def.key]: next })}
+                />
+              </div>
             ))}
           </div>
         </section>

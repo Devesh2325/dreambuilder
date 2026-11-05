@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookmarkPlus, Crosshair, EyeOff, Link2, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookmarkPlus, Copy, Crosshair, EyeOff, Link2, Loader2, Plus, Trash2 } from 'lucide-react';
 import { DEFAULT_TRIGGERS, DEVICES, DocNode, Triggers } from '../core/schema';
 import { MODULES } from '../core/modules';
 import { getAncestors } from '../core/tree';
@@ -10,6 +10,8 @@ import { BLOCK_META } from '../renderer/blockMeta';
 import { BlockField } from '../renderer/types';
 import { projectVariableDefs } from '../templates';
 import { sectionFromNode } from '../templates/library';
+import { ProjectField } from './ProjectField';
+import { PaymentGuide } from './PaymentGuide';
 import { ColorField, fieldClass, labelClass, slugFromTitle } from './fields';
 import { DemoPanel, TourPanel } from './ModulePanels';
 import { SaveToLibrary } from './SaveToLibrary';
@@ -277,6 +279,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
 
   if (field.type === 'menu') return <MenuEditor node={node} fieldKey={field.key} />;
   if (field.type === 'placement') return <PlacementField node={node} label={field.label} />;
+  if (field.type === 'project') return <ProjectField node={node} field={field} />;
 
   const value = node.props[field.key];
   const text = value === undefined || value === null ? '' : String(value);
@@ -308,7 +311,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
           </p>
           {!readOnly && (
             <div className="mt-1.5 flex gap-3 font-semibold">
-              <button type="button" className="text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().setTool('variables')}>Change it</button>
+              <button type="button" className="text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().focusVariable(linkedDetail.key)}>Change it</button>
               <button type="button" aria-label={`Type your own ${field.label}`} className="text-slate-500 dark:text-slate-400 hover:underline" onClick={() => set(typeof current === 'string' ? current : '')}>Type your own</button>
             </div>
           )}
@@ -334,7 +337,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
             Uses {itemField?.label ?? field.label} from {loopList.label}
           </p>
           {!readOnly && (
-            <button type="button" className="mt-1.5 font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().setTool('variables')}>Edit the list</button>
+            <button type="button" className="mt-1.5 font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().focusVariable(loopList.key)}>Edit the list</button>
           )}
         </div>
       </div>
@@ -353,7 +356,10 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
     : [];
   const names: TokenName[] = [...loopNames, ...usable.map((def) => ({ key: def.key, label: def.label }))];
   const friendly = textual ? toFriendly(text, names) : text;
-  const setFriendly = (next: string) => set(textual ? fromFriendly(next, names) : next);
+  const setFriendly = (next: string) => {
+    if (field.slug) set(next.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^[^a-z]+/, ''));
+    else set(textual ? fromFriendly(next, names) : next);
+  };
 
   if (field.type === 'color') {
     return <ColorField label={field.label} disabled={readOnly} value={text} onChange={set} clearable />;
@@ -381,14 +387,20 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
         </button>
       )}
       {field.help && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{field.help}</p>}
+      {field.slug && text && (
+        <p className="mt-1 flex items-start gap-1 text-xs text-emerald-700 dark:text-emerald-400">
+          <Link2 className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
+          <span>Link to this section with #{text}</span>
+        </p>
+      )}
       {linked && (
         <p className="mt-1 flex items-start gap-1 text-xs text-emerald-700 dark:text-emerald-400">
           <Link2 className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
           <span>Shows: {toFriendly(String(resolveString(text.replace(TOKEN_PATTERN, (match, key: string) => (key in draftVariables ? match : `[${names.find((item) => item.key === key)?.label ?? key}]`)), draftVariables)), names)}</span>
         </p>
       )}
-      {(textual || field.type === 'image') && !readOnly && !linked && text.trim() !== '' && field.key !== 'selector' && <MakeVariable node={node} field={field} />}
-      {textual && names.length > 0 && !readOnly && (
+      {(textual || field.type === 'image') && !readOnly && !linked && text.trim() !== '' && !field.plain && <MakeVariable node={node} field={field} />}
+      {textual && names.length > 0 && !readOnly && !field.plain && (
         <select
           aria-label={`Insert a variable into ${field.label}`}
           className="mt-1 w-full text-[13px] bg-transparent text-indigo-600 dark:text-indigo-400 focus:outline-none"
@@ -405,9 +417,20 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
   );
 };
 
-const AdvancedPanel: React.FC<{ node: DocNode }> = ({ node }) => {
+const BehaviorSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <section aria-label={title} className="space-y-2 pb-4 border-b border-slate-100 dark:border-slate-800 last:border-b-0 last:pb-0">
+    <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">{title}</h4>
+    {children}
+  </section>
+);
+
+const noteClass = 'text-xs font-normal text-slate-500 dark:text-slate-400';
+const actionClass = 'w-full h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors disabled:opacity-50';
+
+/** How a block acts, rather than how it looks: when it shows, whether it repeats, and so on. */
+const BehaviorPanel: React.FC<{ node: DocNode }> = ({ node }) => {
   const readOnly = useStudio((s) => s.readOnly);
-  const { updateNode } = useStudio.getState();
+  const { updateNode, duplicateBlock, removeBlock, setInspectorTab } = useStudio.getState();
   const variables = useTemplateVariables();
   const [isSaving, setIsSaving] = useState(false);
   const owner = useStudio.getState().documentOfNode(node.id);
@@ -417,44 +440,75 @@ const AdvancedPanel: React.FC<{ node: DocNode }> = ({ node }) => {
 
   return (
     <div className="space-y-4">
-      <label className={labelClass}>Layer name
-        <input disabled={readOnly} className={`${fieldClass} mt-1`} value={node.name ?? ''} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
-      </label>
+      <BehaviorSection title="Name">
+        <label className={labelClass}>Layer name
+          <input disabled={readOnly} className={`${fieldClass} mt-1`} value={node.name ?? ''} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
+          <span className={`${noteClass} mt-1 block`}>Only you see this. It helps you find the block in Layers.</span>
+        </label>
+      </BehaviorSection>
+
+      <BehaviorSection title="Show or hide">
+        <label className={`${labelClass} flex items-start gap-2`}>
+          <input type="checkbox" className="mt-0.5" disabled={readOnly} checked={Boolean(node.hidden)} onChange={(e) => updateNode(node.id, { hidden: e.target.checked })} />
+          <span>Hide this block
+            <span className={`${noteClass} block`}>Keeps it here, but visitors won't see it.</span>
+          </span>
+        </label>
+        {conditions.length > 0 && (
+          <label className={labelClass}>Only show when filled in
+            <select disabled={readOnly} className={`${fieldClass} mt-1`} value={node.showIf ?? ''} onChange={(e) => updateNode(node.id, { showIf: e.target.value || undefined })}>
+              <option value="">Always show</option>
+              {conditions.map((def) => <option key={def.key} value={def.key}>{def.label}</option>)}
+            </select>
+            <span className={`${noteClass} mt-1 block`}>For example, hide a phone row when there's no phone number.</span>
+          </label>
+        )}
+        <p className={noteClass}>
+          To choose phone, tablet or desktop, open <button type="button" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => setInspectorTab('style')}>Style</button>.
+        </p>
+      </BehaviorSection>
+
       {lists.length > 0 && (
-        <label className={labelClass}>Repeat for each item in
-          <select
-            disabled={readOnly}
-            className={`${fieldClass} mt-1`}
-            value={node.repeat?.list ?? ''}
-            onChange={(e) => updateNode(node.id, { repeat: e.target.value ? { list: e.target.value, as: node.repeat?.as ?? 'item' } : undefined })}
-          >
-            <option value="">Don't repeat</option>
-            {lists.map((def) => <option key={def.key} value={def.key}>{def.label}</option>)}
-          </select>
-          {node.repeat && <span className="mt-1 block font-normal text-xs text-slate-500 dark:text-slate-400">This block appears once for each item. Use <strong>+ Insert a variable</strong> on text inside it to show that item's words.</span>}
-        </label>
+        <BehaviorSection title="Repeat">
+          <label className={labelClass}>Repeat for each item in
+            <select
+              disabled={readOnly}
+              className={`${fieldClass} mt-1`}
+              value={node.repeat?.list ?? ''}
+              onChange={(e) => updateNode(node.id, { repeat: e.target.value ? { list: e.target.value, as: node.repeat?.as ?? 'item' } : undefined })}
+            >
+              <option value="">Don't repeat</option>
+              {lists.map((def) => <option key={def.key} value={def.key}>{def.label}</option>)}
+            </select>
+            <span className={`${noteClass} mt-1 block`}>
+              {node.repeat
+                ? <>This block appears once for each item. Use <strong>+ Insert a variable</strong> on text inside it to show that item's words.</>
+                : 'Makes one copy of this block for every item in a list, such as one card per team member.'}
+            </span>
+          </label>
+        </BehaviorSection>
       )}
-      {conditions.length > 0 && (
-        <label className={labelClass}>Only show when filled in
-          <select disabled={readOnly} className={`${fieldClass} mt-1`} value={node.showIf ?? ''} onChange={(e) => updateNode(node.id, { showIf: e.target.value || undefined })}>
-            <option value="">Always show</option>
-            {conditions.map((def) => <option key={def.key} value={def.key}>{def.label}</option>)}
-          </select>
+
+      <BehaviorSection title="Protect">
+        <label className={`${labelClass} flex items-start gap-2`}>
+          <input type="checkbox" className="mt-0.5" disabled={readOnly} checked={Boolean(node.locked)} onChange={(e) => updateNode(node.id, { locked: e.target.checked })} />
+          <span>Lock this block
+            <span className={`${noteClass} block`}>It can't be moved or deleted by accident. You can still edit it.</span>
+          </span>
         </label>
-      )}
-      <label className={`${labelClass} flex items-center gap-2`}>
-        <input type="checkbox" disabled={readOnly} checked={Boolean(node.hidden)} onChange={(e) => updateNode(node.id, { hidden: e.target.checked })} />
-        Hide this block
-      </label>
-      <label className={`${labelClass} flex items-center gap-2`}>
-        <input type="checkbox" disabled={readOnly} checked={Boolean(node.locked)} onChange={(e) => updateNode(node.id, { locked: e.target.checked })} />
-        Lock (can't be moved or deleted)
-      </label>
+      </BehaviorSection>
+
       {!readOnly && !isRoot && (
-        <button type="button" className="w-full h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors" onClick={() => setIsSaving(true)}>
-          <BookmarkPlus className="w-4 h-4" aria-hidden="true" />
-          Save to team library
-        </button>
+        <BehaviorSection title="Actions">
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className={actionClass} onClick={() => duplicateBlock(node.id)}><Copy className="w-4 h-4" aria-hidden="true" />Duplicate</button>
+            <button type="button" disabled={Boolean(node.locked)} title={node.locked ? 'Unlock it first' : undefined} className={`${actionClass} hover:!border-rose-400 hover:!text-rose-600`} onClick={() => removeBlock(node.id)}><Trash2 className="w-4 h-4" aria-hidden="true" />Delete</button>
+          </div>
+          <button type="button" className={actionClass} onClick={() => setIsSaving(true)}>
+            <BookmarkPlus className="w-4 h-4" aria-hidden="true" />
+            Save to team library
+          </button>
+        </BehaviorSection>
       )}
       {isSaving && (
         <SaveToLibrary
@@ -530,7 +584,7 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
         {tabs.map((id) => (
           <button key={id} role="tab" type="button" aria-selected={activeTab === id} onClick={() => setInspectorTab(id as typeof tab)}
             className={`mr-4 py-2 text-[13px] font-semibold capitalize border-b-2 -mb-px transition-colors ${activeTab === id ? 'border-indigo-600 text-indigo-700 dark:text-indigo-300' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
-            {id}
+            {id === 'advanced' ? 'Behavior' : id}
           </button>
         ))}
       </div>
@@ -577,8 +631,9 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
             </div>
           </form>
         )}
+        {activeTab === 'content' && node.type === 'PaymentButton' && <PaymentGuide provider={String(node.props.provider ?? 'stripe')} url={String(node.props.url ?? '')} />}
         {activeTab === 'style' && <StylePanel node={node} />}
-        {activeTab === 'advanced' && <AdvancedPanel node={node} />}
+        {activeTab === 'advanced' && <BehaviorPanel node={node} />}
       </div>
     </>
   );

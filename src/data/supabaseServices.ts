@@ -2,10 +2,12 @@ import { PostgrestError, User } from '@supabase/supabase-js';
 import { DEFAULT_THEME } from '../core/schema';
 import { createPublicApi } from './publicApi';
 import {
-  AppServices, AssetRecord, AssetRepository, AuthGateway, AuthUser, DocumentRecord, LibraryItem, LibraryRepository, MemberRecord, ProjectRecord,
-  ProjectRepository, PublishingRepository, TeamRepository, WorkspaceMembership, WorkspaceRepository,
+  AdminOverview, AdminRepository, AppServices, AssetRecord, AssetRepository, AuthGateway, AuthUser, DocumentRecord, LibraryItem, LibraryRepository, MemberRecord,
+  NudgeRepository, PlanRepository, PlanRequestRecord, ProfileRepository, ProjectRecord, ProjectRepository, PublishingRepository, SupportRepository, TeamRepository,
+  TicketMessage, TicketRecord, TicketStatus, WorkspaceMembership, WorkspaceRepository,
 } from './services';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabaseClient';
+import { SubscriptionPlan } from '../types/auth';
 
 const db = () => getSupabase();
 
@@ -442,7 +444,170 @@ const library: LibraryRepository = {
   },
 };
 
+const profile: ProfileRepository = {
+  async get() {
+    const { data: session } = await db().auth.getSession();
+    const id = session.session?.user.id;
+    if (!id) return null;
+    const { data, error } = await db().from('user_profiles').select('email, full_name, job_title, timezone').eq('id', id).maybeSingle();
+    check(error);
+    if (!data) return null;
+    const row = data as Row;
+    return { fullName: (row.full_name as string) ?? '', email: row.email as string, jobTitle: (row.job_title as string) ?? '', timezone: (row.timezone as string) ?? '' };
+  },
+  async update({ fullName, jobTitle, timezone }) {
+    const { data: session } = await db().auth.getSession();
+    const id = session.session?.user.id;
+    if (!id) throw new Error('Please log in again.');
+    const patch: Row = {};
+    if (fullName !== undefined) patch.full_name = fullName;
+    if (jobTitle !== undefined) patch.job_title = jobTitle;
+    if (timezone !== undefined) patch.timezone = timezone;
+    const { error } = await db().from('user_profiles').update(patch).eq('id', id);
+    check(error);
+    // The session's copy of the name is what the rest of the app reads.
+    if (fullName !== undefined) await db().auth.updateUser({ data: { full_name: fullName } });
+  },
+  async touchActivity() {
+    const { error } = await db().rpc('touch_last_active');
+    check(error);
+  },
+};
+
+const plans: PlanRepository = {
+  async list() {
+    const [settings, quotas] = await Promise.all([
+      db().from('plan_settings').select('plan, label, price_text, description, max_projects, max_members').order('position'),
+      db().from('plan_module_quotas').select('plan, module, max_projects'),
+    ]);
+    check(settings.error);
+    check(quotas.error);
+    return (settings.data as Row[]).map((row) => ({
+      plan: row.plan as SubscriptionPlan,
+      label: row.label as string,
+      priceText: row.price_text as string,
+      description: row.description as string,
+      maxProjects: row.max_projects as number,
+      maxMembers: row.max_members as number,
+      moduleQuotas: Object.fromEntries((quotas.data as Row[]).filter((quota) => quota.plan === row.plan).map((quota) => [quota.module, quota.max_projects])),
+    }));
+  },
+  async requestChange(organizationId, plan, note) {
+    const { error } = await db().from('plan_requests').insert({ organization_id: organizationId, plan, note });
+    if (error?.code === '23505') throw new Error('You already have a request waiting. We will reply to that first.');
+    check(error);
+  },
+  async listRequests(organizationId) {
+    const { data, error } = await db().from('plan_requests').select('id, plan, note, status, created_at').eq('organization_id', organizationId).order('created_at', { ascending: false });
+    check(error);
+    return (data as Row[]).map((row) => ({ id: row.id as string, plan: row.plan as SubscriptionPlan, note: row.note as string, status: row.status as PlanRequestRecord['status'], createdAt: row.created_at as string }));
+  },
+};
+
+const nudges: NudgeRepository = {
+  async listUnread() {
+    const { data, error } = await db().from('user_nudges').select('id, title, body, link_url, created_at').is('read_at', null).order('created_at', { ascending: false });
+    check(error);
+    return (data as Row[]).map((row) => ({ id: row.id as string, title: row.title as string, body: row.body as string, linkUrl: row.link_url as string | null, createdAt: row.created_at as string }));
+  },
+  async markRead(id) {
+    const { error } = await db().from('user_nudges').update({ read_at: new Date().toISOString() }).eq('id', id);
+    check(error);
+  },
+};
+
+const toTicket = (row: Row): TicketRecord => ({ id: row.id as string, subject: row.subject as string, status: row.status as TicketStatus, createdAt: row.created_at as string, updatedAt: row.updated_at as string });
+const toTicketMessage = (row: Row): TicketMessage => ({ id: row.id as string, isStaff: row.is_staff as boolean, body: row.body as string, createdAt: row.created_at as string });
+
+const support: SupportRepository = {
+  async listTickets() {
+    const { data, error } = await db().from('support_tickets').select('id, subject, status, created_at, updated_at').order('updated_at', { ascending: false });
+    check(error);
+    return (data as Row[]).map(toTicket);
+  },
+  async createTicket(organizationId, subject, body) {
+    const { data, error } = await db().from('support_tickets').insert({ organization_id: organizationId, subject }).select('id').single();
+    check(error);
+    const id = (data as Row).id as string;
+    const message = await db().from('support_messages').insert({ ticket_id: id, body });
+    check(message.error);
+    return id;
+  },
+  async listMessages(ticketId) {
+    const { data, error } = await db().from('support_messages').select('id, is_staff, body, created_at').eq('ticket_id', ticketId).order('created_at');
+    check(error);
+    return (data as Row[]).map(toTicketMessage);
+  },
+  async reply(ticketId, body) {
+    const { error } = await db().from('support_messages').insert({ ticket_id: ticketId, body });
+    if (error?.code === '42501') throw new Error('This request is closed. Please start a new one.');
+    check(error);
+  },
+};
+
+const callAdmin = async <T,>(name: string, args?: Record<string, unknown>): Promise<T> => {
+  const { data, error } = await db().rpc(name, args);
+  check(error);
+  return data as T;
+};
+
+const admin: AdminRepository = {
+  isAdmin: () => callAdmin<boolean>('is_platform_admin'),
+  overview: () => callAdmin<AdminOverview>('admin_overview'),
+  async listUsers() {
+    return (await callAdmin<Row[]>('admin_list_users')).map((row) => ({
+      userId: row.user_id as string,
+      email: row.email as string,
+      fullName: row.full_name as string | null,
+      createdAt: row.created_at as string | null,
+      lastActiveAt: row.last_active_at as string | null,
+      workspaceId: row.workspace_id as string | null,
+      workspaceName: row.workspace_name as string | null,
+      plan: row.plan as SubscriptionPlan | null,
+      projectCount: Number(row.project_count),
+    }));
+  },
+  setWorkspacePlan: (organizationId, plan) => callAdmin('admin_set_workspace_plan', { p_org: organizationId, p_plan: plan }),
+  updatePlan: (plan, patch) => callAdmin('admin_update_plan', {
+    p_plan: plan, p_label: patch.label, p_price: patch.priceText, p_description: patch.description, p_max_projects: patch.maxProjects, p_max_members: patch.maxMembers,
+  }),
+  setModuleQuota: (plan, module, max) => callAdmin('admin_set_module_quota', { p_plan: plan, p_module: module, p_max: max }),
+  sendNudge: (userId, title, body, linkUrl) => callAdmin<number>('admin_send_nudge', { p_user: userId, p_title: title, p_body: body, p_link: linkUrl }),
+  async listPlanRequests() {
+    return (await callAdmin<Row[]>('admin_list_plan_requests')).map((row) => ({
+      id: row.id as string,
+      organizationId: row.organization_id as string,
+      workspaceName: row.workspace_name as string,
+      plan: row.plan as SubscriptionPlan,
+      currentPlan: row.current_plan as SubscriptionPlan,
+      note: row.note as string,
+      status: row.status as PlanRequestRecord['status'],
+      createdAt: row.created_at as string,
+      requestedBy: row.requested_by_email as string | null,
+    }));
+  },
+  resolvePlanRequest: (id, approve) => callAdmin('admin_resolve_plan_request', { p_request: id, p_approve: approve }),
+  async listTickets() {
+    return (await callAdmin<Row[]>('admin_list_tickets')).map((row) => ({
+      ...toTicket(row),
+      userEmail: row.user_email as string,
+      userName: row.user_name as string | null,
+      workspaceName: row.workspace_name as string | null,
+    }));
+  },
+  async listTicketMessages(ticketId) {
+    return (await callAdmin<Row[]>('admin_ticket_messages', { p_ticket: ticketId })).map(toTicketMessage);
+  },
+  replyToTicket: (ticketId, body) => callAdmin('admin_reply_ticket', { p_ticket: ticketId, p_body: body }),
+  setTicketStatus: (ticketId, status) => callAdmin('admin_set_ticket_status', { p_ticket: ticketId, p_status: status }),
+};
+
 export const supabaseServices: AppServices = {
+  profile,
+  plans,
+  nudges,
+  support,
+  admin,
   library,
   auth,
   workspaces,

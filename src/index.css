@@ -22,3 +22,8 @@
 .app-scroll .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* The color picker's sliders: the track is the color itself. */
+.fp-slider { -webkit-appearance: none; appearance: none; display: block; height: 10px; border-radius: 999px; cursor: pointer; }
+.fp-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(15, 23, 42, .35), 0 1px 3px rgba(15, 23, 42, .4); }
+.fp-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(15, 23, 42, .35); }

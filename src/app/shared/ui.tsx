@@ -29,10 +29,13 @@ export const PageHeader: React.FC<{ title: string; subtitle?: string; icon?: str
   </div>
 );
 
-export const StatTile: React.FC<{ label: string; value: number | string }> = ({ label, value }) => (
-  <div className={`${cardClass} !rounded-xl px-4 py-3`}>
-    <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</dt>
-    <dd className="mt-1 text-2xl font-semibold tabular-nums">{typeof value === 'number' ? value.toLocaleString() : value}</dd>
+export const StatTile: React.FC<{ label: string; value: number | string; icon?: React.ReactNode; iconClass?: string }> = ({ label, value, icon, iconClass = 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300' }) => (
+  <div className={`${cardClass} !rounded-xl px-4 py-3 flex items-center gap-3`}>
+    {icon && <span aria-hidden="true" className={`shrink-0 w-10 h-10 flex items-center justify-center rounded-xl ${iconClass}`}>{icon}</span>}
+    <div className="min-w-0">
+      <dt className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">{label}</dt>
+      <dd className="mt-0.5 text-2xl font-semibold tabular-nums">{typeof value === 'number' ? value.toLocaleString() : value}</dd>
+    </div>
   </div>
 );
 

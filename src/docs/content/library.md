@@ -6,7 +6,7 @@ The library is where your team keeps what it reuses. Open **Template library** i
 
 A section is a ready-made part of a page, such as a hero, a pricing table or a footer. In the editor for a website or page, open **Add**, then **Sections**. Drag one onto the canvas, or click it to add it below the selected section.
 
-To save your own, select a block, open its **Advanced** tab and choose **Save to team library**. A saved section keeps what it shows right now, with values filled in, so it works in any project. It stops following that project's variables.
+To save your own, select a block, open its **Behavior** tab and choose **Save to team library**. A saved section keeps what it shows right now, with values filled in, so it works in any project. It stops following that project's variables.
 
 ## Team templates
 
@@ -25,9 +25,11 @@ Open **Variables** in the editor to change any value in one place. There are thr
 
 - **A variable for this project,** such as a phone number. To use it, select a block and choose **+ Insert a variable** under a text or link field.
 - **A global variable,** shared by every project in your workspace. Only owners and admins can change one. A project picks up a change when it's next opened, and visitors see it after you publish that project.
-- **A repeating list,** such as team members, where each item has the same parts. Select a block, open **Advanced** and choose the list under **Repeat for each item in**. That block then appears once per item, and **+ Insert a variable** offers each item's parts for text inside it.
+- **A repeating list,** such as team members, where each item has the same parts. Select a block, open **Behavior** and choose the list under **Repeat for each item in**. That block then appears once per item, and **+ Insert a variable** offers each item's parts for text inside it.
 
 You can also select any text or picture and click **Make this a variable**.
+
+To find one, type in the search box at the top of **Variables**. It looks at names and at what each one says. Point at a variable to outline every place it's used on the page, and click **Show on page** to go to each one in turn.
 
 ## What a template asks for
 

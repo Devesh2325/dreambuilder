@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ChevronRight, Copy, GripVertical, Trash2 } from 'lucide-react';
+import { useEmbedRenderer } from '../experience/EmbeddedProject';
 import { findParentId, getAncestors } from '../core/tree';
 import { resolveString, tokensIn } from '../core/variables';
 import { buildNavLinks } from '../experience/SiteView';
@@ -11,6 +12,7 @@ import { handleStudioShortcut } from './shortcuts';
 import { StepBar } from './StepBar';
 import { findSteps, stepOfNode } from './steps';
 import { useStudio } from './store';
+import { nodesUsingVariable } from './variableUsage';
 
 /** The prop that double-clicking edits. */
 const INLINE_PROP: Record<string, string> = {
@@ -38,6 +40,8 @@ html{scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.45) transparent}
 a:not([draggable=true]),img:not([draggable=true]){-webkit-user-drag:none}
 [draggable=true]{cursor:grab}
 .fp-hotspot{cursor:move;animation:none}
+.fp-embed .fp-root{min-height:0}
+.fp-embed>div{pointer-events:none}
 .fp-section:empty,.fp-container:empty,.fp-box:empty,.fp-grid:empty,.fp-row:empty,.fp-page:empty,.fp-marquee-track:empty,.fp-carousel:empty{min-height:88px;display:flex;align-items:center;justify-content:center;border:1.5px dashed rgba(99,102,241,.4);border-radius:8px;background:rgba(99,102,241,.04)}
 .fp-section:empty::after,.fp-container:empty::after,.fp-box:empty::after,.fp-grid:empty::after,.fp-row:empty::after,.fp-page:empty::after,.fp-marquee-track:empty::after,.fp-carousel:empty::after{content:'Empty: drag blocks here';font:500 13px system-ui,sans-serif;color:rgba(79,70,229,.8)}
 `;
@@ -82,11 +86,19 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
   const dragging = useStudio((s) => s.dragging);
   const { duplicateBlock, removeBlock, getNode, updateProps, setDragging, documentOfNode, select } = useStudio.getState();
 
+  const highlighted = useStudio((s) => s.highlightedVariable);
+  const [usageBoxes, setUsageBoxes] = useState<Box[]>([]);
   const [selectedBox, setSelectedBox] = useState<Box | null>(null);
   const [hoverBox, setHoverBox] = useState<Box | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const [editing, setEditing] = useState<{ id: string; prop: string; value: string; initial: string } | null>(null);
   const dropRef = useRef<DropTarget | null>(null);
+
+  const usageIds = useMemo(() => {
+    if (!highlighted) return [];
+    return useStudio.getState().visibleDocuments().flatMap((owner) => nodesUsingVariable(owner.content, highlighted));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlighted, documents]);
 
   // Blocks can move for many reasons (typing, images loading, scrolling), so measuring every frame is simplest and reliable.
   useEffect(() => {
@@ -98,11 +110,14 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
       const hovered = hoveredId && hoveredId !== selectedId ? nodeElement(doc, hoveredId) : null;
       const nextHover = hovered ? boxOf(hovered) : null;
       setHoverBox((previous) => (sameBox(previous, nextHover) ? previous : nextHover));
+      // A repeated block is drawn many times, and each copy counts.
+      const nextUsage = usageIds.flatMap((id) => [...doc.querySelectorAll(`[data-fp-node="${CSS.escape(id)}"]`)].map(boxOf));
+      setUsageBoxes((previous) => (previous.length === nextUsage.length && previous.every((box, index) => sameBox(box, nextUsage[index])) ? previous : nextUsage));
       frame = requestAnimationFrame(measure);
     };
     measure();
     return () => cancelAnimationFrame(frame);
-  }, [doc, selectedId, hoveredId, documents, device]);
+  }, [doc, selectedId, hoveredId, documents, device, usageIds]);
 
   // Bring a block chosen from the layers panel into view.
   useEffect(() => {
@@ -339,6 +354,9 @@ const Overlay: React.FC<{ doc: Document }> = ({ doc }) => {
   // Inline styles because the iframe deliberately has none of the app's CSS.
   return (
     <div data-fp-overlay="" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 2147483600, fontFamily: 'system-ui, sans-serif' }}>
+      {usageBoxes.map((box, index) => (
+        <div key={index} data-testid="variable-usage" style={{ position: 'fixed', ...box, outline: '2px solid #f59e0b', outlineOffset: 1, background: 'rgba(245,158,11,.14)', borderRadius: 3 }} />
+      ))}
       {hoverBox && !dragging && <div style={{ position: 'fixed', ...hoverBox, outline: `1px solid ${OUTLINE}`, outlineOffset: -1 }} />}
       {selectedBox && !editing && (
         <>
@@ -474,14 +492,16 @@ export const Canvas: React.FC = () => {
     tourSettings?.showProgress && stepSet && activeStep ? `Step ${stepSet.steps.indexOf(activeStep) + 1} of ${stepSet.steps.length}` : '',
     tourSettings?.estimatedTime?.trim() ?? '',
   ].filter(Boolean).join('  ·  ') || undefined;
+  const renderEmbed = useEmbedRenderer('edit');
   const ctx = useMemo<RenderContext>(
     () => ({
       mode: 'edit',
+      renderEmbed,
       navLinks: buildNavLinks(documents, active?.slug ?? ''),
       visibleStep: stepSet && visibleStepKey ? { parentKey: stepSet.parentKey, stepType: stepSet.stepType, key: visibleStepKey } : undefined,
       tourChrome: tourLabel || tourSettings?.showClose ? { label: tourLabel, canClose: tourSettings?.showClose } : undefined,
     }),
-    [documents, active?.slug, stepSet, visibleStepKey, tourLabel, tourSettings?.showClose],
+    [documents, active?.slug, stepSet, visibleStepKey, tourLabel, tourSettings?.showClose, renderEmbed],
   );
 
   // A slide can be far down a long page, so choosing one brings it into view.
@@ -517,6 +537,7 @@ export const Canvas: React.FC = () => {
       <div
         ref={stageRef}
         data-testid="canvas-stage"
+        data-tour="canvas"
         className="flex-1 min-h-0 overflow-hidden relative bg-slate-100 dark:bg-slate-950 [background-image:radial-gradient(rgb(148_163_184_/_.35)_1px,transparent_1px)] [background-size:18px_18px]"
         onClick={(event) => {
           if (event.target === event.currentTarget) useStudio.getState().select(null);

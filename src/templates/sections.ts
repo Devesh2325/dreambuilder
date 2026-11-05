@@ -31,6 +31,13 @@ const plan = (name: string, price: string, details: string, highlighted = false)
     button('Get started', '#', highlighted ? 'primary' : 'secondary'),
   ]);
 
+const payPlan = (name: string, price: string, details: string): El =>
+  el('Card', {}, [
+    heading(name, 'h3'),
+    text(details, muted),
+    el('PaymentButton', { props: { text: 'Buy now', price, provider: 'stripe', url: '' } }),
+  ]);
+
 const stat = (value: string, label: string): El =>
   el('Box', { styles: { textAlign: 'center' } }, [heading(value, 'h2', { color: 'var(--fp-primary)' }), text(label, muted)]);
 
@@ -46,6 +53,17 @@ const slide = (title: string, words: string, background: string): El =>
 const strip = (items: string[]): El[] => items.map((value) => text(value, { fontWeight: 700, fontSize: '1.125rem', color: 'var(--fp-muted)', whiteSpace: 'nowrap' }));
 
 export const SECTION_LIBRARY: LibrarySection[] = [
+  {
+    id: 'pricing-pay', title: 'Prices with pay buttons', category: 'Pricing',
+    element: section([
+      titleBlock('Choose what suits you', 'Pay securely with your card. Add your payment link to each button.'),
+      el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }, responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+        payPlan('Starter', '$19', 'For getting started.'),
+        payPlan('Standard', '$49', 'What most people choose.'),
+        payPlan('Premium', '$99', 'Everything we offer.'),
+      ]),
+    ]),
+  },
   {
     id: 'hero-carousel', title: 'Hero carousel', category: 'Hero',
     element: el('Section', { styles: { padding: '0' } }, [

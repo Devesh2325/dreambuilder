@@ -2,7 +2,16 @@ import { expect, FrameLocator, Page } from '@playwright/test';
 
 export const BASE = '';
 
-export async function signUp(page: Page, workspace = 'Test Workspace') {
+/** Marks the first-visit tours as seen, so they don't cover what a test is doing. */
+export async function skipTours(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('fp_tour_seen_dashboard', '1');
+    localStorage.setItem('fp_tour_seen_editor', '1');
+  });
+}
+
+export async function signUp(page: Page, workspace = 'Test Workspace', options: { tours?: boolean } = {}) {
+  if (!options.tours) await skipTours(page);
   await page.goto(`${BASE}/signup`);
   await page.getByLabel('Your name').fill('Test User');
   await page.getByLabel('Workspace name').fill(workspace);

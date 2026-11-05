@@ -1,14 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Check, X } from 'lucide-react';
+import { ArrowRight, Check, CircleHelp, Eye, FolderKanban, LifeBuoy, Rocket, Send, Sparkles, X } from 'lucide-react';
 import { MODULE_LIST, MODULES } from '../../core/modules';
+import { UsageBar, useCurrentPlan } from '../account/PlansPage';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
+import { formatDate } from '../shared/format';
 import { Icon } from '../shared/Icon';
+import { MODULE_COLORS } from '../shared/moduleColors';
 import { cardClass, DashboardSkeleton, ErrorNote, secondaryButton, StatTile } from '../shared/ui';
 import { StatusBadge } from '../projects/ProjectsPage';
 import { CreateButton } from '../templates/CreateButton';
+import { AppTour, useAppTour } from '../tours/AppTour';
 import { useWorkspace } from '../workspace';
 
 const guideKey = (organizationId: string) => `fp_guide_dismissed_${organizationId}`;
@@ -35,7 +39,7 @@ const GettingStarted: React.FC<{ steps: GuideStep[]; onDismiss: () => void }> = 
   const nextIndex = steps.findIndex((step) => !step.done);
 
   return (
-    <section aria-labelledby="guide-title" className={`${cardClass} overflow-hidden mb-6`}>
+    <section aria-labelledby="guide-title" className={`${cardClass} overflow-hidden`}>
       <div className="flex items-start justify-between gap-3 px-6 pt-5">
         <div>
           <h2 id="guide-title" className="text-lg font-semibold">Get started in {steps.length} steps</h2>
@@ -46,7 +50,7 @@ const GettingStarted: React.FC<{ steps: GuideStep[]; onDismiss: () => void }> = 
         </button>
       </div>
       <div className="mx-6 mt-3 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden" role="progressbar" aria-label="Setup progress" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={steps.length}>
-        <span className="block h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+        <span className="block h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
       </div>
       <ol className="mt-3 pb-2">
         {steps.map((step, index) => (
@@ -72,11 +76,19 @@ const GettingStarted: React.FC<{ steps: GuideStep[]; onDismiss: () => void }> = 
   );
 };
 
+const greeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+};
+
 export const DashboardPage: React.FC = () => {
   const { projects, forms, analytics } = useServices();
   const { user } = useSession();
   const { workspace } = useWorkspace();
   const organizationId = workspace?.organizationId;
+  const plan = useCurrentPlan();
   // Read on every render, because the workspace isn't known yet on the first one.
   const [justDismissed, setJustDismissed] = useState(false);
   const isDismissed = justDismissed || readDismissed(organizationId);
@@ -84,6 +96,7 @@ export const DashboardPage: React.FC = () => {
   const list = useQuery({ queryKey: ['projects', organizationId], queryFn: () => projects.list(organizationId!), enabled: Boolean(organizationId) });
   const responses = useQuery({ queryKey: ['project-details-responses', organizationId], queryFn: () => forms.countByProject(organizationId!), enabled: Boolean(organizationId) });
   const activity = useQuery({ queryKey: ['analytics', organizationId, 30], queryFn: () => analytics.summary(organizationId!, 30), enabled: Boolean(organizationId) });
+  const tour = useAppTour('dashboard', list.isSuccess);
 
   const all = useMemo(() => list.data ?? [], [list.data]);
   const live = all.filter((project) => project.status === 'published');
@@ -133,40 +146,78 @@ export const DashboardPage: React.FC = () => {
   const firstName = user?.fullName?.split(' ')[0];
 
   return (
-    <>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">{firstName ? `Welcome, ${firstName}` : 'Welcome'}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Here's what's happening in {workspace?.name ?? 'your workspace'}.</p>
+    <div className="space-y-6">
+      {tour.isOpen && <AppTour id="dashboard" onDone={tour.finish} />}
+
+      <header className="relative overflow-hidden rounded-3xl px-7 py-7 text-white bg-gradient-to-br from-indigo-700 via-indigo-600 to-fuchsia-600 shadow-lg shadow-indigo-600/20">
+        <div aria-hidden="true" className="absolute -right-16 -top-24 w-72 h-72 rounded-full bg-white/10" />
+        <div aria-hidden="true" className="absolute right-32 -bottom-28 w-56 h-56 rounded-full bg-white/10" />
+        <div className="relative flex flex-wrap items-center justify-between gap-5">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-indigo-100"><Sparkles className="w-4 h-4" aria-hidden="true" />{greeting()}</p>
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight">{firstName ? `Welcome, ${firstName}` : 'Welcome'}</h1>
+            <p className="mt-1 text-sm text-indigo-100">Here's what's happening in {workspace?.name ?? 'your workspace'}.</p>
+          </div>
+          <button type="button" onClick={tour.start} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl text-indigo-700 bg-white hover:bg-indigo-50 transition-colors">
+            <CircleHelp className="w-4 h-4" aria-hidden="true" />
+            Take a tour
+          </button>
+        </div>
       </header>
 
       {list.isLoading && <DashboardSkeleton />}
       {list.isError && <ErrorNote message="We couldn't load your projects. Please refresh the page." />}
 
+      {list.isSuccess && (
+        <dl data-tour="stats" className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+          <StatTile label="Projects" value={all.length} icon={<FolderKanban className="w-5 h-5" />} />
+          <StatTile label="Live" value={live.length} icon={<Rocket className="w-5 h-5" />} iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300" />
+          <StatTile label="Views, last 30 days" value={views} icon={<Eye className="w-5 h-5" />} iconClass="bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300" />
+          <StatTile label="Form responses" value={totalResponses} icon={<Send className="w-5 h-5" />} iconClass="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300" />
+        </dl>
+      )}
+
       {list.isSuccess && !isDismissed && !isComplete && <GettingStarted steps={steps} onDismiss={dismiss} />}
 
       {list.isSuccess && (
         <>
-          <dl className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-6">
-            <StatTile label="Projects" value={all.length} />
-            <StatTile label="Live" value={live.length} />
-            <StatTile label="Views, last 30 days" value={views} />
-            <StatTile label="Form responses" value={totalResponses} />
-          </dl>
+          <section aria-labelledby="build-title" data-tour="build">
+            <h2 id="build-title" className="font-semibold mb-3">What do you want to build?</h2>
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {MODULE_LIST.map((module) => {
+                const count = all.filter((project) => project.type === module.type).length;
+                return (
+                  <li key={module.type}>
+                    <Link to={module.path} aria-label={`${module.plural}: ${count}`} className={`${cardClass} group h-full flex items-start gap-3 p-4 hover:-translate-y-0.5 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all`}>
+                      <span className={`shrink-0 w-10 h-10 flex items-center justify-center rounded-xl ${MODULE_COLORS[module.type]}`}><Icon name={module.icon} className="w-5 h-5" /></span>
+                      <span className="flex-1 min-w-0">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold truncate">{module.plural}</span>
+                          <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400">{count}</span>
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-relaxed text-slate-500 dark:text-slate-400">{module.description}</span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
             <section aria-labelledby="recent-title" className={`${cardClass} overflow-hidden`}>
               <h2 id="recent-title" className="px-5 pt-4 pb-2 font-semibold">Recent projects</h2>
               {all.length === 0 ? (
                 <p className="px-5 pb-5 text-sm text-slate-500 dark:text-slate-400">Your projects will appear here.</p>
               ) : (
                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {all.slice(0, 7).map((project) => (
+                  {all.slice(0, 6).map((project) => (
                     <li key={project.id}>
                       <Link to={ROUTES.project(project.id)} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                        <span className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><Icon name={MODULES[project.type].icon} /></span>
+                        <span className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg ${MODULE_COLORS[project.type]}`}><Icon name={MODULES[project.type].icon} /></span>
                         <span className="flex-1 min-w-0">
                           <span className="block text-sm font-medium truncate">{project.title}</span>
-                          <span className="block text-xs text-slate-500 dark:text-slate-400">{MODULES[project.type].label} · Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
+                          <span className="block text-xs text-slate-500 dark:text-slate-400">{MODULES[project.type].label} · Updated {formatDate(project.updatedAt)}</span>
                         </span>
                         <StatusBadge status={project.status} />
                       </Link>
@@ -176,27 +227,28 @@ export const DashboardPage: React.FC = () => {
               )}
             </section>
 
-            <section aria-labelledby="build-title">
-              <h2 id="build-title" className="font-semibold mb-3">What do you want to build?</h2>
-              <ul className="grid gap-2">
-                {MODULE_LIST.map((module) => {
-                  const count = all.filter((project) => project.type === module.type).length;
-                  return (
-                    <li key={module.type}>
-                      <Link to={module.path} aria-label={`${module.plural}: ${count}`} className={`${cardClass} !rounded-xl flex items-center gap-3 px-3 py-2.5 hover:border-indigo-400 transition-colors`}>
-                        <span className="shrink-0 text-indigo-600 dark:text-indigo-300"><Icon name={module.icon} /></span>
-                        <span className="flex-1 text-sm font-medium">{module.plural}</span>
-                        <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400">{count}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-              <Link to={ROUTES.docs} className={`${secondaryButton} w-full mt-3`}>Read the docs</Link>
-            </section>
+            <div className="space-y-4">
+              {plan && (
+                <section aria-labelledby="plan-title" className={`${cardClass} p-5`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 id="plan-title" className="font-semibold">{plan.label} plan</h2>
+                    <Link to={ROUTES.plans} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">See plans</Link>
+                  </div>
+                  <div className="mt-3"><UsageBar label="Projects used" used={all.length} max={plan.maxProjects} /></div>
+                </section>
+              )}
+              <section aria-labelledby="help-title" className={`${cardClass} p-5`}>
+                <h2 id="help-title" className="font-semibold">Need a hand?</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">The guides cover every module. If you get stuck, ask us.</p>
+                <div className="mt-3 grid gap-2">
+                  <Link to={ROUTES.docs} className={secondaryButton}>Read the docs</Link>
+                  <Link to={ROUTES.support} className={secondaryButton}><LifeBuoy className="w-4 h-4" aria-hidden="true" />Contact support</Link>
+                </div>
+              </section>
+            </div>
           </div>
         </>
       )}
-    </>
+    </div>
   );
 };

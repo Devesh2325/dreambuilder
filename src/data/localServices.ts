@@ -1,9 +1,9 @@
 import { DEFAULT_THEME, PROJECT_TYPES } from '../core/schema';
-import { PLAN_LIMITS } from '../types/auth';
+import { PLAN_DESCRIPTIONS, PLAN_LABELS, PLAN_LIMITS, SubscriptionPlan } from '../types/auth';
 import { LocalStore, openLocalStore } from './localStore';
 import {
-  AnalyticsRow, AppServices, AssetRecord, AuthUser, DocumentRecord, InvitationRecord, LibraryItem, MemberRecord, ProjectRecord,
-  PublishedSnapshot, SubmissionRecord, VersionRecord, WorkspaceMembership,
+  AdminPlanRequest, AdminTicket, AnalyticsRow, AppServices, AssetRecord, AuthUser, DocumentRecord, InvitationRecord, LibraryItem, MemberRecord, NudgeRecord,
+  PlanInfo, PlanRequestRecord, ProjectRecord, PublishedSnapshot, SubmissionRecord, TicketMessage, TicketRecord, VersionRecord, WorkspaceMembership,
 } from './services';
 
 /**
@@ -14,6 +14,10 @@ import {
 
 interface LocalUser extends AuthUser {
   password: string;
+  jobTitle?: string;
+  timezone?: string;
+  createdAt?: string;
+  lastActiveAt?: string;
 }
 
 interface StoredVersion extends VersionRecord {
@@ -41,6 +45,12 @@ interface LocalState {
   events: LocalEvent[];
   invitations: (InvitationRecord & { organizationId: string; token: string; accepted: boolean })[];
   library: (LibraryItem & { organizationId: string })[];
+  /** Only what a super admin has changed. Everything else comes from the defaults. */
+  planChanges: Partial<Record<SubscriptionPlan, Partial<PlanInfo>>>;
+  planRequests: (PlanRequestRecord & { organizationId: string; requestedBy: string | null })[];
+  nudges: (NudgeRecord & { userId: string; readAt: string | null })[];
+  tickets: (TicketRecord & { userId: string; organizationId: string | null })[];
+  ticketMessages: (TicketMessage & { ticketId: string })[];
 }
 
 
@@ -57,7 +67,35 @@ const emptyState = (): LocalState => ({
   events: [],
   invitations: [],
   library: [],
+  planChanges: {},
+  planRequests: [],
+  nudges: [],
+  tickets: [],
+  ticketMessages: [],
 });
+
+const PLANS: SubscriptionPlan[] = ['free', 'starter', 'pro', 'agency', 'enterprise'];
+
+const planInfo = (state: LocalState, plan: SubscriptionPlan): PlanInfo => ({
+  plan,
+  label: PLAN_LABELS[plan],
+  priceText: plan === 'free' ? 'Free' : 'Ask us',
+  description: PLAN_DESCRIPTIONS[plan],
+  maxProjects: PLAN_LIMITS[plan].maxProjects,
+  maxMembers: PLAN_LIMITS[plan].teamMembersLimit,
+  moduleQuotas: {},
+  ...state.planChanges[plan],
+});
+
+/**
+ * Demo mode has one browser and no database, so the first account made here runs it.
+ * On the real backend, a super admin is a row in platform_admins.
+ */
+const isSuperAdmin = (state: LocalState) => Boolean(state.currentUserId) && state.users[0]?.id === state.currentUserId;
+
+const requireSuperAdmin = (state: LocalState) => {
+  if (!isSuperAdmin(state)) throw new Error('Only a super admin can do this');
+};
 
 function normalize(stored: Partial<LocalState> | undefined): LocalState {
   const state: LocalState = { ...emptyState(), ...stored };
@@ -146,7 +184,7 @@ export function createLocalServices(): AppServices {
         const result = await update((state) => {
           const lower = email.toLowerCase();
           if (state.users.some((u) => u.email === lower)) return 'User already registered';
-          const user: LocalUser = { id: uuid(), email: lower, fullName, password };
+          const user: LocalUser = { id: uuid(), email: lower, fullName, password, createdAt: now() };
           const id = uuid();
           state.users.push(user);
           state.workspaces.push({ id, name: workspaceName, slug: `${slugify(workspaceName) || 'workspace'}-${id.slice(0, 8)}`, plan: 'free', branding: {} });
@@ -218,9 +256,15 @@ export function createLocalServices(): AppServices {
         return update((state) => {
           const workspace = state.workspaces.find((w) => w.id === input.organizationId);
           const count = state.projects.filter((p) => p.organizationId === input.organizationId).length;
-          // Local mode is for trying the product, so only warns about limits on real plans.
-          if (workspace && workspace.plan !== 'free' && count >= PLAN_LIMITS[workspace.plan].maxProjects) {
-            throw new Error("Your plan's project limit has been reached");
+          if (workspace) {
+            const plan = planInfo(state, workspace.plan);
+            // Demo mode is for trying the product, so the free plan's default limit isn't
+            // applied. Anything a super admin has set is.
+            const isEnforced = workspace.plan !== 'free' || state.planChanges.free?.maxProjects !== undefined;
+            if (isEnforced && count >= plan.maxProjects) throw new Error("Your plan's project limit has been reached");
+            const quota = plan.moduleQuotas[input.type];
+            const sameKind = state.projects.filter((p) => p.organizationId === input.organizationId && p.type === input.type).length;
+            if (quota !== undefined && sameKind >= quota) throw new Error(`Your plan allows ${quota} of this kind of project. Upgrade your plan to add more.`);
           }
           const id = uuid();
           const time = now();
@@ -432,11 +476,12 @@ export function createLocalServices(): AppServices {
     },
 
     analytics: {
-      async summary(organizationId) {
+      async summary(organizationId, days) {
         const state = await load();
         const ids = new Set(state.projects.filter((p) => p.organizationId === organizationId).map((p) => p.id));
         const rows = new Map<string, AnalyticsRow & { seen: Set<string> }>();
-        for (const event of state.events.filter((e) => ids.has(e.projectId))) {
+        const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+        for (const event of state.events.filter((e) => ids.has(e.projectId) && e.day >= since)) {
           const key = `${event.projectId}|${event.type}|${event.day}`;
           const row = rows.get(key) ?? { projectId: event.projectId, eventType: event.type, day: event.day, events: 0, visitors: 0, seen: new Set<string>() };
           row.events += 1;
@@ -505,6 +550,217 @@ export function createLocalServices(): AppServices {
           if (!invite || !user || invite.email !== user.email) throw new Error('This invitation is invalid or has expired');
           invite.accepted = true;
           state.members.push({ organizationId: invite.organizationId, userId: user.id, role: invite.role });
+        });
+      },
+    },
+
+    profile: {
+      async get() {
+        const state = await load();
+        const user = state.users.find((u) => u.id === state.currentUserId);
+        return user ? { fullName: user.fullName ?? '', email: user.email, jobTitle: user.jobTitle ?? '', timezone: user.timezone ?? '' } : null;
+      },
+      async update(patch) {
+        await update((state) => {
+          const user = state.users.find((u) => u.id === state.currentUserId);
+          if (user) Object.assign(user, patch);
+        });
+        await notify();
+      },
+      async touchActivity() {
+        await update((state) => {
+          const user = state.users.find((u) => u.id === state.currentUserId);
+          if (user) user.lastActiveAt = now();
+        });
+      },
+    },
+
+    plans: {
+      async list() {
+        const state = await load();
+        return PLANS.map((plan) => planInfo(state, plan));
+      },
+      async requestChange(organizationId, plan, note) {
+        await update((state) => {
+          if (state.planRequests.some((r) => r.organizationId === organizationId && r.status === 'pending')) {
+            throw new Error('You already have a request waiting. We will reply to that first.');
+          }
+          state.planRequests.unshift({ id: uuid(), organizationId, plan, note, status: 'pending', createdAt: now(), requestedBy: state.currentUserId });
+        });
+      },
+      async listRequests(organizationId) {
+        return (await load()).planRequests.filter((r) => r.organizationId === organizationId);
+      },
+    },
+
+    nudges: {
+      async listUnread() {
+        const state = await load();
+        return state.nudges.filter((n) => n.userId === state.currentUserId && !n.readAt);
+      },
+      async markRead(id) {
+        await update((state) => {
+          const nudge = state.nudges.find((n) => n.id === id && n.userId === state.currentUserId);
+          if (nudge) nudge.readAt = now();
+        });
+      },
+    },
+
+    support: {
+      async listTickets() {
+        const state = await load();
+        return state.tickets.filter((t) => t.userId === state.currentUserId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      },
+      async createTicket(organizationId, subject, body) {
+        return update((state) => {
+          const id = uuid();
+          const time = now();
+          state.tickets.push({ id, subject, status: 'open', createdAt: time, updatedAt: time, userId: state.currentUserId!, organizationId });
+          state.ticketMessages.push({ id: uuid(), ticketId: id, isStaff: false, body, createdAt: time });
+          return id;
+        });
+      },
+      async listMessages(ticketId) {
+        const state = await load();
+        const ticket = state.tickets.find((t) => t.id === ticketId);
+        if (!ticket || ticket.userId !== state.currentUserId) return [];
+        return state.ticketMessages.filter((m) => m.ticketId === ticketId);
+      },
+      async reply(ticketId, body) {
+        await update((state) => {
+          const ticket = state.tickets.find((t) => t.id === ticketId && t.userId === state.currentUserId);
+          if (!ticket || ticket.status === 'closed') throw new Error('This request is closed. Please start a new one.');
+          state.ticketMessages.push({ id: uuid(), ticketId, isStaff: false, body, createdAt: now() });
+          Object.assign(ticket, { status: 'open', updatedAt: now() });
+        });
+      },
+    },
+
+    admin: {
+      isAdmin: async () => isSuperAdmin(await load()),
+      async overview() {
+        const state = await load();
+        requireSuperAdmin(state);
+        const tally = <K extends string>(values: K[]) => values.reduce<Partial<Record<K, number>>>((counts, value) => ({ ...counts, [value]: (counts[value] ?? 0) + 1 }), {});
+        return {
+          users: state.users.length,
+          workspaces: state.workspaces.length,
+          projects: state.projects.length,
+          published: state.projects.filter((p) => p.status === 'published').length,
+          openTickets: state.tickets.filter((t) => t.status === 'open').length,
+          pendingRequests: state.planRequests.filter((r) => r.status === 'pending').length,
+          byModule: tally(state.projects.map((p) => p.type)),
+          byPlan: tally(state.workspaces.map((w) => w.plan)),
+        };
+      },
+      async listUsers() {
+        const state = await load();
+        requireSuperAdmin(state);
+        return state.users.map((user) => {
+          const membership = state.members.find((m) => m.userId === user.id && m.role === 'owner') ?? state.members.find((m) => m.userId === user.id);
+          const workspace = state.workspaces.find((w) => w.id === membership?.organizationId);
+          return {
+            userId: user.id,
+            email: user.email,
+            fullName: user.fullName,
+            createdAt: user.createdAt ?? null,
+            lastActiveAt: user.lastActiveAt ?? null,
+            workspaceId: workspace?.id ?? null,
+            workspaceName: workspace?.name ?? null,
+            plan: workspace?.plan ?? null,
+            projectCount: state.projects.filter((p) => p.organizationId === workspace?.id).length,
+          };
+        });
+      },
+      async setWorkspacePlan(organizationId, plan) {
+        await update((state) => {
+          requireSuperAdmin(state);
+          const workspace = state.workspaces.find((w) => w.id === organizationId);
+          if (workspace) workspace.plan = plan;
+        });
+      },
+      async updatePlan(plan, patch) {
+        await update((state) => {
+          requireSuperAdmin(state);
+          state.planChanges[plan] = { ...state.planChanges[plan], ...patch };
+        });
+      },
+      async setModuleQuota(plan, module, max) {
+        await update((state) => {
+          requireSuperAdmin(state);
+          const quotas = { ...planInfo(state, plan).moduleQuotas };
+          if (max === null) delete quotas[module];
+          else quotas[module] = max;
+          state.planChanges[plan] = { ...state.planChanges[plan], moduleQuotas: quotas };
+        });
+      },
+      async sendNudge(userId, title, body, linkUrl) {
+        return update((state) => {
+          requireSuperAdmin(state);
+          if (linkUrl && !/^(\/[^/]|https:\/\/)/.test(linkUrl)) throw new Error('A link must start with / or https://');
+          const targets = state.users.filter((u) => userId === null || u.id === userId);
+          for (const user of targets) state.nudges.unshift({ id: uuid(), userId: user.id, title, body, linkUrl: linkUrl || null, createdAt: now(), readAt: null });
+          return targets.length;
+        });
+      },
+      async listPlanRequests() {
+        const state = await load();
+        requireSuperAdmin(state);
+        return state.planRequests.map((request): AdminPlanRequest => {
+          const workspace = state.workspaces.find((w) => w.id === request.organizationId);
+          return {
+            ...request,
+            workspaceName: workspace?.name ?? '',
+            currentPlan: workspace?.plan ?? 'free',
+            requestedBy: state.users.find((u) => u.id === request.requestedBy)?.email ?? null,
+          };
+        });
+      },
+      async resolvePlanRequest(id, approve) {
+        await update((state) => {
+          requireSuperAdmin(state);
+          const request = state.planRequests.find((r) => r.id === id && r.status === 'pending');
+          if (!request) throw new Error('This request has already been handled');
+          request.status = approve ? 'approved' : 'declined';
+          const workspace = state.workspaces.find((w) => w.id === request.organizationId);
+          if (approve && workspace) workspace.plan = request.plan;
+        });
+      },
+      async listTickets() {
+        const state = await load();
+        requireSuperAdmin(state);
+        return state.tickets.map((ticket): AdminTicket => {
+          const user = state.users.find((u) => u.id === ticket.userId);
+          return {
+            id: ticket.id,
+            subject: ticket.subject,
+            status: ticket.status,
+            createdAt: ticket.createdAt,
+            updatedAt: ticket.updatedAt,
+            userEmail: user?.email ?? '',
+            userName: user?.fullName ?? null,
+            workspaceName: state.workspaces.find((w) => w.id === ticket.organizationId)?.name ?? null,
+          };
+        }).sort((a, b) => Number(b.status === 'open') - Number(a.status === 'open') || b.updatedAt.localeCompare(a.updatedAt));
+      },
+      async listTicketMessages(ticketId) {
+        const state = await load();
+        requireSuperAdmin(state);
+        return state.ticketMessages.filter((m) => m.ticketId === ticketId);
+      },
+      async replyToTicket(ticketId, body) {
+        await update((state) => {
+          requireSuperAdmin(state);
+          state.ticketMessages.push({ id: uuid(), ticketId, isStaff: true, body, createdAt: now() });
+          const ticket = state.tickets.find((t) => t.id === ticketId);
+          if (ticket) Object.assign(ticket, { status: 'answered', updatedAt: now() });
+        });
+      },
+      async setTicketStatus(ticketId, status) {
+        await update((state) => {
+          requireSuperAdmin(state);
+          const ticket = state.tickets.find((t) => t.id === ticketId);
+          if (ticket) Object.assign(ticket, { status, updatedAt: now() });
         });
       },
     },

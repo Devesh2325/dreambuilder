@@ -28,6 +28,8 @@ npx playwright test -g "survey"             # one browser test
 
 A new data feature needs changes in the interface, both implementations, and usually a migration.
 
+Super admins, plans, nudges and support are repositories too (`admin`, `plans`, `nudges`, `support`, `profile`). On the real backend a super admin is a row in `platform_admins`, added only by SQL (`docs/SUPABASE_SETUP.md`), and every `admin_*` function checks it. In the local backend the first account made in that browser is the super admin, so the demo can try it.
+
 ## Database and security
 
 Security lives in `supabase/migrations/`, not the UI. `useWorkspace().can()` only hides buttons.
@@ -35,7 +37,7 @@ Security lives in `supabase/migrations/`, not the UI. `useWorkspace().can()` onl
 - Default grants are revoked and re-granted **per column**. A new client-writable column needs a `grant`, and columns like `plan`, `status` and `published_version_id` are deliberately not writable by clients.
 - Privileged writes go through `SECURITY DEFINER` functions, which must set `search_path = ''` and check roles themselves. New functions need an explicit `revoke`/`grant`: `engagement.sql` re-grants them all, so a later migration must repeat this for its own.
 - Visitors have no login. They only reach functions that require the project to be published. Webhook addresses, the address a tour is built on and the variable list are stripped from public snapshots, in `public_snapshot` and in the local backend.
-- Plan limits are in both `src/types/auth.ts` and `plan_max_*` in the migrations. Keep them in step.
+- Plan limits start as the seeds in `plan_settings` and the defaults in `src/types/auth.ts`, which the local backend uses. Keep them in step. After that a super admin changes them in the app, so read them through `plans.list()`, never `PLAN_LIMITS`, in any UI. `plan_module_quotas` adds a limit per module, and no row means only the overall limit applies.
 
 `src/test/db/` runs the migrations on PGlite (in-process Postgres, no Docker), with Supabase's `auth`, `storage` and default grants stubbed. Every migration change needs tests there. PGlite's `query` takes one statement at a time; use `t.db.exec` for several.
 
@@ -54,7 +56,9 @@ There is **one renderer** for the editor, previews, public sites and the embed: 
 
 `src/experience/` is what plays published content: `ExperiencePlayer` for tours, demos, overlays and so on, and `SiteView` for multi-page sites (header + page + footer). Each module's `delivery` in `src/core/modules.ts` (`site`, `overlay`, `inline`) decides how it reaches visitors.
 
-To add a block, add it to both `blockMeta.ts` and `BLOCK_RENDERERS`; a test checks they match. The properties panel is generated from `fields`. It only appears in a module's Add panel if listed in `BLOCK_GROUPS` in `src/studio/LeftPanel.tsx`.
+To add a block, add it to both `blockMeta.ts` and `BLOCK_RENDERERS`; a test checks they match. The properties panel is generated from `fields`. A field with `plain` is a technical value and offers no variables, and `slug` also cleans what's typed. It only appears in a module's Add panel if listed in `BLOCK_GROUPS` in `src/studio/LeftPanel.tsx`.
+
+`PaymentButton` is only a link to a provider's hosted page, https only, so card details never touch this app. `ProjectEmbed` shows another project through `ctx.renderEmbed`, which only the app passes (`experience/EmbeddedProject.tsx`): the editor and previews load drafts, and public sites load published snapshots. The embed script doesn't support it. An embedded project gets prefixed node ids and a `scopeId`, because node ids become class names and `.fp-root` holds the theme, so without them it would take over the host page's styles. It gets no `renderEmbed` of its own, which prevents loops.
 
 To add a module, update `PROJECT_TYPES`, `MODULES` and `PATHS` (`src/core/modules.ts`), the `projects.type` check in the migrations, `MODULE_COLUMNS` (`moduleColumns.tsx`), `BLOCK_GROUPS`, templates, and a docs guide. Each module has its own list page at `MODULES[type].path`. `ProjectsPage` and `ProjectPage` are shared by all modules, and what differs comes from `MODULE_COLUMNS`. Creating goes `/create?type=` (choose a template), `/new/:templateId` (fill in details), then straight to the editor.
 
@@ -78,6 +82,8 @@ Team templates and sections live in `workspace_library` (`LibraryRepository`). T
 - There is one side panel, with the active tool in the store (`tool`). Clicking a block on the canvas opens `edit`, so the canvas gets the rest of the screen. Clicking the open tool closes the panel.
 - Steps, demo screens, slides and form steps show one at a time. `steps.ts` finds them in the expanded tree, `activeStepKey` holds the choice, and `ctx.visibleStep` makes `RenderedNode` draw only that one, in edit mode only. Selecting a block in another step switches to it. Steps from a list variable are added and removed by editing that list.
 - Style values are strings, and a plain number means pixels (`declarations` in `css.ts`), except for `UNITLESS` properties. Every control in `StylePanel.tsx` is checked against computed style in `e2e/editor.spec.ts`.
+- Spacing boxes show real values: most spacing comes from `BASE_CSS`, not the node, so `useComputedBox` reads the computed style from the canvas iframe for the placeholders.
+- `highlightedVariable` outlines every use of a variable on the canvas, and `focusVariable` opens Variables on one. Fields in that panel carry `data-var`.
 - A website canvas shows header + page + footer together, so actions find the owning document with `documentOfNode`.
 - Autosave is debounced. Each save sends the `revision` it loaded; a stale one matches no rows and returns `conflict`, which the UI resolves through `reloadFromServer` or `overwriteServer`.
 - `Canvas.tsx` attaches native listeners to the iframe's document, and draws the selection overlay inside the iframe with inline styles, since app CSS doesn't reach it. Elements there fail `instanceof` checks because they belong to another document.
@@ -97,6 +103,10 @@ The editor can drive the script on a customer's site, to pick an element, build 
 Video iframes only ever point at YouTube or Vimeo: `parseVideoUrl` in `core/video.ts` rebuilds the address from a checked id.
 
 The docs in `src/docs/content/` are checked by `src/test/core/docs.test.ts` against the JS API, recorded events and script attributes. Update them together.
+
+## In-app help
+
+`src/app/tours/AppTour.tsx` holds FlowPilot's own tours, played by the customer tour player. They target `data-tour` attributes in the app, and start once per browser (`fp_tour_seen_*`). The `signUp` helper in `e2e/helpers.ts` marks them as seen, or they would cover what tests click; pass `{ tours: true }` to test them. Empty pages use `FlowPilotBanner`, and the landing page's demo (`ProductDemo`) uses the demo player with generated screens.
 
 ## Browser tests
 

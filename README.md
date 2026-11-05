@@ -30,11 +30,18 @@ To go live, connect Supabase: see [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.m
 - **Tours:** target real elements on your site, with a visual picker, missing-target handling and resume.
 - **Embed script:** about 21 KB compressed, isolated in Shadow DOM, with a JavaScript API.
 - **Teams:** workspaces, roles enforced by the database, invitation links.
-- **Docs:** integration guides inside the app at `/docs`.
+- **Payments on your site:** a Pay button linked to a hosted page from Stripe, Razorpay, PayPal or another provider. Card details never reach this app.
+- **Integrations:** show a form, demo, banner, FAQ, menu or tour you've made inside any website or page.
+- **Plans and super admin:** plans with limits per module, usage meters, plan requests, a view of every user, and nudges. On Supabase a super admin is added by SQL. In demo mode the first account made in that browser is one.
+- **Support:** customers ask from inside the app, and the team replies from an inbox.
+- **Profile:** name, job title, password and time zone. Dates across the app follow the time zone.
+- **Analytics:** comparison with the previous period, a daily chart with a table view, what people did, per-project numbers and CSV export.
+- **Help:** first-visit tours of the dashboard and editor, step-by-step install guides for each platform, and integration guides at `/docs`.
 
 ## Not included yet
 
-- Online payments. Plan limits are enforced, but plans are changed manually.
+- Online payment for plans. Limits are enforced, and a super admin changes a workspace's plan. Customers' own sites can take payments through hosted links from their provider.
+- Email. Support replies and nudges appear inside the app only.
 - Custom domains.
 - Server-side rendering of public sites, which would help SEO.
 - Invitation and form notification emails. Invitations are links you send yourself.

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, Braces, ChevronRight, Eye, EyeOff, FileText, GripVertical, Layers, LucideIcon, PanelLeft, Palette, Pencil, Plus, SlidersHorizontal, SquarePlus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Braces, ChevronRight, CircleHelp, Eye, EyeOff, FileText, GripVertical, Layers, LucideIcon, PanelLeft, Palette, Pencil, Plus, Search, SlidersHorizontal, SquarePlus, Trash2, X } from 'lucide-react';
 import { DocContent, GLOBAL_FOOTER_SLUG, GLOBAL_HEADER_SLUG, ProjectType } from '../core/schema';
 import { Icon } from '../app/shared/Icon';
+import { MODULES } from '../core/modules';
 import { BusyIcon, errorMessage } from '../app/shared/ui';
 import { pagesOf } from '../experience/SiteView';
 import { BLOCK_META, canContain } from '../renderer/blockMeta';
 import { ALL_THEMES } from '../templates/themes';
 import { ColorField, fieldClass, FontField, labelClass, slugFromTitle } from './fields';
+import { useEmbeddableProjects } from './ProjectField';
 import { SectionsPanel, usesSections } from './SectionsPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { StudioTool, useStudio } from './store';
@@ -14,13 +16,13 @@ import { VariablesPanel } from './VariablesPanel';
 
 // Each module only offers the blocks that make sense in it.
 const LAYOUT = ['Section', 'Container', 'Box', 'Card', 'Grid', 'Row'];
-const CONTENT = ['Heading', 'Text', 'Button', 'Image', 'Video', 'Divider', 'Spacer'];
+const CONTENT = ['Heading', 'Text', 'Button', 'PaymentButton', 'Image', 'Video', 'Divider', 'Spacer'];
 const FORM = ['Form', 'FormStep', 'FormField', 'ScaleField'];
 const MOVING = ['Marquee', 'Carousel', 'Slide'];
 
 const BLOCK_GROUPS: Record<ProjectType, { title: string; types: string[] }[]> = {
-  website: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion'] }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
-  page: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion'] }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
+  website: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion', 'Banner'] }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
+  page: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion', 'Banner'] }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
   tour: [{ title: 'Tour', types: ['TourStep'] }, { title: 'Inside a step', types: ['Heading', 'Text', 'Button', 'Image', 'Video', 'Row'] }],
   form: [{ title: 'Form', types: FORM }, { title: 'Content', types: ['Heading', 'Text', 'Image', 'Divider', 'Spacer'] }],
   demo: [{ title: 'Demo', types: ['DemoScreen', 'DemoHotspot'] }],
@@ -33,23 +35,76 @@ const BLOCK_GROUPS: Record<ProjectType, { title: string; types: string[] }[]> = 
   faq: [{ title: 'FAQ', types: ['Accordion', 'Heading', 'Text'] }, { title: 'Layout', types: ['Box', 'Card', 'Spacer'] }],
 };
 
+const SearchBox: React.FC<{ label: string; placeholder: string; value: string; onChange: (value: string) => void }> = ({ label, placeholder, value, onChange }) => (
+  <div className="relative">
+    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" aria-hidden="true" />
+    <input type="search" aria-label={label} placeholder={placeholder} className={`${fieldClass} !pl-8`} value={value} onChange={(event) => onChange(event.target.value)} />
+  </div>
+);
+
+/** A project from elsewhere in the workspace, placed in this page as one block. */
+const ProjectsList: React.FC = () => {
+  const list = useEmbeddableProjects();
+  const readOnly = useStudio((s) => s.readOnly);
+  const [message, setMessage] = useState<string | null>(null);
+  return (
+    <div className="space-y-3">
+      <p className="text-[13px] text-slate-500 dark:text-slate-400">Show one of your forms, demos, banners, FAQs, menus or tours in this page. Change it there, and it updates here when you publish it.</p>
+      {message && <p role="alert" className="text-[13px] text-rose-600 dark:text-rose-400">{message}</p>}
+      {list.isSuccess && list.data?.length === 0 && (
+        <p className="text-[13px] rounded-lg px-2.5 py-2 bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">Nothing to add yet. Create a form, demo or banner first, and it appears here.</p>
+      )}
+      <ul className="space-y-1">
+        {list.data?.map((project) => (
+          <li key={project.id}>
+            <button
+              type="button"
+              disabled={readOnly}
+              className="w-full flex items-center gap-2.5 p-2 text-left rounded-lg border border-transparent bg-slate-50 dark:bg-slate-800/60 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+              onClick={() => {
+                const state = useStudio.getState();
+                const id = state.addBlock('ProjectEmbed');
+                if (!id) {
+                  setMessage("That can't go there. Select a different block first.");
+                  return;
+                }
+                setMessage(null);
+                state.updateProps(id, { projectId: project.id });
+                state.updateNode(id, { name: project.title });
+              }}
+            >
+              <span className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-300"><Icon name={MODULES[project.type].icon} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-medium truncate">{project.title}</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400">{MODULES[project.type].label}{project.status === 'published' ? '' : ' · Not published yet'}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 const AddPanel: React.FC = () => {
   const type = useStudio((s) => s.project?.type);
-  const [tab, setTab] = useState<'blocks' | 'sections'>('blocks');
+  const [tab, setTab] = useState<'blocks' | 'sections' | 'projects'>('blocks');
   if (!type) return null;
   if (!usesSections(type)) return <div className="p-3"><BlocksList /></div>;
 
   return (
     <div className="p-3 space-y-3">
       <div role="tablist" aria-label="What to add" className="flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800">
-        {(['blocks', 'sections'] as const).map((id) => (
+        {(['blocks', 'sections', 'projects'] as const).map((id) => (
           <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => setTab(id)}
             className={`flex-1 h-8 rounded-md text-[13px] font-semibold capitalize transition-colors ${tab === id ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-300'}`}>
             {id}
           </button>
         ))}
       </div>
-      {tab === 'blocks' ? <BlocksList /> : <SectionsPanel />}
+      {tab === 'blocks' && <BlocksList />}
+      {tab === 'sections' && <SectionsPanel />}
+      {tab === 'projects' && <ProjectsList />}
     </div>
   );
 };
@@ -59,13 +114,20 @@ const BlocksList: React.FC = () => {
   const type = useStudio((s) => s.project?.type);
   const { addBlock, setDragging } = useStudio.getState();
   const [message, setMessage] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   if (!type) return null;
+  const term = search.trim().toLowerCase();
+  const groups = BLOCK_GROUPS[type]
+    .map((group) => ({ ...group, types: group.types.filter((blockType) => BLOCK_META[blockType].label.toLowerCase().includes(term)) }))
+    .filter((group) => group.types.length > 0);
 
   return (
     <div className="space-y-5">
+      <SearchBox label="Search blocks" placeholder="Search blocks" value={search} onChange={setSearch} />
       <p className="text-[13px] text-slate-500 dark:text-slate-400">Drag onto the canvas, or click to add after the selected block.</p>
       {message && <p role="alert" className="text-[13px] text-rose-600 dark:text-rose-400">{message}</p>}
-      {BLOCK_GROUPS[type].map((group) => (
+      {groups.length === 0 && <p className="text-[13px] text-slate-500 dark:text-slate-400">No block is called that.</p>}
+      {groups.map((group) => (
         <section key={group.title} aria-label={group.title}>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">{group.title}</h3>
           <div className="grid grid-cols-3 gap-1.5">
@@ -230,14 +292,41 @@ const LayerRow: React.FC<{ content: DocContent; id: string; depth: number; paren
   );
 };
 
+const textOfNode = (props: Record<string, unknown>) => ['text', 'question', 'label', 'title', 'brand', 'alt'].map((key) => props[key]).filter((value) => typeof value === 'string').join(' ');
+
 const LayersPanel: React.FC = () => {
   useStudio((s) => s.documents);
   useStudio((s) => s.activeDocumentId);
+  const selectedId = useStudio((s) => s.selectedId);
+  const { select, hover } = useStudio.getState();
+  const [search, setSearch] = useState('');
   const visible = useStudio.getState().visibleDocuments();
+  const term = search.trim().toLowerCase();
 
   return (
     <div className="p-2 space-y-3">
-      {visible.map((doc) => (
+      <div className="px-1"><SearchBox label="Search layers" placeholder="Find a block by name or text" value={search} onChange={setSearch} /></div>
+      {term ? (() => {
+        const found = visible.flatMap((doc) => Object.values(doc.content.nodes).filter((node) => {
+          const name = node.name ?? BLOCK_META[node.type]?.label ?? node.type;
+          return `${name} ${textOfNode(node.props)}`.toLowerCase().includes(term);
+        }));
+        return found.length === 0 ? <p className="px-1 text-[13px] text-slate-500 dark:text-slate-400">Nothing matches.</p> : (
+          <ul aria-label="Matching blocks">
+            {found.map((node) => (
+              <li key={node.id}>
+                <button type="button" aria-current={selectedId === node.id || undefined} className={`w-full flex items-center gap-2 px-2 py-1.5 text-[13px] text-left rounded-lg ${selectedId === node.id ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`} onMouseEnter={() => hover(node.id)} onMouseLeave={() => hover(null)} onClick={() => select(node.id)}>
+                  <Icon name={BLOCK_META[node.type]?.icon ?? 'Square'} className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{node.name ?? BLOCK_META[node.type]?.label ?? node.type}</span>
+                    {textOfNode(node.props) && <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{textOfNode(node.props)}</span>}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        );
+      })() : visible.map((doc) => (
         <section key={doc.id} aria-label={doc.title}>
           {visible.length > 1 && <h3 className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">{doc.title}</h3>}
           <ul><LayerRow content={doc.content} id={doc.content.rootId} depth={0} parentId={null} index={0} /></ul>
@@ -393,63 +482,101 @@ const ThemePanel: React.FC = () => {
   );
 };
 
+const TOOL_HINTS: Partial<Record<StudioTool, string>> = {
+  add: 'Drag blocks and sections onto your page.',
+  variables: 'Your details, all in one place.',
+  layers: 'Everything on this page, in order.',
+  pages: 'Your pages, their addresses and search settings.',
+  theme: 'Colors and fonts for the whole project.',
+};
+
+const railDivider = <span role="presentation" className="w-8 my-1 border-t border-slate-200 dark:border-slate-700" />;
+
 /** The studio's single side panel. Everything lives here, so the canvas gets the rest. */
-export const LeftPanel: React.FC = () => {
+export const LeftPanel: React.FC<{ onStartTour?: () => void }> = ({ onStartTour }) => {
   const project = useStudio((s) => s.project);
   const tool = useStudio((s) => s.tool);
   const { setTool } = useStudio.getState();
   const [lastTool, setLastTool] = useState<StudioTool>('edit');
   const usesPages = project?.type === 'website' || project?.type === 'page';
 
-  const tools: { id: StudioTool; label: string; icon: LucideIcon }[] = [
-    // Most used first.
-    { id: 'edit', label: 'Edit', icon: SlidersHorizontal },
-    { id: 'add', label: 'Add', icon: SquarePlus },
-    { id: 'variables', label: 'Variables', icon: Braces },
-    { id: 'layers', label: 'Layers', icon: Layers },
-    ...(usesPages ? [{ id: 'pages' as StudioTool, label: 'Pages', icon: FileText }] : []),
-    { id: 'theme', label: 'Theme', icon: Palette },
+  // Grouped by what they're for: building, your content, and the overall look.
+  const toolGroups: { id: StudioTool; label: string; icon: LucideIcon }[][] = [
+    [
+      { id: 'edit', label: 'Edit', icon: SlidersHorizontal },
+      { id: 'add', label: 'Add', icon: SquarePlus },
+    ],
+    [
+      { id: 'variables', label: 'Variables', icon: Braces },
+      { id: 'layers', label: 'Layers', icon: Layers },
+      ...(usesPages ? [{ id: 'pages' as StudioTool, label: 'Pages', icon: FileText }] : []),
+    ],
+    [{ id: 'theme', label: 'Theme', icon: Palette }],
   ];
-  const active = tools.find((item) => item.id === tool);
+  const active = toolGroups.flat().find((item) => item.id === tool);
 
   return (
     <aside aria-label="Tools" className="relative z-10 shrink-0 flex bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-      <div role="tablist" aria-label="Tools" aria-orientation="vertical" className="no-scrollbar w-[68px] shrink-0 flex flex-col items-center gap-1 py-2 overflow-y-auto border-r border-slate-100 dark:border-slate-800">
-        {tools.map(({ id, label, icon: ToolIcon }) => (
-          <button
-            key={id}
-            role="tab"
-            type="button"
-            aria-selected={tool === id}
-            title={tool === id ? `Close ${label}` : label}
-            // Clicking the open tool closes the panel, giving the canvas more room.
-            onClick={() => {
-              setLastTool(id);
-              setTool(tool === id ? null : id);
-            }}
-            className={`w-[60px] h-[52px] flex flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium transition-colors ${
-              tool === id
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <ToolIcon className="w-5 h-5" aria-hidden="true" />
-            {label}
-          </button>
+      <div role="tablist" aria-label="Tools" aria-orientation="vertical" data-tour="studio-tools" className="no-scrollbar w-[68px] shrink-0 flex flex-col items-center gap-1 py-2 overflow-y-auto border-r border-slate-100 dark:border-slate-800">
+        {toolGroups.map((group, groupIndex) => (
+          <React.Fragment key={group[0].id}>
+            {groupIndex > 0 && railDivider}
+            {group.map(({ id, label, icon: ToolIcon }) => (
+              <button
+                key={id}
+                role="tab"
+                type="button"
+                aria-selected={tool === id}
+                data-tour={`tool-${id}`}
+                title={tool === id ? `Close ${label}` : TOOL_HINTS[id] ?? label}
+                // Clicking the open tool closes the panel, giving the canvas more room.
+                onClick={() => {
+                  setLastTool(id);
+                  setTool(tool === id ? null : id);
+                }}
+                className={`relative w-[60px] h-[50px] flex flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-medium transition-colors ${
+                  tool === id
+                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                {tool === id && <span aria-hidden="true" className="absolute -left-1 top-2.5 bottom-2.5 w-[3px] rounded-r-full bg-indigo-600 dark:bg-indigo-400" />}
+                <ToolIcon className="w-5 h-5" aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </React.Fragment>
         ))}
-        <button
-          type="button"
-          aria-label={tool ? 'Hide panel' : 'Show panel'}
-          title={tool ? 'Hide panel' : 'Show panel'}
-          onClick={() => setTool(tool ? null : lastTool)}
-          className="mt-auto w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors"
-        >
-          <PanelLeft className="w-[18px] h-[18px]" aria-hidden="true" />
-        </button>
+        <div className="mt-auto flex flex-col items-center gap-1">
+          {onStartTour && (
+            <button type="button" aria-label="Take a tour of the editor" title="Take a tour of the editor" onClick={onStartTour} className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors">
+              <CircleHelp className="w-[18px] h-[18px]" aria-hidden="true" />
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label={tool ? 'Hide panel' : 'Show panel'}
+            title={tool ? 'Hide panel' : 'Show panel'}
+            onClick={() => setTool(tool ? null : lastTool)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors"
+          >
+            <PanelLeft className="w-[18px] h-[18px]" aria-hidden="true" />
+          </button>
+        </div>
       </div>
       {tool && active && (
         <div role="tabpanel" aria-label={active.label} className="w-[320px] flex flex-col min-h-0">
-          {tool !== 'edit' && <h2 className="shrink-0 px-3 pt-3 pb-1 text-base font-semibold">{active.label}</h2>}
+          {tool !== 'edit' && (
+            <div className="shrink-0 flex items-start justify-between gap-2 px-3 pt-3 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold leading-tight">{active.label}</h2>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{TOOL_HINTS[tool]}</p>
+              </div>
+              <button type="button" aria-label="Close panel" title="Close panel" className="shrink-0 p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800" onClick={() => setTool(null)}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           <div className="relative flex-1 overflow-y-auto overflow-x-hidden min-h-0">
             {tool === 'edit' && <SettingsPanel />}
             {tool === 'add' && <AddPanel />}

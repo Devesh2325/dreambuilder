@@ -227,6 +227,11 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-demo-dots{display:flex;gap:6px}
 :where(.fp-root) .fp-demo-dots span{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--fp-text) 18%,transparent)}
 :where(.fp-root) .fp-demo-dots span[data-active=true]{background:var(--fp-primary)}
+:where(.fp-root) .fp-pay{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+:where(.fp-root) .fp-pay-price{font-weight:800;font-size:1.25rem}
+:where(.fp-root) .fp-pay-hint{font-size:.8125rem;color:var(--fp-muted)}
+:where(.fp-root) .fp-embed{width:100%;min-width:0}
+:where(.fp-root) .fp-embed-empty{padding:32px 16px;text-align:center;font-size:.875rem;color:var(--fp-muted);border:1.5px dashed color-mix(in srgb,var(--fp-text) 25%,transparent);border-radius:var(--fp-radius)}
 :where(.fp-root) .fp-marquee{overflow:hidden;width:100%;display:block}
 :where(.fp-root) .fp-marquee-track{display:flex;width:max-content;animation:fp-marquee 30s linear infinite}
 :where(.fp-root) .fp-marquee-track[data-reverse]{animation-direction:reverse}

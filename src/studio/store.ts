@@ -76,6 +76,13 @@ interface StudioState {
   /** Stays the same across blocks and tools, so you can style one block after another. */
   inspectorTab: 'content' | 'style' | 'advanced';
   setInspectorTab: (tab: 'content' | 'style' | 'advanced') => void;
+  /** The variable whose places are outlined on the canvas, while its field is hovered or being edited. */
+  highlightedVariable: string | null;
+  setHighlightedVariable: (key: string | null) => void;
+  /** Opens Variables on this one, ready to type. */
+  focusRequest: string | null;
+  focusVariable: (key: string) => void;
+  clearFocusRequest: () => void;
   /** Which step, screen or slide the canvas draws. Null means the first. */
   activeStepKey: string | null;
   setActiveStep: (key: string | null) => void;
@@ -183,6 +190,8 @@ const initialState = {
   tool: 'variables' as StudioTool | null,
   inspectorTab: 'content' as const,
   activeStepKey: null,
+  highlightedVariable: null as string | null,
+  focusRequest: null as string | null,
   globals: [] as GlobalVariable[],
 };
 
@@ -315,6 +324,11 @@ export const useStudio = create<StudioState>((set, get) => {
     setTool: (tool) => set({ tool }),
     setInspectorTab: (inspectorTab) => set({ inspectorTab }),
     setActiveStep: (activeStepKey) => set({ activeStepKey }),
+    setHighlightedVariable: (highlightedVariable) => {
+      if (get().highlightedVariable !== highlightedVariable) set({ highlightedVariable });
+    },
+    focusVariable: (key) => set({ tool: 'variables', focusRequest: key }),
+    clearFocusRequest: () => set({ focusRequest: null }),
 
     visibleDocuments: () => {
       const { documents, activeDocumentId } = get();

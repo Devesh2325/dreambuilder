@@ -39,6 +39,7 @@ window.FlowPilot?.track('{{PROJECT_ID}}', 'upgrade_clicked', { plan: 'pro' });
 | `impression` | An experience was shown |
 | `page_viewed` | A hosted page was opened |
 | `cta_clicked` | A link button was clicked |
+| `payment_clicked` | A Pay button was clicked, which doesn't mean a payment was made |
 | `form_submitted` | A form was sent |
 | `tour_step_viewed` | A tour step appeared |
 | `tour_step_completed` | Next was clicked on a tour step |

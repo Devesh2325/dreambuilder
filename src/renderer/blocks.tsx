@@ -114,6 +114,43 @@ const Video: Block = ({ node, attrs, ctx }) => {
   );
 };
 
+/**
+ * The provider takes the payment on its own secure page. Card details never pass through
+ * this page, which is why this is a link and not a form.
+ */
+const PaymentButton: Block = ({ node, attrs, ctx }) => {
+  const url = asText(node.props.url);
+  const href = /^https:\/\//i.test(url) ? safeUrl(url) : '';
+  const price = asText(node.props.price);
+  const label = asText(node.props.text) || 'Buy now';
+  if (!href && ctx.mode !== 'edit') return null;
+  return (
+    <div {...withClass(attrs, 'fp-pay')}>
+      {price && <span className="fp-pay-price">{price}</span>}
+      <a
+        className="fp-btn fp-btn-primary"
+        href={href || '#'}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(event) => {
+          if (ctx.mode === 'edit') event.preventDefault();
+          else ctx.track?.('payment_clicked', { label, provider: asText(node.props.provider) });
+        }}
+      >
+        {label}
+      </a>
+      {!href && <span className="fp-pay-hint">Add your payment link to make this work</span>}
+    </div>
+  );
+};
+
+const ProjectEmbed: Block = ({ node, attrs, ctx }) => {
+  const id = asText(node.props.projectId);
+  const content = id ? ctx.renderEmbed?.(id) : null;
+  if (!content && ctx.mode !== 'edit') return null;
+  return <div {...withClass(attrs, 'fp-embed')}>{content ?? <p className="fp-embed-empty">Choose which of your projects to show here.</p>}</div>;
+};
+
 const Divider: Block = ({ attrs }) => <hr {...withClass(attrs, 'fp-divider')} />;
 
 const Spacer: Block = ({ node, attrs }) => <div {...attrs} style={{ height: Number(node.props.height) || 0 }} />;
@@ -562,6 +599,8 @@ export const BLOCK_RENDERERS: Record<string, Block> = {
   Button,
   Image,
   Video,
+  PaymentButton,
+  ProjectEmbed,
   Divider,
   Spacer,
   Navbar,

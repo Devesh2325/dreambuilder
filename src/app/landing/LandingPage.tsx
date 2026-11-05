@@ -9,6 +9,7 @@ import { SECTION_LIBRARY } from '../../templates/sections';
 import { ROUTES } from '../routes';
 import { Icon } from '../shared/Icon';
 import { LiveThumbnail } from '../templates/LiveThumbnail';
+import { ProductDemo } from './ProductDemo';
 
 const SHOWCASE = ['website-restaurant', 'page-fintech-app', 'website-saas', 'page-travel-package', 'website-clinic', 'page-gym-offer'];
 const INDUSTRIES = ['Restaurants', 'Clinics', 'Real estate', 'Gyms', 'Schools', 'Law firms', 'Hotels', 'Software', 'Salons', 'Charities', 'Finance', 'Shops', 'Weddings', 'Consultants'];
@@ -36,7 +37,8 @@ const FAQ = [
   { question: 'Can I add tours and forms to my existing site?', answer: 'Yes. Paste one script into your site, and your tours, banners, forms and demos appear there. It runs apart from your own styles, so the two don\'t interfere.' },
   { question: 'Where do my websites live?', answer: 'Published websites and pages get their own web address on FlowPilot. Connecting your own domain isn\'t available yet.' },
   { question: 'Can my team use it together?', answer: 'Yes. Invite people as admins, editors or viewers, and save templates and sections for everyone to reuse.' },
-  { question: 'What does it cost?', answer: 'You can start on the free plan. Online upgrades aren\'t available yet, so get in touch if you need more.' },
+  { question: 'Can I take payments on my site?', answer: 'Yes. Add a Pay button, and connect it to a payment link from Stripe, Razorpay, PayPal or another provider. Visitors pay on their secure page, and the money goes straight to you.' },
+  { question: 'What does it cost?', answer: 'You can start on the free plan. Online upgrades aren\'t available yet, so ask us from the Plans page if you need more.' },
 ];
 
 const Cta: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
@@ -77,6 +79,7 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto h-16 px-6 flex items-center justify-between gap-6">
           <Logo light />
           <nav aria-label="Landing page" className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300">
+            <a href="#demo" className="hover:text-white">Try it</a>
             <a href="#build" className="hover:text-white">What you can build</a>
             <a href="#features" className="hover:text-white">Features</a>
             <a href="#templates" className="hover:text-white">Templates</a>
@@ -134,6 +137,19 @@ export const LandingPage: React.FC = () => {
             ))}
           </div>
           <p className="sr-only">Templates for {INDUSTRIES.join(', ')}.</p>
+        </section>
+
+        <section id="demo" aria-labelledby="demo-title" className="py-24 px-6 bg-slate-950 text-white">
+          <div className="max-w-5xl mx-auto">
+            <div className="max-w-2xl mx-auto text-center">
+              <p className="text-sm font-semibold text-indigo-300">Try it now, no signup</p>
+              <h2 id="demo-title" className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight">See how it works</h2>
+              <p className="mt-4 text-lg text-slate-300">Click through the four steps. This interactive demo was made with FlowPilot's own demo builder, so you could make one just like it for your product.</p>
+            </div>
+            <div className="mt-10 rounded-2xl overflow-hidden bg-white text-slate-900 p-3 sm:p-4 shadow-2xl shadow-indigo-950">
+              <ProductDemo />
+            </div>
+          </div>
         </section>
 
         <section id="build" aria-labelledby="build-title" className="py-24 px-6">

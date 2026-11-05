@@ -3,6 +3,7 @@ import { MODULES } from '../core/modules';
 import { ProjectSettings, ProjectType, Theme } from '../core/schema';
 import { VariableValues } from '../core/variables';
 import { Frame } from '../renderer/Frame';
+import { useEmbedRenderer } from './EmbeddedProject';
 import { ExperiencePlayer, PlayerHost } from './ExperiencePlayer';
 import { pagesOf, SiteDocument, SiteView } from './SiteView';
 
@@ -60,6 +61,7 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
     [doc],
   );
 
+  const renderEmbed = useEmbedRenderer('preview');
   const pages = pagesOf(documents);
   const pageExists = pages.some((page) => page.slug === slug);
 
@@ -88,6 +90,7 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
             variables={variables}
             ctx={{
               mode: 'preview',
+              renderEmbed,
               submitForm: async () => ({ ok: true }),
               // Only internal pages navigate. A preview must not leave the app.
               navigate: (href) => {

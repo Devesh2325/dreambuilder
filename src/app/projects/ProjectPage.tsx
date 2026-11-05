@@ -1,44 +1,24 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronRight, Copy, Download, ExternalLink, Pencil, RotateCcw, Trash2 } from 'lucide-react';
-import { moduleNoun, MODULES } from '../../core/modules';
+import { ChevronRight, Download, ExternalLink, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { MODULES } from '../../core/modules';
 import { DocumentRecord, ProjectRecord } from '../../data/services';
+import { EmbedLoaderContext } from '../../experience/EmbeddedProject';
 import { ProjectPreview } from '../../experience/ProjectPreview';
 import { publicSitePath, ROUTES } from '../routes';
 import { useServices } from '../session';
+import { formatDate, formatDateTime } from '../shared/format';
 import { Icon } from '../shared/Icon';
+import { MODULE_COLORS } from '../shared/moduleColors';
 import { BusyIcon, BusyLabel, cardClass, dangerButton, EmptyState, ErrorNote, errorMessage, LoadingNote, primaryButton, ProjectSkeleton, secondaryButton } from '../shared/ui';
 import { useWorkspace } from '../workspace';
 import { collectsResponses, MODULE_COLUMNS } from './moduleColumns';
 import { StatusBadge } from './ProjectsPage';
+import { useDraftEmbedLoader } from './embedLoader';
+import { InstallGuide } from './InstallGuide';
 import { PublishDialog } from './PublishDialog';
-import { embedSnippet, inlineSnippet, submissionsToCsv } from './projectHelpers';
-
-const CopyBlock: React.FC<{ label: string; code: string }> = ({ label, code }) => {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <p className="text-sm font-medium">{label}</p>
-        <button
-          type="button"
-          aria-label={`Copy ${label}`}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400"
-          onClick={async () => {
-            await navigator.clipboard.writeText(code);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          }}
-        >
-          {copied ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
-      </div>
-      <pre className="text-xs p-3 rounded-lg overflow-x-auto bg-slate-900 text-slate-100 dark:bg-black/40"><code>{code}</code></pre>
-    </div>
-  );
-};
+import { submissionsToCsv } from './projectHelpers';
 
 const panelClass = `${cardClass} p-5`;
 
@@ -54,6 +34,7 @@ const OverviewTab: React.FC<{ project: ProjectRecord; documents: DocumentRecord[
       </div>
       <div className="space-y-5">
         <section aria-label="Next step" className={panelClass}>
+          {project.status === 'published' && <span className="sr-only">Published.</span>}
           {project.status === 'published' ? (
             <>
               <h2 className="font-semibold">It's live</h2>
@@ -83,41 +64,10 @@ const OverviewTab: React.FC<{ project: ProjectRecord; documents: DocumentRecord[
                 <dd className="font-medium text-right">{column.value({ project, documents, responses })}</dd>
               </div>
             ))}
-            <div className="flex justify-between gap-3 py-2"><dt className="text-slate-500 dark:text-slate-400">Updated</dt><dd className="font-medium text-right">{new Date(project.updatedAt).toLocaleDateString()}</dd></div>
+            <div className="flex justify-between gap-3 py-2"><dt className="text-slate-500 dark:text-slate-400">Updated</dt><dd className="font-medium text-right">{formatDate(project.updatedAt)}</dd></div>
           </dl>
         </section>
       </div>
-    </div>
-  );
-};
-
-const INSTALL_INTRO = {
-  site: 'Your pages are hosted for you, so visitors just need the link.',
-  overlay: 'Add one script to your site. It floats over your pages, following the rules you set in the editor.',
-  inline: 'Share the link, or add it to your own site where it should appear.',
-};
-
-const ShareTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
-  const module = MODULES[project.type];
-  const liveUrl = project.slug ? `${window.location.origin}${publicSitePath(project.slug)}` : null;
-  const isPublished = project.status === 'published';
-  const showsInline = module.delivery === 'inline' || project.settings.position === 'inline';
-
-  return (
-    <div className={`${panelClass} max-w-3xl space-y-5`}>
-      <div>
-        <h2 className="font-semibold">Share and install</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{INSTALL_INTRO[module.delivery]}</p>
-      </div>
-      {!isPublished && <p role="note" className="text-sm rounded-lg px-3 py-2 bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">Publish first. This code won't show anything until then.</p>}
-      {isPublished && liveUrl && <CopyBlock label="Web address" code={liveUrl} />}
-      {module.delivery !== 'site' && <CopyBlock label="Add to your site, before </body>" code={embedSnippet(window.location.origin, project.id)} />}
-      {showsInline && <CopyBlock label="Place where it should appear" code={inlineSnippet(project.id)} />}
-      <p className="text-sm">
-        <Link to={`${ROUTES.doc(project.type)}?project=${project.id}`} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-          Read the {moduleNoun(project.type)} integration guide
-        </Link>
-      </p>
     </div>
   );
 };
@@ -174,7 +124,7 @@ const ResponsesTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td className="py-2 pr-4 whitespace-nowrap text-slate-500 dark:text-slate-400">{new Date(row.createdAt).toLocaleString()}</td>
+                  <td className="py-2 pr-4 whitespace-nowrap text-slate-500 dark:text-slate-400">{formatDateTime(row.createdAt)}</td>
                   {columns.map((column) => <td key={column} className="py-2 pr-4">{String(row.data[column] ?? '')}</td>)}
                   <td className="py-2 text-right">
                     {can('edit:project') && (
@@ -223,7 +173,7 @@ const VersionsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
               <strong>Version {version.versionNumber}</strong>
               {version.id === project.publishedVersionId && <span className="ml-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">Live</span>}
               <span className="block text-xs text-slate-500 dark:text-slate-400 truncate">
-                {new Date(version.createdAt).toLocaleString()}{version.changeSummary ? ` | ${version.changeSummary}` : ''}
+                {formatDateTime(version.createdAt)}{version.changeSummary ? ` | ${version.changeSummary}` : ''}
               </span>
             </span>
             {can('edit:project') && (
@@ -333,6 +283,7 @@ export const ProjectPage: React.FC = () => {
   const location = useLocation();
   const [tab, setTab] = useState<TabId>('overview');
   const [isPublishing, setIsPublishing] = useState(false);
+  const embedLoader = useDraftEmbedLoader();
   const notice = location.state as { justPublished?: boolean } | null;
   const [justPublished, setJustPublished] = useState(Boolean(notice?.justPublished));
 
@@ -389,7 +340,7 @@ export const ProjectPage: React.FC = () => {
 
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="shrink-0 w-11 h-11 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><Icon name={module.icon} className="w-5 h-5" /></span>
+          <span className={`shrink-0 w-11 h-11 flex items-center justify-center rounded-xl ${MODULE_COLORS[project.type]}`}><Icon name={module.icon} className="w-5 h-5" /></span>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold truncate">{project.title}</h1>
@@ -427,8 +378,12 @@ export const ProjectPage: React.FC = () => {
       </div>
 
       <div role="tabpanel">
-        {tab === 'overview' && <OverviewTab project={project} documents={query.data!.documents} responses={responses} onPublish={() => setIsPublishing(true)} canEdit={canEdit} />}
-        {tab === 'share' && <ShareTab project={project} />}
+        {tab === 'overview' && (
+          <EmbedLoaderContext.Provider value={embedLoader}>
+            <OverviewTab project={project} documents={query.data!.documents} responses={responses} onPublish={() => setIsPublishing(true)} canEdit={canEdit} />
+          </EmbedLoaderContext.Provider>
+        )}
+        {tab === 'share' && <InstallGuide project={project} onPublish={() => setIsPublishing(true)} canEdit={canEdit} />}
         {tab === 'responses' && <ResponsesTab project={project} />}
         {tab === 'versions' && <VersionsTab project={project} />}
         {tab === 'settings' && <SettingsTab key={project.title} project={project} />}

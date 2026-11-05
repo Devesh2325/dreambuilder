@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Globe2, Lightbulb, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Globe2, Lightbulb, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { DocContent } from '../core/schema';
 import { validateValues } from '../core/validation';
-import { defaultValues, tokensIn, VariableDef, VariableType } from '../core/variables';
+import { defaultValues, VariableDef, VariableType } from '../core/variables';
 import { useServices } from '../app/session';
 import { BusyLabel, ErrorNote, errorMessage } from '../app/shared/ui';
 import { VariableField, VariableForm } from '../app/shared/VariableForm';
@@ -12,6 +12,7 @@ import { projectVariableDefs } from '../templates';
 import { GlobalVariable } from '../types/auth';
 import { fieldClass, labelClass } from './fields';
 import { useStudio, variableKey } from './store';
+import { nodesUsingVariable, variableMatches, variablesOfNode } from './variableUsage';
 
 export { variableKey };
 
@@ -35,10 +36,7 @@ export function usageCounts(contents: DocContent[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const content of contents) {
     for (const node of Object.values(content.nodes)) {
-      const used = tokensIn([node.props, node.styles, node.responsive]);
-      if (node.showIf) used.add(node.showIf.replace(/^!/, ''));
-      if (node.repeat) used.add(node.repeat.list);
-      for (const key of used) counts[key] = (counts[key] ?? 0) + 1;
+      for (const key of variablesOfNode(node)) counts[key] = (counts[key] ?? 0) + 1;
     }
   }
   return counts;
@@ -215,7 +213,7 @@ const EditVariable: React.FC<{ def: VariableDef; onSave: (patch: Partial<Variabl
   );
 };
 
-const GlobalRow: React.FC<{ variable: GlobalVariable; canEdit: boolean; hint: string; onSave: (value: string) => Promise<void>; onRemove: () => void }> = ({ variable, canEdit, hint, onSave, onRemove }) => {
+const GlobalRow: React.FC<{ variable: GlobalVariable; canEdit: boolean; hint: string; onShow?: () => void; onSave: (value: string) => Promise<void>; onRemove: () => void }> = ({ variable, canEdit, hint, onShow, onSave, onRemove }) => {
   const [value, setValue] = useState(String(variable.value ?? ''));
   const save = useMutation({ mutationFn: () => onSave(value) });
   const isChanged = value !== String(variable.value ?? '');
@@ -229,6 +227,7 @@ const GlobalRow: React.FC<{ variable: GlobalVariable; canEdit: boolean; hint: st
         errors={{}}
         errorPrefix={variable.key}
         hint={hint}
+        onShow={onShow}
         onChange={(next) => setValue(String(next ?? ''))}
       />
       {canEdit && (
@@ -259,7 +258,51 @@ export const VariablesPanel: React.FC = () => {
   const queryClient = useQueryClient();
   const [justAdded, setJustAdded] = useState<{ label: string; isList: boolean } | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const focusRequest = useStudio((s) => s.focusRequest);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const usageCursor = useRef<Record<string, number>>({});
+
+  // Clear the outlines on leaving, or they'd stay on the canvas with nothing explaining them.
+  useEffect(() => () => useStudio.getState().setHighlightedVariable(null), []);
+
+  // Arriving from "Change it" on a block: go straight to that variable.
+  useEffect(() => {
+    if (!focusRequest) return;
+    if (search) {
+      setSearch('');
+      return;
+    }
+    const field = panelRef.current?.querySelector(`[data-var="${CSS.escape(focusRequest)}"]`);
+    field?.scrollIntoView({ block: 'center' });
+    field?.querySelector<HTMLElement>('input,textarea,select')?.focus();
+    const state = useStudio.getState();
+    state.setHighlightedVariable(focusRequest);
+    state.clearFocusRequest();
+  }, [focusRequest, search]);
+
   if (!draft || !project) return null;
+
+  const term = search.trim();
+  const matches = (def: { key: string; label: string }) => variableMatches(def.label, draft.variables[def.key], term);
+
+  /** Each press goes to the next place it's used, changing page when it has to. */
+  const showUsage = (key: string) => {
+    const state = useStudio.getState();
+    const places = state.documents.flatMap((doc) => nodesUsingVariable(doc.content, key).map((id) => ({ documentId: doc.id, id })));
+    if (places.length === 0) return;
+    const index = ((usageCursor.current[key] ?? -1) + 1) % places.length;
+    usageCursor.current[key] = index;
+    const place = places[index];
+    if (!state.documentOfNode(place.id)) state.setActiveDocument(place.documentId);
+    state.select(place.id);
+    state.setHighlightedVariable(key);
+  };
+
+  const highlightFrom = (target: EventTarget) => {
+    const key = (target as Element).closest?.('[data-var]')?.getAttribute('data-var');
+    useStudio.getState().setHighlightedVariable(key ?? null);
+  };
 
   const defs = projectVariableDefs(project.templateId, draft.settings);
   const own = draft.settings.variableDefs ?? [];
@@ -285,30 +328,43 @@ export const VariablesPanel: React.FC = () => {
   };
 
   return (
-    <div className="p-3 space-y-6">
-      <div className="rounded-lg bg-indigo-50 dark:bg-indigo-500/10 p-3 text-[13px] text-indigo-950 dark:text-indigo-100">
+    <div
+      ref={panelRef}
+      className="p-3 space-y-6"
+      onMouseOver={(event) => highlightFrom(event.target)}
+      onFocus={(event) => highlightFrom(event.target)}
+      onMouseLeave={() => useStudio.getState().setHighlightedVariable(document.activeElement?.closest('[data-var]')?.getAttribute('data-var') ?? null)}
+    >
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" aria-hidden="true" />
+        <input type="search" aria-label="Search variables" placeholder="Find by name, or by what it says" className={`${fieldClass} !pl-8`} value={search} onChange={(event) => setSearch(event.target.value)} />
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Point at one to see it light up on the page.</p>
+      </div>
+      {!term && <div className="rounded-lg bg-indigo-50 dark:bg-indigo-500/10 p-3 text-[13px] text-indigo-950 dark:text-indigo-100">
         <p className="flex items-center gap-1.5 font-semibold">
           <Lightbulb className="w-4 h-4 shrink-0" aria-hidden="true" />
           One change, updated everywhere
         </p>
         <p className="mt-1">Variables are things you use more than once, like your business name. Change one here, and every place that uses it updates by itself. Your changes save automatically.</p>
-      </div>
-      {fromTemplate.length > 0 && (
+      </div>}
+      {term && ![...defs, ...globals].some(matches) && <p className="text-[13px] text-slate-500 dark:text-slate-400">Nothing matches "{term}".</p>}
+      {fromTemplate.some(matches) && (
         <fieldset disabled={readOnly} className="min-w-0">
           <VariableForm
-            defs={fromTemplate}
+            defs={fromTemplate.filter(matches)}
             values={draft.variables}
             errors={errors}
             hints={hints}
+            onShow={showUsage}
             onChange={(values) => updateDraft((d) => { d.variables = values; }, 'variables')}
           />
         </fieldset>
       )}
       <section aria-label="Your variables" className="space-y-4">
-        {own.length > 0 && <h2 className="text-sm font-bold text-slate-900 dark:text-white">Your variables</h2>}
+        {own.some(matches) && <h2 className="text-sm font-bold text-slate-900 dark:text-white">Your variables</h2>}
         <fieldset disabled={readOnly} className="min-w-0 space-y-4">
-          {own.map((def) => (
-            <div key={def.key}>
+          {own.filter(matches).map((def) => (
+            <div key={def.key} data-var={def.key}>
               {editing === def.key && (
                 <EditVariable
                   def={def}
@@ -327,6 +383,7 @@ export const VariablesPanel: React.FC = () => {
                   errors={errors}
                   errorPrefix={def.key}
                   hint={hints[def.key]}
+                  onShow={counts[def.key] ? () => showUsage(def.key) : undefined}
                   onChange={(next) => updateDraft((d) => { d.variables[def.key] = next; }, `variables:${def.key}`)}
                 />
                 {!readOnly && (
@@ -347,7 +404,7 @@ export const VariablesPanel: React.FC = () => {
           <p role="status" className="text-[13px] rounded-lg px-2.5 py-2 bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
             <strong>{justAdded.label}</strong> is saved.{' '}
             {justAdded.isList
-              ? <>To use it, click a block on the canvas, open <strong>Advanced</strong> and choose it under <strong>Repeat for each item in</strong>.</>
+              ? <>To use it, click a block on the canvas, open <strong>Behavior</strong> and choose it under <strong>Repeat for each item in</strong>.</>
               : <>To use it, click some text on the canvas, then choose it under <strong>+ Insert a variable</strong>.</>}
           </p>
         )}
@@ -370,7 +427,7 @@ export const VariablesPanel: React.FC = () => {
         )}
       </section>
 
-      {globals.length > 0 && (
+      {globals.some(matches) && (
         <section aria-label="Global variables" className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
           <div>
             <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-white">
@@ -380,17 +437,19 @@ export const VariablesPanel: React.FC = () => {
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Shared by every project in this workspace. A project picks up a change when it's next opened, and visitors see it after you publish that project.</p>
           </div>
           <fieldset disabled={!canEditGlobals || readOnly} className="min-w-0 space-y-4">
-            {globals.map((item) => (
+            {globals.filter(matches).map((item) => (
+              <div key={`${item.key}:${String(item.value)}`} data-var={item.key}>
               <GlobalRow
-                key={`${item.key}:${String(item.value)}`}
                 variable={item}
                 canEdit={canEditGlobals && !readOnly}
                 hint={usageHint(counts[item.key])}
+                onShow={counts[item.key] ? () => showUsage(item.key) : undefined}
                 onSave={(value) => saveGlobals(globals.map((other) => (other.key === item.key ? { ...other, value } : other)))}
                 onRemove={() => {
                   if (remove(item)) void saveGlobals(globals.filter((other) => other.key !== item.key));
                 }}
               />
+              </div>
             ))}
           </fieldset>
           {!canEditGlobals && <p className="text-xs text-slate-500 dark:text-slate-400">Only workspace owners and admins can change these.</p>}

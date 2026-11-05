@@ -53,11 +53,18 @@ If signup fails with "Database error saving new user", the `on_auth_user_created
 
 ## Changing a workspace's plan
 
-There's no online checkout. New workspaces are on the free plan, limited to 3 projects and 1 member. To change a plan, run this in the SQL Editor:
+There's no online checkout. New workspaces start on the free plan. A super admin (see below) changes a workspace's plan under **Super admin**, on the **Users** tab, or approves a request on the **Plan requests** tab. The same page sets each plan's limits, for projects overall, team members and each module.
+
+## Making someone a super admin
+
+A super admin sets every plan's limits, sees every user, sends nudges, approves plan requests and answers support. Nobody can become one from the app, so run this once in the SQL editor after that person has signed up:
 
 ```sql
-update public.organizations set plan = 'pro' where slug = 'your-workspace-slug';
+insert into public.platform_admins (user_id)
+select id from auth.users where email = 'you@example.com';
 ```
+
+They then see **Super admin** in the left menu. Delete the row to remove their access.
 
 ## Testing database security
 

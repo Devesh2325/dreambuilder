@@ -7,8 +7,11 @@ import { ProjectType } from '../../core/schema';
 import { ProjectRecord } from '../../data/services';
 import { publicSitePath, ROUTES } from '../routes';
 import { useServices } from '../session';
+import { ModuleEmptyBanner } from '../shared/FlowPilotBanner';
+import { formatDate } from '../shared/format';
 import { Icon } from '../shared/Icon';
-import { BusyIcon, cardClass, EmptyState, ErrorNote, errorMessage, inputClass, PageHeader, StatTile, TableSkeleton } from '../shared/ui';
+import { MODULE_COLORS } from '../shared/moduleColors';
+import { BusyIcon, cardClass, ErrorNote, errorMessage, inputClass, PageHeader, StatTile, TableSkeleton } from '../shared/ui';
 import { CreateButton } from '../templates/CreateButton';
 import { useWorkspace } from '../workspace';
 import { collectsResponses, MODULE_COLUMNS, ProjectRow } from './moduleColumns';
@@ -128,10 +131,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
       {query.isError && <ErrorNote message="We couldn't load your projects. Please refresh the page." />}
 
       {query.isSuccess && moduleProjects.length === 0 && (
-        <EmptyState title={`No ${module.plural.toLowerCase()} yet`} icon={module.icon}>
-          <p className="mb-5">Choose a template, fill in your details, and it's ready to publish.</p>
-          <CreateButton type={type} />
-        </EmptyState>
+        <ModuleEmptyBanner type={type} canCreate={can('create:project')} />
       )}
 
       {moduleProjects.length > 0 && (
@@ -183,7 +183,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
                       <tr key={project.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                         <th scope="row" className="px-5 py-3 font-medium max-w-[300px]">
                           <Link to={ROUTES.project(project.id)} className="flex items-center gap-3 min-w-0 hover:text-indigo-600 dark:hover:text-indigo-400">
-                            <span className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><Icon name={module.icon} /></span>
+                            <span className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg ${MODULE_COLORS[type]}`}><Icon name={module.icon} /></span>
                             <span className="truncate">{project.title}</span>
                           </Link>
                         </th>
@@ -191,7 +191,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
                         {columns.map((column) => (
                           <td key={column.label} className={`px-5 py-3 text-slate-600 dark:text-slate-300 ${column.numeric ? 'text-right tabular-nums' : ''}`}>{column.value(row)}</td>
                         ))}
-                        <td className="px-5 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">{new Date(project.updatedAt).toLocaleDateString()}</td>
+                        <td className="px-5 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">{formatDate(project.updatedAt)}</td>
                         <td className="px-5 py-2">
                           <div className="flex justify-end gap-0.5">
                             {can('edit:project') && <Link to={ROUTES.studio(project.id)} aria-label={`Edit ${project.title}`} title="Edit in editor" className={iconAction}><Pencil className="w-4 h-4" /></Link>}

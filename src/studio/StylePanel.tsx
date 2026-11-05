@@ -6,8 +6,10 @@ import {
 import { Device, DEVICES, DocNode } from '../core/schema';
 import { ImageInput } from '../app/shared/VariableForm';
 import { BLOCK_META } from '../renderer/blockMeta';
+import { GradientEditor } from './ColorPicker';
 import { ColorField, fieldClass, FontSelect } from './fields';
 import { useStudio } from './store';
+import { ComputedBox, useComputedBox } from './useComputedBox';
 
 const smallLabel = 'block mb-1 text-xs font-medium text-slate-500 dark:text-slate-400';
 
@@ -169,40 +171,100 @@ const sideOfShorthand = (shorthand: string, side: typeof SIDES[number]): string 
   return { Top: top, Right: right, Bottom: bottom, Left: left }[side];
 };
 
-/** Margin outside and padding inside, drawn like the block they apply to. */
-const BoxModel: React.FC<{ read: (key: string) => string; inherited: (key: string) => string; disabled?: boolean; set: (key: string, value: string) => void }> = ({ read, inherited, disabled, set }) => {
+const SPACING_PRESETS = [
+  { label: 'None', value: '0' },
+  { label: 'S', value: '8' },
+  { label: 'M', value: '16' },
+  { label: 'L', value: '32' },
+  { label: 'XL', value: '64' },
+];
+
+const SIDE_KEYS = (kind: 'margin' | 'padding') => SIDES.map((side) => `${kind}${side}`);
+
+/**
+ * Margin outside and padding inside, drawn like the block they apply to. Each box shows what
+ * the block really uses right now, in gray until it's set here, and one value can set all sides.
+ */
+const BoxModel: React.FC<{ read: (key: string) => string; inherited: (key: string) => string; computed: ComputedBox | null; disabled?: boolean; set: (key: string, value: string) => void; setAll: (kind: 'margin' | 'padding', value: string) => void }> = ({ read, inherited, computed, disabled, set, setAll }) => {
+  const shownSide = (kind: 'margin' | 'padding', side: typeof SIDES[number]) => {
+    const key = `${kind}${side}`;
+    return read(key) || inherited(key) || sideOfShorthand(read(kind) || inherited(kind), side) || (computed?.[key as keyof ComputedBox] ?? '0');
+  };
   const sideField = (kind: 'margin' | 'padding', side: typeof SIDES[number]) => {
     const key = `${kind}${side}`;
     return (
       <NumberField
         bare
         label={`${kind === 'margin' ? 'Margin' : 'Padding'} ${side.toLowerCase()}`}
-        placeholder={inherited(key) || sideOfShorthand(read(kind) || inherited(kind), side) || '0'}
+        placeholder={shownSide(kind, side)}
         disabled={disabled}
         value={read(key)}
         onChange={(value) => set(key, value)}
       />
     );
   };
-  return (
-    <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 p-1.5 text-center">
-      <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 text-left px-1">Margin</p>
-      <div className="w-14 mx-auto">{sideField('margin', 'Top')}</div>
-      <div className="grid grid-cols-[48px_minmax(0,1fr)_48px] items-center gap-1.5 my-1">
-        {sideField('margin', 'Left')}
-        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-500/10 p-1.5">
-          <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 text-left px-1">Padding</p>
-          <div className="w-12 mx-auto">{sideField('padding', 'Top')}</div>
-          <div className="grid grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)] items-center gap-1 my-1">
-            {sideField('padding', 'Left')}
-            <span className="h-5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600" aria-hidden="true" />
-            {sideField('padding', 'Right')}
-          </div>
-          <div className="w-12 mx-auto">{sideField('padding', 'Bottom')}</div>
+  const allField = (kind: 'margin' | 'padding', title: string, hint: string) => {
+    const sides = SIDES.map((side) => shownSide(kind, side));
+    const isSame = sides.every((value) => value === sides[0]);
+    const own = read(kind);
+    return (
+      <div>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className={smallLabel}>{title}</p>
+          <p className="text-[11px] text-slate-400">{hint}</p>
         </div>
-        {sideField('margin', 'Right')}
+        <div className="flex items-center gap-1.5">
+          <input
+            aria-label={`All ${kind}`}
+            disabled={disabled}
+            className={`${fieldClass} !w-[72px] shrink-0 !px-2 text-center`}
+            placeholder={isSame ? sides[0] : 'Mixed'}
+            value={own}
+            onChange={(event) => setAll(kind, event.target.value)}
+          />
+          <div role="group" aria-label={`${title} sizes`} className="flex-1 min-w-0 flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800">
+            {SPACING_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                disabled={disabled}
+                aria-label={`${title}: ${preset.label}`}
+                aria-pressed={own === preset.value}
+                title={`${preset.value} pixels on every side`}
+                className={`flex-1 h-8 rounded-md text-xs font-medium transition-colors ${own === preset.value ? 'bg-white dark:bg-slate-600 text-indigo-700 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white'}`}
+                onClick={() => setAll(kind, preset.value)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="w-14 mx-auto">{sideField('margin', 'Bottom')}</div>
+    );
+  };
+  return (
+    <div className="space-y-3">
+      {allField('padding', 'All padding', 'Space inside')}
+      {allField('margin', 'All margin', 'Space outside')}
+      <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 p-1.5 text-center">
+        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 text-left px-1">Margin</p>
+        <div className="w-14 mx-auto">{sideField('margin', 'Top')}</div>
+        <div className="grid grid-cols-[48px_minmax(0,1fr)_48px] items-center gap-1.5 my-1">
+          {sideField('margin', 'Left')}
+          <div className="rounded-lg bg-emerald-50 dark:bg-emerald-500/10 p-1.5">
+            <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 text-left px-1">Padding</p>
+            <div className="w-12 mx-auto">{sideField('padding', 'Top')}</div>
+            <div className="grid grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)] items-center gap-1 my-1">
+              {sideField('padding', 'Left')}
+              <span className="h-5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600" aria-hidden="true" />
+              {sideField('padding', 'Right')}
+            </div>
+            <div className="w-12 mx-auto">{sideField('padding', 'Bottom')}</div>
+          </div>
+          {sideField('margin', 'Right')}
+        </div>
+        <div className="w-14 mx-auto">{sideField('margin', 'Bottom')}</div>
+      </div>
     </div>
   );
 };
@@ -221,15 +283,6 @@ const SHADOWS: Choice[] = [
   { value: '0 28px 56px -14px rgba(15,23,42,.42)', label: 'XL' },
 ];
 
-const GRADIENTS = [
-  'linear-gradient(135deg, #6366f1, #a855f7)',
-  'linear-gradient(135deg, #0ea5e9, #10b981)',
-  'linear-gradient(135deg, #f43f5e, #f59e0b)',
-  'linear-gradient(135deg, #0f172a, #334155)',
-  'linear-gradient(135deg, #fde68a, #fca5a5)',
-  'linear-gradient(180deg, var(--fp-background), var(--fp-surface))',
-];
-
 const backgroundImageUrl = (value: string) => value.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/)?.[1] ?? '';
 
 /** Columns in a value such as repeat(3, ...) or a plain list of tracks. 0 means automatic. */
@@ -246,6 +299,7 @@ const MEDIA_BLOCKS = ['Image', 'Video', 'Divider', 'Spacer'];
 const groupOrder = (type: string): string[] => {
   if (TEXT_BLOCKS.includes(type)) return ['Typography', 'Fill', 'Spacing', 'Size', 'Border', 'Effects', 'Position', 'Layout'];
   if (MEDIA_BLOCKS.includes(type)) return ['Size', 'Border', 'Spacing', 'Effects', 'Position'];
+  if (type === 'Section' || type === 'Container') return ['Spacing', 'Fill', 'Layout', 'Size', 'Border', 'Typography', 'Effects', 'Position'];
   return ['Layout', 'Spacing', 'Fill', 'Size', 'Border', 'Typography', 'Effects', 'Position'];
 };
 const OPEN_BY_DEFAULT = 3;
@@ -257,6 +311,7 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
   const theme = useStudio((s) => s.draft?.theme);
   const { updateStyle, updateStyles, updateNode, setChildCount, setGridColumns, clearDeviceStyles, setTool } = useStudio.getState();
   const [splitCorners, setSplitCorners] = useState(() => CORNERS.some((corner) => node.styles[corner.key] !== undefined));
+  const computed = useComputedBox(node.id);
 
   const own = device === 'desktop' ? node.styles : node.responsive?.[device];
   const read = (key: string) => String(own?.[key] ?? '');
@@ -352,7 +407,13 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
           )}
           {select('Distribute', 'justifyContent', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'space-between', label: 'Space between' }, { value: 'space-around', label: 'Space around' }, { value: 'space-evenly', label: 'Space evenly' }])}
           {select('Align', 'alignItems', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'stretch', label: 'Stretch' }, { value: 'baseline', label: 'Baseline' }])}
-          {number('Gap', 'gap', '0')}
+          {number('Gap', 'gap', computed?.gap ?? '0')}
+          {computed && !['flex', 'inline-flex', 'grid', 'inline-grid'].includes(computed.display) && childNodes.length > 1 && (
+            <p className="text-[13px] rounded-lg px-2.5 py-2 bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+              Gap only works when Display is Flex or Grid.
+              {!readOnly && <> <button type="button" className="font-semibold underline" onClick={() => setKey('display', 'flex')}>Turn on Flex</button></>}
+            </p>
+          )}
         </>
       ),
     },
@@ -360,8 +421,21 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
       keys: spacingKeys,
       body: (
         <>
-          <BoxModel read={read} inherited={inherited} disabled={readOnly} set={setKey} />
-          <p className="text-xs text-slate-500 dark:text-slate-400">A number means pixels. You can also type 2rem, 5% or auto. Arrow keys change the value.</p>
+          <BoxModel
+            read={read}
+            inherited={inherited}
+            computed={computed}
+            disabled={readOnly}
+            set={setKey}
+            setAll={(kind, value) => updateStyles(node.id, { [kind]: value, ...Object.fromEntries(SIDE_KEYS(kind).map((key) => [key, ''])) })}
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">Gray numbers are what this block uses now, in pixels. Type over one to change that side. You can also type 2rem, 5% or auto.</p>
+          {hasAny(...spacingKeys) && !readOnly && (
+            <button type="button" className="inline-flex items-center gap-1 text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => clear(...spacingKeys)}>
+              <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+              Back to the default spacing
+            </button>
+          )}
         </>
       ),
     },
@@ -419,11 +493,12 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
           {fillTab === 'color' && <ColorField label="Background" disabled={readOnly} theme={theme} clearable value={background} onChange={setBackground} />}
           {fillTab === 'gradient' && (
             <>
-              <div role="group" aria-label="Gradients" className="grid grid-cols-6 gap-1.5">
-                {GRADIENTS.map((gradient, index) => (
-                  <button key={gradient} type="button" disabled={readOnly} aria-label={`Gradient ${index + 1}`} aria-pressed={background === gradient} onClick={() => setBackground(gradient)} className={`h-9 rounded-lg border border-black/10 dark:border-white/20 ${background === gradient ? 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-900' : ''}`} style={{ background: gradient.replace(/var\(--fp-background\)/, theme?.background ?? '#fff').replace(/var\(--fp-surface\)/, theme?.surface ?? '#f1f5f9') }} />
-                ))}
-              </div>
+              <GradientEditor
+                value={background.includes('gradient') ? background : ''}
+                disabled={readOnly}
+                resolve={(css) => css.replace(/var\(--fp-background\)/g, theme?.background ?? '#fff').replace(/var\(--fp-surface\)/g, theme?.surface ?? '#f1f5f9').replace(/var\(--fp-primary\)/g, theme?.primary ?? '#4f46e5')}
+                onChange={setBackground}
+              />
               <NumberField label="Custom gradient" placeholder="linear-gradient(90deg, #000, #fff)" disabled={readOnly} value={background.includes('gradient') ? background : ''} onChange={setBackground} />
             </>
           )}

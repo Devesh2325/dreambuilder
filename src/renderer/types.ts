@@ -25,6 +25,8 @@ export interface RenderContext {
   track?: (eventType: string, metadata?: Record<string, unknown>) => void;
   /** Editor only: of this parent's step children, draw only the given one. */
   visibleStep?: { parentKey: string; stepType: string; key: string };
+  /** Draws another of the workspace's projects inside this page. */
+  renderEmbed?: (projectId: string) => ReactNode;
   /** What a tour draws around its steps: progress and a close button. */
   tourChrome?: { label?: string; canClose?: boolean };
 }
@@ -37,7 +39,7 @@ export interface BlockRenderProps {
   ctx: RenderContext;
 }
 
-export type FieldType = 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'color' | 'image' | 'url' | 'menu' | 'placement';
+export type FieldType = 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'color' | 'image' | 'url' | 'menu' | 'placement' | 'project';
 
 export interface BlockField {
   key: string;
@@ -45,6 +47,10 @@ export interface BlockField {
   type: FieldType;
   options?: { label: string; value: string }[];
   help?: string;
+  /** A technical value typed by hand, so it offers no variables. */
+  plain?: boolean;
+  /** Only letters, numbers and hyphens are kept as it's typed. */
+  slug?: boolean;
 }
 
 export interface BlockMeta {

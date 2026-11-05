@@ -263,7 +263,144 @@ export interface LibraryRepository {
   remove(id: string): Promise<void>;
 }
 
+export interface ProfileRecord {
+  fullName: string;
+  email: string;
+  jobTitle: string;
+  /** An IANA name such as Asia/Kolkata. Empty means the browser's own. */
+  timezone: string;
+}
+
+export interface ProfileRepository {
+  get(): Promise<ProfileRecord | null>;
+  update(patch: Partial<Pick<ProfileRecord, 'fullName' | 'jobTitle' | 'timezone'>>): Promise<void>;
+  /** Lets super admins see who is active. */
+  touchActivity(): Promise<void>;
+}
+
+export interface PlanInfo {
+  plan: SubscriptionPlan;
+  label: string;
+  priceText: string;
+  description: string;
+  maxProjects: number;
+  maxMembers: number;
+  /** Only modules with their own limit. The rest count toward maxProjects alone. */
+  moduleQuotas: Partial<Record<ProjectType, number>>;
+}
+
+export interface PlanRequestRecord {
+  id: string;
+  plan: SubscriptionPlan;
+  note: string;
+  status: 'pending' | 'approved' | 'declined';
+  createdAt: string;
+}
+
+export interface PlanRepository {
+  list(): Promise<PlanInfo[]>;
+  requestChange(organizationId: string, plan: SubscriptionPlan, note: string): Promise<void>;
+  listRequests(organizationId: string): Promise<PlanRequestRecord[]>;
+}
+
+export interface NudgeRecord {
+  id: string;
+  title: string;
+  body: string;
+  linkUrl: string | null;
+  createdAt: string;
+}
+
+export interface NudgeRepository {
+  listUnread(): Promise<NudgeRecord[]>;
+  markRead(id: string): Promise<void>;
+}
+
+export type TicketStatus = 'open' | 'answered' | 'closed';
+
+export interface TicketRecord {
+  id: string;
+  subject: string;
+  status: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketMessage {
+  id: string;
+  isStaff: boolean;
+  body: string;
+  createdAt: string;
+}
+
+export interface SupportRepository {
+  listTickets(): Promise<TicketRecord[]>;
+  createTicket(organizationId: string | null, subject: string, body: string): Promise<string>;
+  listMessages(ticketId: string): Promise<TicketMessage[]>;
+  reply(ticketId: string, body: string): Promise<void>;
+}
+
+export interface AdminOverview {
+  users: number;
+  workspaces: number;
+  projects: number;
+  published: number;
+  openTickets: number;
+  pendingRequests: number;
+  byModule: Partial<Record<ProjectType, number>>;
+  byPlan: Partial<Record<SubscriptionPlan, number>>;
+}
+
+export interface AdminUser {
+  userId: string;
+  email: string;
+  fullName: string | null;
+  createdAt: string | null;
+  lastActiveAt: string | null;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  plan: SubscriptionPlan | null;
+  projectCount: number;
+}
+
+export interface AdminPlanRequest extends PlanRequestRecord {
+  organizationId: string;
+  workspaceName: string;
+  currentPlan: SubscriptionPlan;
+  requestedBy: string | null;
+}
+
+export interface AdminTicket extends TicketRecord {
+  userEmail: string;
+  userName: string | null;
+  workspaceName: string | null;
+}
+
+/** For super admins only. The database checks this on every call. */
+export interface AdminRepository {
+  isAdmin(): Promise<boolean>;
+  overview(): Promise<AdminOverview>;
+  listUsers(): Promise<AdminUser[]>;
+  setWorkspacePlan(organizationId: string, plan: SubscriptionPlan): Promise<void>;
+  updatePlan(plan: SubscriptionPlan, patch: Pick<PlanInfo, 'label' | 'priceText' | 'description' | 'maxProjects' | 'maxMembers'>): Promise<void>;
+  /** Null removes the module's own limit. */
+  setModuleQuota(plan: SubscriptionPlan, module: ProjectType, max: number | null): Promise<void>;
+  /** A null user means everyone. Returns how many people it reached. */
+  sendNudge(userId: string | null, title: string, body: string, linkUrl: string): Promise<number>;
+  listPlanRequests(): Promise<AdminPlanRequest[]>;
+  resolvePlanRequest(id: string, approve: boolean): Promise<void>;
+  listTickets(): Promise<AdminTicket[]>;
+  listTicketMessages(ticketId: string): Promise<TicketMessage[]>;
+  replyToTicket(ticketId: string, body: string): Promise<void>;
+  setTicketStatus(ticketId: string, status: TicketStatus): Promise<void>;
+}
+
 export interface AppServices {
+  profile: ProfileRepository;
+  plans: PlanRepository;
+  nudges: NudgeRepository;
+  support: SupportRepository;
+  admin: AdminRepository;
   library: LibraryRepository;
   auth: AuthGateway;
   workspaces: WorkspaceRepository;

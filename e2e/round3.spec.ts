@@ -586,7 +586,8 @@ test.describe('order of the panels', () => {
     expect((await titles(page)).at(-1)).toBe('Layout');
 
     await canvas(page).getByRole('button', { name: 'Select parent block' }).click();
-    expect((await titles(page))[0]).toBe('Layout');
+    // Sections and containers lead with spacing, and boxes, grids and rows with layout.
+    expect(['Spacing', 'Layout']).toContain((await titles(page))[0]);
 
     await page.getByRole('tab', { name: 'Add' }).click();
     await page.getByRole('tabpanel', { name: 'Add' }).getByRole('button', { name: 'Image', exact: true }).click();

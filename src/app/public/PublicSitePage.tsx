@@ -5,6 +5,7 @@ import { MODULES } from '../../core/modules';
 import { resolveString } from '../../core/variables';
 import { getPublicApi } from '../../data';
 import { PublishedSnapshot } from '../../data/services';
+import { liveEmbedRenderer } from '../../experience/EmbeddedProject';
 import { ExperiencePlayer, PlayerHost } from '../../experience/ExperiencePlayer';
 import { pagesOf, SiteView } from '../../experience/SiteView';
 import { deviceName, getSessionId, getVisitorId } from '../../experience/visitor';
@@ -12,6 +13,30 @@ import { googleFontsUrl } from '../../renderer/css';
 import { FormSubmitResult } from '../../renderer/types';
 
 const api = getPublicApi();
+
+const sendEvent = (projectId: string, eventType: string, metadata?: Record<string, unknown>) => {
+  // Analytics must never interfere with the page.
+  api.trackEvents(projectId, [{
+    type: eventType,
+    visitorId: getVisitorId(),
+    sessionId: getSessionId(),
+    device: deviceName(window.innerWidth),
+    url: window.location.pathname,
+    metadata,
+  }]).catch(() => undefined);
+};
+
+const sendForm = async (projectId: string, data: Record<string, unknown>): Promise<FormSubmitResult> => {
+  try {
+    await api.submitForm(projectId, data, getVisitorId());
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Could not send. Please try again.' };
+  }
+};
+
+// Answers and activity belong to the embedded project, so they show up under it.
+const renderEmbed = liveEmbedRenderer((id) => api.getPublishedExperience(id), sendForm, sendEvent);
 
 const Message: React.FC<{ title: string; children?: React.ReactNode }> = ({ title, children }) => (
   <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif', color: '#334155', background: '#fff', padding: 24, textAlign: 'center' }}>
@@ -59,26 +84,12 @@ export const PublicSitePage: React.FC = () => {
   const project = snapshot?.project;
 
   const track = useMemo(() => (eventType: string, metadata?: Record<string, unknown>) => {
-    if (!project) return;
-    // Analytics must never interfere with the page.
-    api.trackEvents(project.id, [{
-      type: eventType,
-      visitorId: getVisitorId(),
-      sessionId: getSessionId(),
-      device: deviceName(window.innerWidth),
-      url: window.location.pathname,
-      metadata,
-    }]).catch(() => undefined);
+    if (project) sendEvent(project.id, eventType, metadata);
   }, [project]);
 
   const submitForm = useMemo(() => async (data: Record<string, unknown>): Promise<FormSubmitResult> => {
     if (!project) return { ok: false, error: 'This form is not available.' };
-    try {
-      await api.submitForm(project.id, data, getVisitorId());
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : 'Could not send. Please try again.' };
-    }
+    return sendForm(project.id, data);
   }, [project]);
 
   const documents = useMemo(() => (snapshot?.documents ?? []).map((doc) => ({ ...doc, kind: doc.kind as DocumentKind })), [snapshot]);
@@ -124,6 +135,7 @@ export const PublicSitePage: React.FC = () => {
         variables={project.variables}
         ctx={{
           mode: 'live',
+          renderEmbed,
           submitForm,
           track,
           navigate: (href) => {

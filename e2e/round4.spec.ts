@@ -238,7 +238,7 @@ test.describe('variables', () => {
     const add = page.getByRole('tabpanel', { name: 'Add' });
     await add.getByRole('button', { name: 'Card', exact: true }).click();
     await page.getByRole('tab', { name: 'Edit' }).click();
-    await page.getByRole('tab', { name: 'advanced' }).click();
+    await page.getByRole('tab', { name: 'Behavior' }).click();
     await page.getByLabel(/^Repeat for each item in/).selectOption({ label: 'Team members' });
     await page.getByRole('tab', { name: 'Add' }).click();
     await add.getByRole('button', { name: 'Text', exact: true }).click();

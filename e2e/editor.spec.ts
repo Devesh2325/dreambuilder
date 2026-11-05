@@ -290,7 +290,7 @@ test.describe('style panel', () => {
     await expect.poll(() => css(heading, 'background-color')).toBe('rgb(0, 255, 0)');
 
     await page.getByRole('tab', { name: 'gradient' }).click();
-    await page.getByRole('button', { name: 'Gradient 1' }).click();
+    await page.getByRole('button', { name: 'Gradient 1', exact: true }).click();
     await expect.poll(() => css(heading, 'background-image')).toContain('linear-gradient');
     await expect.poll(() => css(heading, 'background-color')).toBe('rgba(0, 0, 0, 0)');
 
@@ -441,7 +441,7 @@ test.describe('section library', () => {
     const frame = canvas(page);
     const headline = await frame.getByRole('heading', { level: 1 }).innerText();
     await frame.getByRole('heading', { level: 1 }).click();
-    await page.getByRole('tab', { name: 'advanced' }).click();
+    await page.getByRole('tab', { name: 'Behavior' }).click();
     await page.getByRole('button', { name: 'Save to team library' }).click();
     await page.getByRole('dialog').getByLabel('Name').fill('Our headline');
     await page.getByRole('button', { name: 'Save to library' }).click();
