@@ -110,6 +110,8 @@ interface StudioState {
   addNodes: (rootId: string, nodes: Record<string, DocNode>, parentId?: string, index?: number) => string | null;
   moveBlock: (id: string, parentId: string, index: number) => boolean;
   removeBlock: (id: string) => void;
+  /** Puts a new subtree where a block is, as one undo step. */
+  replaceBlock: (id: string, rootId: string, nodes: Record<string, DocNode>) => boolean;
   duplicateBlock: (id: string) => void;
   updateProps: (id: string, patch: Record<string, unknown>) => void;
   /** An empty value removes the style. */
@@ -410,6 +412,19 @@ export const useStudio = create<StudioState>((set, get) => {
       if (!doc || id === doc.content.rootId || doc.content.nodes[id]?.locked) return;
       editDocument(doc.id, (content) => removeNode(content, id));
       if (get().selectedId === id) set({ selectedId: null });
+    },
+
+    replaceBlock: (id, rootId, nodes) => {
+      const doc = get().documentOfNode(id);
+      const parentId = doc ? findParentId(doc.content, id) : null;
+      if (!doc || !parentId || get().readOnly || doc.content.nodes[id]?.locked) return false;
+      editDocument(doc.id, (content) => {
+        const index = content.nodes[parentId].children.indexOf(id);
+        removeNode(content, id);
+        insertSubtree(content, parentId, rootId, nodes, index);
+      });
+      set({ selectedId: rootId });
+      return true;
     },
 
     duplicateBlock: (id) => {

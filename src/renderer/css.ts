@@ -245,6 +245,7 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:rgba(15,23,42,.55);color:#fff;font-size:1.25rem;line-height:1;cursor:pointer}
 :where(.fp-root) .fp-carousel-arrow[data-side=prev]{left:10px}
 :where(.fp-root) .fp-carousel-arrow[data-side=next]{right:10px}
+:where(.fp-root) .fp-carousel-count{position:absolute;top:10px;right:10px;padding:3px 10px;border-radius:999px;background:rgba(15,23,42,.7);color:#fff;font:600 12px/1.4 system-ui,sans-serif;pointer-events:none}
 :where(.fp-root) .fp-banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;padding:10px 44px 10px 16px;background:var(--fp-primary);color:#fff;position:relative}
 :where(.fp-root) .fp-close{position:absolute;top:8px;right:10px;background:none;border:0;color:inherit;font-size:1.125rem;line-height:1;cursor:pointer;padding:4px}
 :where(.fp-root) .fp-popup{position:relative;background:var(--fp-background);border-radius:var(--fp-radius);padding:32px;width:460px;max-width:100%;display:flex;flex-direction:column;gap:14px;box-shadow:0 25px 50px -12px rgba(15,23,42,.45)}

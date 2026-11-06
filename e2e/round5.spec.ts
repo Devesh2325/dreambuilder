@@ -647,3 +647,53 @@ test('integrations: an unpublished project warns in the editor, and is simply ab
   await expect(page.getByRole('heading', { name: 'Your trusted local experts' })).toBeVisible();
   await expect(page.locator('.fp-embed form')).toHaveCount(0);
 });
+
+test.describe('changing a section design', () => {
+  test('a hero takes a new look but keeps its words, links and variables', async ({ page }) => {
+    await signUp(page);
+    await createInEditor(page, 'website-business');
+    const hero = canvas(page).locator('.fp-section').first();
+    await hero.click({ position: { x: 8, y: 8 } });
+    await page.getByRole('button', { name: 'Change design', exact: true }).click();
+
+    const dialog = page.getByRole('dialog', { name: "Change this section's design" });
+    // It opens on hero designs, since this is the page's first section.
+    await expect(dialog.getByRole('button', { name: 'Hero', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await dialog.getByRole('button', { name: 'Use the Hero over a photo design' }).click();
+    await expect(dialog).toHaveCount(0);
+
+    const section = canvas(page).locator('.fp-section').first();
+    await expect(section.getByRole('heading', { name: 'Your trusted local experts' })).toBeVisible();
+    await expect(section.getByText('Fast, friendly service from people who live in your community.')).toBeVisible();
+    await expect(section.getByRole('link', { name: 'Get a free quote' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Now using Hero over a photo' })).toBeVisible();
+    // The customer's own photo becomes the background, not the design's sample.
+    const background = await section.evaluate((el) => getComputedStyle(el).backgroundImage);
+    expect(background).not.toContain('photo-1497366216548');
+    expect(background).toContain('url(');
+    await expect(page.getByText('This design has no place for')).toHaveCount(0);
+
+    // Still linked: changing the variable changes the new design.
+    await page.getByRole('tab', { name: 'Variables' }).click();
+    await page.getByRole('textbox', { name: 'Main headline' }).fill('Plumbing done right');
+    await expect(canvas(page).locator('.fp-section').first().getByRole('heading', { name: 'Plumbing done right' })).toBeVisible();
+    await waitForSaved(page);
+  });
+
+  test('can be undone, and is offered from any block inside a section', async ({ page }) => {
+    await signUp(page);
+    await createInEditor(page, 'website-business');
+    const sections = canvas(page).locator('.fp-section');
+    const count = await sections.count();
+    await canvas(page).getByRole('heading', { name: 'What we do' }).click();
+    await page.getByRole('button', { name: "Change this section's design" }).click();
+    const dialog = page.getByRole('dialog', { name: "Change this section's design" });
+    await dialog.getByRole('button', { name: 'All', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Use the Centered hero design' }).click();
+    await expect(sections).toHaveCount(count);
+    await expect(canvas(page).getByRole('heading', { name: 'What we do' })).toBeVisible();
+    await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
+    await expect(canvas(page).getByRole('heading', { name: 'What we do' })).toBeVisible();
+    await expect(sections).toHaveCount(count);
+  });
+});

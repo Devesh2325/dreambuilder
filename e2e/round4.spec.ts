@@ -144,13 +144,38 @@ test.describe('marquee and carousel', () => {
     await expect(canvas(page).getByText('Limited places').first()).toBeVisible();
   });
 
-  test('carousel slides have their own step bar in a page', async ({ page }) => {
+  test('a carousel in a page switches slides itself, with no bar above the canvas', async ({ page }) => {
     await signUp(page);
     await createInEditor(page, 'page-fintech-app');
-    const bar = page.getByTestId('step-bar');
-    await expect(bar.getByRole('button', { name: 'Slide 2' })).toBeVisible();
-    await bar.getByRole('button', { name: 'Slide 2' }).click();
-    await expect(canvas(page).getByText("Finally, an app that doesn't make money confusing.")).toBeInViewport();
+    await expect(page.getByTestId('step-bar')).toHaveCount(0);
+    const quotes = canvas(page).locator('.fp-carousel').first();
+    await quotes.scrollIntoViewIfNeeded();
+    await expect(quotes.getByText('Slide 1 of 2')).toBeVisible();
+    await quotes.getByRole('button', { name: 'Next slide' }).click();
+    await expect(quotes.getByText('Slide 2 of 2')).toBeVisible();
+    await expect(canvas(page).getByText("Finally, an app that doesn't make money confusing.")).toBeVisible();
+    // These come from a list, so that's where they're added. The arrow selected the carousel.
+    await page.getByRole('tab', { name: 'content' }).click();
+    await expect(page.getByText('These slides come from a list.')).toBeVisible();
+
+    // A carousel with its own slides counts, adds and removes them in its settings.
+    await page.getByRole('tab', { name: 'Add' }).click();
+    await page.getByRole('tab', { name: 'sections' }).click();
+    await page.getByRole('button', { name: 'Add Hero carousel' }).click();
+    const added = canvas(page).locator('.fp-carousel').filter({ hasText: /Slide 1 of 3/ });
+    await expect(added).toHaveCount(1);
+    await added.click({ position: { x: 20, y: 20 } });
+    await canvas(page).getByRole('button', { name: 'Select parent block' }).click();
+    for (let n = 0; n < 4 && !(await page.getByRole('status', { name: 'Number of slides' }).isVisible()); n += 1) {
+      await canvas(page).getByRole('button', { name: 'Select parent block' }).click();
+    }
+    await page.getByRole('tab', { name: 'content' }).click();
+    await expect(page.getByRole('status', { name: 'Number of slides' })).toHaveText('3');
+    await page.getByRole('button', { name: 'Add a slide' }).click();
+    await expect(page.getByRole('status', { name: 'Number of slides' })).toHaveText('4');
+    await expect(canvas(page).getByText(/^Slide \d of 4$/)).toBeVisible();
+    await page.getByRole('button', { name: 'Remove the last slide' }).click();
+    await expect(page.getByRole('status', { name: 'Number of slides' })).toHaveText('3');
   });
 });
 

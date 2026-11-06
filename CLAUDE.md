@@ -83,6 +83,8 @@ Team templates and sections live in `workspace_library` (`LibraryRepository`). T
 - Steps, demo screens, slides and form steps show one at a time. `steps.ts` finds them in the expanded tree, `activeStepKey` holds the choice, and `ctx.visibleStep` makes `RenderedNode` draw only that one, in edit mode only. Selecting a block in another step switches to it. Steps from a list variable are added and removed by editing that list.
 - Style values are strings, and a plain number means pixels (`declarations` in `css.ts`), except for `UNITLESS` properties. Every control in `StylePanel.tsx` is checked against computed style in `e2e/editor.spec.ts`.
 - Spacing boxes show real values: most spacing comes from `BASE_CSS`, not the node, so `useComputedBox` reads the computed style from the canvas iframe for the placeholders.
+- **Change design** (`restyleSection.ts`, `ChangeDesign.tsx`) swaps a section for a library design and moves the old content across by kind and order, tokens included. Sample words left in the design are removed, its pictures kept, and a repeating list goes into the design's first row of alike containers.
+- In websites and pages a carousel switches slides with its own arrows in the editor (`ctx.selectedId` shows the slide holding the selection), so `findSteps` ignores slides there.
 - `highlightedVariable` outlines every use of a variable on the canvas, and `focusVariable` opens Variables on one. Fields in that panel carry `data-var`.
 - A website canvas shows header + page + footer together, so actions find the owning document with `documentOfNode`.
 - Autosave is debounced. Each save sends the `revision` it loaded; a stale one matches no rows and returns `conflict`, which the UI resolves through `reloadFromServer` or `overwriteServer`.

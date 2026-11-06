@@ -6,6 +6,8 @@ The library is where your team keeps what it reuses. Open **Template library** i
 
 A section is a ready-made part of a page, such as a hero, a pricing table or a footer. In the editor for a website or page, open **Add**, then **Sections**. Drag one onto the canvas, or click it to add it below the selected section.
 
+To give a section a different look without retyping it, select it and click **Change design**. Each design is shown with your own words, links and pictures already in place, and choosing one changes only the look. Variables stay linked, anything the new design has no place for is listed, and **Undo** puts it back.
+
 To save your own, select a block, open its **Behavior** tab and choose **Save to team library**. A saved section keeps what it shows right now, with values filled in, so it works in any project. It stops following that project's variables.
 
 ## Team templates

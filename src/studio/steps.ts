@@ -20,9 +20,9 @@ export interface StepSet {
 }
 
 /** The steps, screens or slides in a document, so the canvas can show one at a time. */
-export function findSteps(content: DocContent, variables: VariableValues): StepSet | null {
+export function findSteps(content: DocContent, variables: VariableValues, ignore: string[] = []): StepSet | null {
   const search = (node: RenderNode): StepSet | null => {
-    const stepType = node.children.find((child) => STEP_LABELS[child.type])?.type;
+    const stepType = node.children.find((child) => STEP_LABELS[child.type] && !ignore.includes(child.type))?.type;
     if (stepType) {
       const steps = node.children.filter((child) => child.type === stepType);
       return {

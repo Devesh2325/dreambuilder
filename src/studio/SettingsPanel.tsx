@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookmarkPlus, Copy, Crosshair, EyeOff, Link2, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookmarkPlus, Copy, Crosshair, EyeOff, LayoutTemplate, Link2, Loader2, Minus, Plus, Trash2, Undo2, X } from 'lucide-react';
 import { DEFAULT_TRIGGERS, DEVICES, DocNode, Triggers } from '../core/schema';
 import { MODULES } from '../core/modules';
 import { getAncestors } from '../core/tree';
@@ -10,7 +10,9 @@ import { BLOCK_META } from '../renderer/blockMeta';
 import { BlockField } from '../renderer/types';
 import { projectVariableDefs } from '../templates';
 import { sectionFromNode } from '../templates/library';
+import { ChangeDesignDialog, useDesignChange } from './ChangeDesign';
 import { ProjectField } from './ProjectField';
+import { sectionOf } from './restyleSection';
 import { PaymentGuide } from './PaymentGuide';
 import { ColorField, fieldClass, labelClass, slugFromTitle } from './fields';
 import { DemoPanel, TourPanel } from './ModulePanels';
@@ -528,6 +530,82 @@ const BehaviorPanel: React.FC<{ node: DocNode }> = ({ node }) => {
   );
 };
 
+/** The way to swap a section's look while keeping what it says. */
+const SectionDesign: React.FC<{ node: DocNode }> = ({ node }) => {
+  const readOnly = useStudio((s) => s.readOnly);
+  const projectType = useStudio((s) => s.project?.type);
+  const [isChoosing, setIsChoosing] = useState(false);
+  const saved = useDesignChange((s) => s.change);
+  const setChange = useDesignChange((s) => s.setChange);
+  const owner = useStudio.getState().documentOfNode(node.id);
+  const sectionId = owner ? sectionOf(owner.content, node.id) : null;
+  const change = saved && saved.sectionId === sectionId ? saved : null;
+  if (readOnly || (projectType !== 'website' && projectType !== 'page') || !sectionId) return null;
+  const isSection = sectionId === node.id;
+
+  return (
+    <div className="mx-3 mt-2 shrink-0">
+      <button type="button" className="w-full h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-200 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 transition-colors" onClick={() => setIsChoosing(true)}>
+        <LayoutTemplate className="w-4 h-4" aria-hidden="true" />
+        {isSection ? 'Change design' : "Change this section's design"}
+      </button>
+      {change && (
+        <div role="status" className="mt-2 rounded-lg px-2.5 py-2 text-[13px] bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
+          <div className="flex items-start justify-between gap-2">
+            <p>Now using <strong>{change.title}</strong>, with your content.</p>
+            <button type="button" aria-label="Dismiss" className="shrink-0 p-0.5" onClick={() => setChange(null)}><X className="w-3.5 h-3.5" /></button>
+          </div>
+          {change.leftOut.length > 0 && (
+            <div className="mt-1">
+              <p>This design has no place for:</p>
+              <ul className="list-disc pl-4">{change.leftOut.map((item, index) => <li key={index}>{item}</li>)}</ul>
+            </div>
+          )}
+          {change.samplePictures > 0 && <p className="mt-1">It also has {change.samplePictures} sample {change.samplePictures === 1 ? 'picture' : 'pictures'} to replace with your own.</p>}
+          <button type="button" className="mt-1.5 inline-flex items-center gap-1 font-semibold underline" onClick={() => {
+            useStudio.getState().undo();
+            setChange(null);
+          }}>
+            <Undo2 className="w-3.5 h-3.5" aria-hidden="true" />
+            Undo
+          </button>
+        </div>
+      )}
+      {isChoosing && <ChangeDesignDialog sectionId={sectionId} onClose={(result) => {
+        setIsChoosing(false);
+        if (result) setChange(result);
+      }} />}
+    </div>
+  );
+};
+
+/** Slides are added and removed here, and seen with the carousel's own arrows. */
+const SlideCount: React.FC<{ node: DocNode }> = ({ node }) => {
+  const readOnly = useStudio((s) => s.readOnly);
+  const owner = useStudio.getState().documentOfNode(node.id);
+  const fromList = node.children.some((id) => owner?.content.nodes[id]?.repeat);
+  const count = node.children.length;
+  return (
+    <div>
+      <p className={`${labelClass} mb-1`}>Slides</p>
+      {fromList ? (
+        <p className="text-[13px] text-slate-500 dark:text-slate-400">These slides come from a list. Add or remove them in <button type="button" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline" onClick={() => useStudio.getState().setTool('variables')}>Variables</button>.</p>
+      ) : (
+        <div className="flex items-center gap-1">
+          <button type="button" aria-label="Remove the last slide" disabled={readOnly || count <= 1} className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 disabled:opacity-40" onClick={() => useStudio.getState().setChildCount(node.id, count - 1)}>
+            <Minus className="w-4 h-4" aria-hidden="true" />
+          </button>
+          <output aria-label="Number of slides" className="flex-1 h-9 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 text-sm font-semibold tabular-nums">{count}</output>
+          <button type="button" aria-label="Add a slide" disabled={readOnly || count >= 12} className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 disabled:opacity-40" onClick={() => useStudio.getState().setChildCount(node.id, count + 1)}>
+            <Plus className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">A new slide starts as a copy of the last one. Use the arrows on the carousel to see each slide.</p>
+    </div>
+  );
+};
+
 const openElementPicker = (url: string, nodeId: string) => {
   useStudio.getState().updateDraft((d) => { d.settings.builderUrl = url; }, 'builderUrl');
   const nonce = crypto.randomUUID();
@@ -580,6 +658,7 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
           {!readOnly && <button type="button" className="font-semibold underline" onClick={() => updateNode(node.id, { hidden: false })}>Show</button>}
         </div>
       )}
+      <SectionDesign node={node} />
       <div role="tablist" aria-label="Block settings" className="flex shrink-0 mt-2 px-3 border-b border-slate-200 dark:border-slate-800">
         {tabs.map((id) => (
           <button key={id} role="tab" type="button" aria-selected={activeTab === id} onClick={() => setInspectorTab(id as typeof tab)}
@@ -631,6 +710,7 @@ const NodeInspector: React.FC<{ node: DocNode }> = ({ node }) => {
             </div>
           </form>
         )}
+        {activeTab === 'content' && node.type === 'Carousel' && <SlideCount node={node} />}
         {activeTab === 'content' && node.type === 'PaymentButton' && <PaymentGuide provider={String(node.props.provider ?? 'stripe')} url={String(node.props.url ?? '')} />}
         {activeTab === 'style' && <StylePanel node={node} />}
         {activeTab === 'advanced' && <BehaviorPanel node={node} />}

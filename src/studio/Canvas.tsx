@@ -484,7 +484,11 @@ export const Canvas: React.FC = () => {
   const contents = useMemo(() => visible.map((d) => d.content), [visible]);
   const active = documents.find((d) => d.id === activeDocumentId);
   const variables = draft?.variables;
-  const stepSet = useMemo(() => (active && variables ? findSteps(active.content, variables) : null), [active, variables]);
+  const projectType = useStudio((s) => s.project?.type);
+  // A carousel in a website or page has its own arrows in the editor, so its slides
+  // aren't steps there. Banners made of slides still are.
+  const isSite = projectType === 'website' || projectType === 'page';
+  const stepSet = useMemo(() => (active && variables ? findSteps(active.content, variables, isSite ? ['Slide'] : []) : null), [active, variables, isSite]);
   const activeStep = stepSet ? (stepSet.steps.find((step) => step.key === activeStepKey) ?? stepSet.steps[0] ?? null) : null;
   const visibleStepKey = activeStep?.key;
   const tourSettings = draft?.settings.tour;
@@ -497,11 +501,12 @@ export const Canvas: React.FC = () => {
     () => ({
       mode: 'edit',
       renderEmbed,
+      selectedId: selectedId ?? undefined,
       navLinks: buildNavLinks(documents, active?.slug ?? ''),
       visibleStep: stepSet && visibleStepKey ? { parentKey: stepSet.parentKey, stepType: stepSet.stepType, key: visibleStepKey } : undefined,
       tourChrome: tourLabel || tourSettings?.showClose ? { label: tourLabel, canClose: tourSettings?.showClose } : undefined,
     }),
-    [documents, active?.slug, stepSet, visibleStepKey, tourLabel, tourSettings?.showClose, renderEmbed],
+    [documents, active?.slug, stepSet, visibleStepKey, tourLabel, tourSettings?.showClose, renderEmbed, selectedId],
   );
 
   // A slide can be far down a long page, so choosing one brings it into view.

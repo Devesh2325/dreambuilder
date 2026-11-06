@@ -1,6 +1,7 @@
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { safeImageUrl, safeUrl } from '../core/variables';
 import { parseVideoUrl } from '../core/video';
+import { RenderNode } from '../core/variables';
 import { BlockRenderProps, NavLink, RenderContext } from './types';
 
 type Block = React.FC<BlockRenderProps>;
@@ -536,6 +537,13 @@ const Carousel: Block = ({ node, attrs, children, ctx }) => {
 
   const go = (next: number) => setIndex((next + count) % count);
 
+  // Selecting a block inside another slide, from Layers say, brings that slide into view.
+  const contains = (item: RenderNode, id: string): boolean => item.sourceId === id || item.children.some((child) => contains(child, id));
+  const selected = isEditing && ctx.selectedId ? node.children.findIndex((child) => contains(child, ctx.selectedId!)) : -1;
+  useEffect(() => {
+    if (selected >= 0) setIndex(selected);
+  }, [selected]);
+
   return (
     <div
       {...withClass(attrs, 'fp-carousel')}
@@ -545,11 +553,12 @@ const Carousel: Block = ({ node, attrs, children, ctx }) => {
       onMouseLeave={() => setIsPaused(false)}
     >
       {children.map((child, i) => (
-        <div key={node.children[i].key} style={{ display: isEditing || i === current ? 'block' : 'none' }} aria-hidden={!isEditing && i !== current}>
+        <div key={node.children[i].key} style={{ display: i === current ? 'block' : 'none' }} aria-hidden={i !== current}>
           {child}
         </div>
       ))}
-      {!isEditing && count > 1 && node.props.showArrows !== false && (
+      {isEditing && count > 1 && <span className="fp-carousel-count">Slide {current + 1} of {count}</span>}
+      {count > 1 && (isEditing || node.props.showArrows !== false) && (
         <>
           <button type="button" className="fp-carousel-arrow" data-side="prev" aria-label="Previous slide" onClick={() => go(current - 1)}>‹</button>
           <button type="button" className="fp-carousel-arrow" data-side="next" aria-label="Next slide" onClick={() => go(current + 1)}>›</button>

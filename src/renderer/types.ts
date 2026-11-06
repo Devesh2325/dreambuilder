@@ -25,6 +25,8 @@ export interface RenderContext {
   track?: (eventType: string, metadata?: Record<string, unknown>) => void;
   /** Editor only: of this parent's step children, draw only the given one. */
   visibleStep?: { parentKey: string; stepType: string; key: string };
+  /** The block selected in the editor, so a carousel can show the slide it's on. */
+  selectedId?: string;
   /** Draws another of the workspace's projects inside this page. */
   renderEmbed?: (projectId: string) => ReactNode;
   /** What a tour draws around its steps: progress and a close button. */
