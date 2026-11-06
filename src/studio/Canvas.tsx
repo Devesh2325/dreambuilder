@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ChevronRight, Copy, GripVertical, Trash2 } from 'lucide-react';
 import { useEmbedRenderer } from '../experience/EmbeddedProject';
+import { useVariablesWithData } from '../experience/useDataSources';
 import { findParentId, getAncestors } from '../core/tree';
 import { resolveString, tokensIn } from '../core/variables';
 import { buildNavLinks } from '../experience/SiteView';
@@ -483,7 +484,7 @@ export const Canvas: React.FC = () => {
   const visible = useMemo(() => useStudio.getState().visibleDocuments(), [documents, activeDocumentId]); // eslint-disable-line react-hooks/exhaustive-deps
   const contents = useMemo(() => visible.map((d) => d.content), [visible]);
   const active = documents.find((d) => d.id === activeDocumentId);
-  const variables = draft?.variables;
+  const variables = useVariablesWithData(draft?.variables, draft?.settings);
   const projectType = useStudio((s) => s.project?.type);
   // A carousel in a website or page has its own arrows in the editor, so its slides
   // aren't steps there. Banners made of slides still are.
@@ -561,7 +562,7 @@ export const Canvas: React.FC = () => {
             <div style={{ width: frameWidth, height: frameHeight, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
               <Frame title="Design canvas" theme={draft.theme} onDocument={setDoc} style={{ display: 'block', width: '100%', height: '100%', background: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(15,23,42,.1), 0 12px 32px -12px rgba(15,23,42,.25)' }}>
                 <style dangerouslySetInnerHTML={{ __html: CANVAS_CSS }} />
-                <ExperienceView documents={contents} theme={draft.theme} variables={draft.variables} ctx={ctx} />
+                <ExperienceView documents={contents} theme={draft.theme} variables={variables} ctx={ctx} />
                 {doc && <Overlay doc={doc} />}
               </Frame>
             </div>

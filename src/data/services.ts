@@ -239,6 +239,7 @@ export interface TrackedEvent {
 /** Calls that work without logging in. The embed script uses these too. */
 export interface PublicApi {
   getPublishedSite(slug: string): Promise<PublishedSnapshot | null>;
+  getPublishedSiteByDomain(domain: string): Promise<PublishedSnapshot | null>;
   getPublishedExperience(projectId: string): Promise<PublishedSnapshot | null>;
   submitForm(projectId: string, data: Record<string, unknown>, visitorId?: string): Promise<void>;
   trackEvents(projectId: string, events: TrackedEvent[]): Promise<void>;
@@ -395,7 +396,27 @@ export interface AdminRepository {
   setTicketStatus(ticketId: string, status: TicketStatus): Promise<void>;
 }
 
+export interface DomainRecord {
+  id: string;
+  projectId: string;
+  /** Lower case, such as www.example.com. */
+  domain: string;
+  status: 'pending' | 'active' | 'failed';
+  verificationToken: string;
+  lastError: string | null;
+  createdAt: string;
+}
+
+export interface DomainRepository {
+  list(projectId: string): Promise<DomainRecord[]>;
+  add(project: ProjectRecord, domain: string): Promise<DomainRecord>;
+  remove(id: string): Promise<void>;
+  /** Asks the server to check the DNS records and connect the domain. */
+  verify(id: string): Promise<DomainRecord>;
+}
+
 export interface AppServices {
+  domains: DomainRepository;
   profile: ProfileRepository;
   plans: PlanRepository;
   nudges: NudgeRepository;

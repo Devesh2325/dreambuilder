@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  AppWindow, BarChart3, Blocks, Box, Boxes, CheckSquare, ChevronsUpDown, CircleDot, ClipboardList, Columns3, Compass, CreditCard, DollarSign, GalleryHorizontal,
+  AppWindow, BarChart3, Blocks, Box, Boxes, CheckSquare, CircleUser, Code, Info, List, Quote, Table, Tag, ChevronsUpDown, CircleDot, ClipboardList, Columns3, Compass, CreditCard, DollarSign, GalleryHorizontal,
   FileText, Footprints, Gauge, Globe, Heading, HelpCircle, Image, LayoutGrid, LayoutTemplate, ListOrdered, LoaderCircle, LucideIcon, Megaphone,
   Menu, MessageSquareQuote, Minus, Monitor, MousePointerClick, MoveVertical, PlaySquare, RectangleHorizontal, ShieldCheck, Square, Star, TextCursorInput, Type, Video,
 } from 'lucide-react';
@@ -8,7 +8,7 @@ import {
 // An explicit list, because importing every icon by name would add megabytes to the app.
 const ICONS: Record<string, LucideIcon> = {
   Video,
-  AppWindow, BarChart3, Blocks, Box, Boxes, CheckSquare, ChevronsUpDown, CircleDot, ClipboardList, Columns3, Compass, CreditCard, DollarSign, GalleryHorizontal,
+  AppWindow, BarChart3, Blocks, Box, Boxes, CheckSquare, CircleUser, Code, Info, List, Quote, Table, Tag, ChevronsUpDown, CircleDot, ClipboardList, Columns3, Compass, CreditCard, DollarSign, GalleryHorizontal,
   FileText, Footprints, Gauge, Globe, Heading, HelpCircle, Image, LayoutGrid, LayoutTemplate, ListOrdered, LoaderCircle, Megaphone,
   Menu, MessageSquareQuote, Minus, Monitor, MousePointerClick, MoveVertical, PlaySquare, RectangleHorizontal, ShieldCheck, Square, Star, TextCursorInput, Type,
 };

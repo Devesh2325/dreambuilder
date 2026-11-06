@@ -5,7 +5,10 @@ import { MODULES, moduleNoun } from '../../core/modules';
 import { ProjectRecord } from '../../data/services';
 import { publicSitePath, ROUTES } from '../routes';
 import { cardClass, primaryButton } from '../shared/ui';
+import { DomainSetup } from './DomainSetup';
+import { MobileSteps } from './MobileSteps';
 import { embedSnippet, inlineSnippet } from './projectHelpers';
+import { SiteCheck } from './SiteCheck';
 
 export const CopyBlock: React.FC<{ label: string; code: string }> = ({ label, code }) => {
   const [copied, setCopied] = useState(false);
@@ -120,6 +123,14 @@ const PLATFORMS: Platform[] = [
 <Script src="${src}" data-project-id="${projectId}" strategy="afterInteractive" />`,
   },
   {
+    id: 'vue',
+    label: 'Vue or Angular',
+    steps: [
+      'Paste the code into index.html, just before </body>. It loads once and follows page changes in your app by itself.',
+      'For something that appears inside a page, put the placeholder from the next step into that component\'s template.',
+    ],
+  },
+  {
     id: 'gtm',
     label: 'Google Tag Manager',
     steps: [
@@ -205,8 +216,11 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
                 </ul>
                 {isPublished && iframeCode && <CopyBlock label="Show it inside a page" code={iframeCode} />}
               </Step>
-              <Step number={4} title="Using your own domain">
-                <p>Connecting your own domain to FlowPilot isn't available yet. Until it is, whoever sells you your domain can forward an address such as offers.yourcompany.com to your web address above. Look for "domain forwarding" or "redirect" in their settings.</p>
+              <Step number={4} title="Use your own domain">
+                <DomainSetup project={project} />
+              </Step>
+              <Step number={5} title="In a mobile app">
+                <MobileSteps project={project} />
               </Step>
             </>
           ) : (
@@ -221,11 +235,14 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
                 </Step>
               )}
               <Step number={showsInline ? 4 : 3} title="Check that it works">
+                <SiteCheck project={project} showsInline={showsInline} />
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Open your site in a new private window, so nothing is remembered from before.</li>
-                  {module.delivery === 'overlay' && <li>Go to a page that matches the rules you set in the editor, under When it appears.</li>}
-                  <li>Not showing? Check that it's published and that the script is on that page, then see <Link to={ROUTES.doc('troubleshooting')} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Troubleshooting</Link>.</li>
+                  {module.delivery === 'overlay' && <li>Visitors see it on pages that match the rules you set in the editor, under When it appears.</li>}
+                  <li>Still stuck? See <Link to={ROUTES.doc('troubleshooting')} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Troubleshooting</Link>.</li>
                 </ul>
+              </Step>
+              <Step number={showsInline ? 5 : 4} title="In a mobile app">
+                <MobileSteps project={project} />
               </Step>
             </>
           )}

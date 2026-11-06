@@ -32,9 +32,13 @@ createServer((request, response) => {
 
   const project = url.searchParams.get('project') ?? 'project-1';
   const inline = url.searchParams.get('inline') ? `<div id="slot" data-flowpilot="${project}"></div>` : '';
-  const script = url.searchParams.get('noscript') ? '' : `<script src="/flowpilot.js" data-project-id="${project}"${url.searchParams.get('builder') ? ' data-builder-origin="http://localhost:5199"' : ''} defer></script>`;
+  // Like a real site's policy: its own scripts only, so FlowPilot's address is refused.
+  const strict = url.searchParams.get('csp');
+  const source = strict ? `http://127.0.0.1:${port}/flowpilot.js` : '/flowpilot.js';
+  const script = url.searchParams.get('noscript') ? '' : `<script src="${source}" data-project-id="${project}"${url.searchParams.get('builder') ? ' data-builder-origin="http://localhost:5199"' : ''} defer></script>`;
 
   response.setHeader('Content-Type', 'text/html');
+  if (strict) response.setHeader('Content-Security-Policy', "script-src 'self' 'unsafe-inline'");
   response.end(page(`
     <nav id="main-nav" style="padding:16px;background:#eee">
       <a href="#">Home</a>

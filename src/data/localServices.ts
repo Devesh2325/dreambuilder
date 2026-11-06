@@ -2,7 +2,7 @@ import { DEFAULT_THEME, PROJECT_TYPES } from '../core/schema';
 import { PLAN_DESCRIPTIONS, PLAN_LABELS, PLAN_LIMITS, SubscriptionPlan } from '../types/auth';
 import { LocalStore, openLocalStore } from './localStore';
 import {
-  AdminPlanRequest, AdminTicket, AnalyticsRow, AppServices, AssetRecord, AuthUser, DocumentRecord, InvitationRecord, LibraryItem, MemberRecord, NudgeRecord,
+  AdminPlanRequest, AdminTicket, AnalyticsRow, DomainRecord, AppServices, AssetRecord, AuthUser, DocumentRecord, InvitationRecord, LibraryItem, MemberRecord, NudgeRecord,
   PlanInfo, PlanRequestRecord, ProjectRecord, PublishedSnapshot, SubmissionRecord, TicketMessage, TicketRecord, VersionRecord, WorkspaceMembership,
 } from './services';
 
@@ -51,6 +51,7 @@ interface LocalState {
   nudges: (NudgeRecord & { userId: string; readAt: string | null })[];
   tickets: (TicketRecord & { userId: string; organizationId: string | null })[];
   ticketMessages: (TicketMessage & { ticketId: string })[];
+  domains: (DomainRecord & { organizationId: string })[];
 }
 
 
@@ -72,6 +73,7 @@ const emptyState = (): LocalState => ({
   nudges: [],
   tickets: [],
   ticketMessages: [],
+  domains: [],
 });
 
 const PLANS: SubscriptionPlan[] = ['free', 'starter', 'pro', 'agency', 'enterprise'];
@@ -554,6 +556,39 @@ export function createLocalServices(): AppServices {
       },
     },
 
+    domains: {
+      async list(projectId) {
+        const state = await load();
+        const project = state.projects.find((p) => p.id === projectId);
+        if (!project || !canOpen(state, project)) return [];
+        return state.domains.filter((d) => d.projectId === projectId).map(({ organizationId: _org, ...domain }) => domain);
+      },
+      async add(project, domain) {
+        return update((state) => {
+          const member = state.members.find((m) => m.organizationId === project.organizationId && m.userId === state.currentUserId);
+          if (!member || member.role === 'viewer') throw new Error('Only owners, admins and editors can add a domain.');
+          if (project.type !== 'website' && project.type !== 'page') throw new Error('Only websites and pages can have their own domain.');
+          if (state.domains.some((d) => d.domain === domain)) throw new Error('That domain is already connected to a site.');
+          if (state.domains.filter((d) => d.projectId === project.id).length >= 3) throw new Error('A site can have up to three domains.');
+          const record = { id: uuid(), projectId: project.id, organizationId: project.organizationId, domain, status: 'pending' as const, verificationToken: uuid().replace(/-/g, ''), lastError: null, createdAt: now() };
+          state.domains.push(record);
+          const { organizationId: _org, ...domainRecord } = record;
+          return domainRecord;
+        });
+      },
+      async remove(id) {
+        await update((state) => {
+          const domain = state.domains.find((d) => d.id === id);
+          const member = domain && state.members.find((m) => m.organizationId === domain.organizationId && m.userId === state.currentUserId);
+          if (!member || member.role === 'viewer') throw new Error('Only owners, admins and editors can remove a domain.');
+          state.domains = state.domains.filter((d) => d.id !== id);
+        });
+      },
+      async verify() {
+        throw new Error("Connecting a domain needs FlowPilot's live setup, with its database and hosting. In demo mode you can add a domain and see its DNS records, but it can't go live.");
+      },
+    },
+
     profile: {
       async get() {
         const state = await load();
@@ -784,6 +819,11 @@ export function createLocalServices(): AppServices {
     },
 
     publicApi: {
+      async getPublishedSiteByDomain(domain) {
+        const state = await load();
+        const record = state.domains.find((d) => d.domain === domain.toLowerCase() && d.status === 'active');
+        return publishedSnapshot(state, state.projects.find((p) => p.id === record?.projectId));
+      },
       async getPublishedSite(slug) {
         const state = await load();
         return publishedSnapshot(state, state.projects.find((p) => p.slug === slug));

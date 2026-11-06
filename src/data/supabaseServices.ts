@@ -2,7 +2,7 @@ import { PostgrestError, User } from '@supabase/supabase-js';
 import { DEFAULT_THEME } from '../core/schema';
 import { createPublicApi } from './publicApi';
 import {
-  AdminOverview, AdminRepository, AppServices, AssetRecord, AssetRepository, AuthGateway, AuthUser, DocumentRecord, LibraryItem, LibraryRepository, MemberRecord,
+  AdminOverview, AdminRepository, AppServices, DomainRecord, DomainRepository, AssetRecord, AssetRepository, AuthGateway, AuthUser, DocumentRecord, LibraryItem, LibraryRepository, MemberRecord,
   NudgeRepository, PlanRepository, PlanRequestRecord, ProfileRepository, ProjectRecord, ProjectRepository, PublishingRepository, SupportRepository, TeamRepository,
   TicketMessage, TicketRecord, TicketStatus, WorkspaceMembership, WorkspaceRepository,
 } from './services';
@@ -444,6 +444,43 @@ const library: LibraryRepository = {
   },
 };
 
+const DOMAIN_COLUMNS = 'id, project_id, domain, status, verification_token, last_error, created_at';
+const toDomain = (row: Row): DomainRecord => ({
+  id: row.id as string,
+  projectId: row.project_id as string,
+  domain: row.domain as string,
+  status: row.status as DomainRecord['status'],
+  verificationToken: row.verification_token as string,
+  lastError: row.last_error as string | null,
+  createdAt: row.created_at as string,
+});
+
+const domains: DomainRepository = {
+  async list(projectId) {
+    const { data, error } = await db().from('project_domains').select(DOMAIN_COLUMNS).eq('project_id', projectId).order('created_at');
+    check(error);
+    return (data as Row[]).map(toDomain);
+  },
+  async add(project, domain) {
+    const { data, error } = await db().from('project_domains').insert({ project_id: project.id, organization_id: project.organizationId, domain }).select(DOMAIN_COLUMNS).single();
+    if (error?.code === '23505') throw new Error('That domain is already connected to a site.');
+    if (error?.code === '42501') throw new Error('A site can have up to three domains, and only editors can add them.');
+    check(error);
+    return toDomain(data as Row);
+  },
+  async remove(id) {
+    const { error } = await db().from('project_domains').delete().eq('id', id);
+    check(error);
+  },
+  async verify(id) {
+    const { error } = await db().functions.invoke('domains', { body: { domainId: id } });
+    if (error) throw new Error("We couldn't reach the domain service. If this keeps happening, its administrator may not have set it up yet.");
+    const { data, error: readError } = await db().from('project_domains').select(DOMAIN_COLUMNS).eq('id', id).single();
+    check(readError);
+    return toDomain(data as Row);
+  },
+};
+
 const profile: ProfileRepository = {
   async get() {
     const { data: session } = await db().auth.getSession();
@@ -603,6 +640,7 @@ const admin: AdminRepository = {
 };
 
 export const supabaseServices: AppServices = {
+  domains,
   profile,
   plans,
   nudges,

@@ -1,16 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BookmarkPlus, Copy, Crosshair, EyeOff, LayoutTemplate, Link2, Loader2, Minus, Plus, Trash2, Undo2, X } from 'lucide-react';
-import { DEFAULT_TRIGGERS, DEVICES, DocNode, Triggers } from '../core/schema';
+import { DEFAULT_TRIGGERS, DEVICES, DocNode, ProjectSettings, Triggers } from '../core/schema';
 import { MODULES } from '../core/modules';
 import { getAncestors } from '../core/tree';
 import { hasToken, resolveString, resolveValue, VariableDef, VariableValues } from '../core/variables';
 import { ImageInput } from '../app/shared/VariableForm';
 import { pagesOf } from '../experience/SiteView';
 import { BLOCK_META } from '../renderer/blockMeta';
+import { IconShape } from '../renderer/blocks';
 import { BlockField } from '../renderer/types';
 import { projectVariableDefs } from '../templates';
 import { sectionFromNode } from '../templates/library';
 import { ChangeDesignDialog, useDesignChange } from './ChangeDesign';
+import { dataSourceDefs } from '../core/dataSources';
 import { ProjectField } from './ProjectField';
 import { sectionOf } from './restyleSection';
 import { PaymentGuide } from './PaymentGuide';
@@ -20,13 +22,13 @@ import { SaveToLibrary } from './SaveToLibrary';
 import { useStudio } from './store';
 import { StylePanel } from './StylePanel';
 
-const NO_SETTINGS = {};
+const NO_SETTINGS: ProjectSettings = {};
 
 const useTemplateVariables = (): VariableDef[] => {
   const templateId = useStudio((s) => s.project?.templateId);
   const settings = useStudio((s) => s.draft?.settings ?? NO_SETTINGS);
   const globals = useStudio((s) => s.globals);
-  return [...projectVariableDefs(templateId, settings), ...globals.map((item) => ({ key: item.key, label: item.label, type: item.type }))];
+  return [...projectVariableDefs(templateId, settings), ...globals.map((item) => ({ key: item.key, label: item.label, type: item.type })), ...dataSourceDefs(settings.dataSources)];
 };
 
 /** Turns what a field says now into a variable, which is the easiest way to make one. */
@@ -253,6 +255,29 @@ const PlacementField: React.FC<{ node: DocNode; label: string }> = ({ node, labe
   );
 };
 
+/** Every icon as a picture, since a name alone doesn't say what it looks like. */
+const IconField: React.FC<{ node: DocNode; field: BlockField }> = ({ node, field }) => {
+  const readOnly = useStudio((s) => s.readOnly);
+  const [search, setSearch] = useState('');
+  const value = String(node.props[field.key] ?? '');
+  const options = (field.options ?? []).filter((option) => option.label.toLowerCase().includes(search.trim().toLowerCase()));
+  return (
+    <div>
+      <p className={`${labelClass} mb-1`}>{field.label}</p>
+      <input type="search" aria-label="Search icons" placeholder="Search icons" className={`${fieldClass} mb-2`} value={search} onChange={(event) => setSearch(event.target.value)} />
+      <div role="group" aria-label={field.label} className="grid grid-cols-7 gap-1 max-h-48 overflow-y-auto">
+        {options.map((option) => (
+          <button key={option.value} type="button" disabled={readOnly} title={option.label} aria-label={option.label} aria-pressed={value === option.value}
+            className={`h-9 flex items-center justify-center rounded-lg border transition-colors ${value === option.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-400'}`}
+            onClick={() => useStudio.getState().updateProps(node.id, { [field.key]: option.value })}>
+            <IconShape name={option.value} size={18} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const TOKEN_PATTERN = /\{\{\s*([a-zA-Z][\w.]*)\s*\}\}/g;
 
 interface TokenName {
@@ -282,6 +307,7 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
   if (field.type === 'menu') return <MenuEditor node={node} fieldKey={field.key} />;
   if (field.type === 'placement') return <PlacementField node={node} label={field.label} />;
   if (field.type === 'project') return <ProjectField node={node} field={field} />;
+  if (field.type === 'icon') return <IconField node={node} field={field} />;
 
   const value = node.props[field.key];
   const text = value === undefined || value === null ? '' : String(value);

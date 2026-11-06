@@ -1,6 +1,14 @@
 # Troubleshooting
 
-Open your browser's console first. FlowPilot logs a message starting with `[FlowPilot]` when it can't load something.
+Open your browser's console first. FlowPilot logs a message starting with `[FlowPilot]` when it can't load something. The quickest check is **Check that it works** on the project's **Share and install** tab, which opens your page and says what's wrong.
+
+## "violates the following Content Security Policy directive"
+
+Your site only allows scripts and connections from addresses it lists, and FlowPilot's isn't one of them. Add the sources shown in [Installing the script](install), or send the message from **Check that it works** to whoever looks after your site.
+
+## "This FlowPilot is running in demo mode"
+
+A demo FlowPilot keeps projects in the browser it runs in, so no other site can load them. To go live on your site, FlowPilot needs its live database connected. Until then, **Check that it works** can still preview your draft on your page.
 
 ## Nothing appears on my site
 
@@ -10,7 +18,7 @@ Open your browser's console first. FlowPilot logs a message starting with `[Flow
 - **Do the URL rules match?** Rules compare against the page path, such as `/dashboard`, without your domain.
 - **Is there a delay?** Check the delay, scroll and exit-intent settings. If several are set, the first to happen wins. Exit intent only works with a mouse.
 - **Does it apply to this device?** Check the device settings.
-- **Is it blocked?** Ad blockers and Content Security Policies can stop the script. See [CSP setup](install).
+- **Is it blocked?** Ad blockers and Content Security Policies can stop the script. See [Installing the script](install).
 
 ## An inline experience is missing
 

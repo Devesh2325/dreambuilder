@@ -19,10 +19,11 @@ const LAYOUT = ['Section', 'Container', 'Box', 'Card', 'Grid', 'Row'];
 const CONTENT = ['Heading', 'Text', 'Button', 'PaymentButton', 'Image', 'Video', 'Divider', 'Spacer'];
 const FORM = ['Form', 'FormStep', 'FormField', 'ScaleField'];
 const MOVING = ['Marquee', 'Carousel', 'Slide'];
+const ARTICLE = ['Avatar', 'Icon', 'List', 'Quote', 'Callout', 'CodeBlock', 'Table', 'Badge'];
 
 const BLOCK_GROUPS: Record<ProjectType, { title: string; types: string[] }[]> = {
-  website: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion', 'Banner'] }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
-  page: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion', 'Banner'] }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
+  website: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion', 'Banner'] }, { title: 'Articles and docs', types: ARTICLE }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
+  page: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion', 'Banner'] }, { title: 'Articles and docs', types: ARTICLE }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
   tour: [{ title: 'Tour', types: ['TourStep'] }, { title: 'Inside a step', types: ['Heading', 'Text', 'Button', 'Image', 'Video', 'Row'] }],
   form: [{ title: 'Form', types: FORM }, { title: 'Content', types: ['Heading', 'Text', 'Image', 'Divider', 'Spacer'] }],
   demo: [{ title: 'Demo', types: ['DemoScreen', 'DemoHotspot'] }],
@@ -32,7 +33,7 @@ const BLOCK_GROUPS: Record<ProjectType, { title: string; types: string[] }[]> = 
     { title: 'Forms', types: FORM },
   ],
   menu: [{ title: 'Menu', types: ['Navbar'] }],
-  faq: [{ title: 'FAQ', types: ['Accordion', 'Heading', 'Text'] }, { title: 'Layout', types: ['Box', 'Card', 'Spacer'] }],
+  faq: [{ title: 'FAQ', types: ['Accordion', 'Heading', 'Text', 'Callout', 'List'] }, { title: 'Layout', types: ['Box', 'Card', 'Spacer'] }],
 };
 
 const SearchBox: React.FC<{ label: string; placeholder: string; value: string; onChange: (value: string) => void }> = ({ label, placeholder, value, onChange }) => (

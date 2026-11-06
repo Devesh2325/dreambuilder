@@ -106,6 +106,13 @@ Video iframes only ever point at YouTube or Vimeo: `parseVideoUrl` in `core/vide
 
 The docs in `src/docs/content/` are checked by `src/test/core/docs.test.ts` against the JS API, recorded events and script attributes. Update them together.
 
+## Going live on customers' sites
+
+- The embed reports on a page when opened with `#fp-check` (`SiteCheck.tsx`): which projects the page asks for, whether they load, and what its Content Security Policy blocked. It then previews the draft, as test mode does. A demo build (no Supabase URL) says so in the console instead of failing silently.
+- `core/siteCheck.ts` lists what a customer's CSP must allow. Keep it in step with what the embed loads.
+- Custom domains: `project_domains` rows are added by editors, but only the `domains` Edge Function (service role) marks one active, after checking a TXT proof record. `App.tsx` serves a site by domain when the host isn't in `VITE_APP_HOSTS`, and with that unset every host is the builder.
+- Data sources (`settings.dataSources`) are fetched by the visitor's browser and become list variables `data.<key>`, so the normal repeat shows them. They're added to the editor's variables in `useTemplateVariables` only, never to the Variables form. Nothing secret may be in their address.
+
 ## In-app help
 
 `src/app/tours/AppTour.tsx` holds FlowPilot's own tours, played by the customer tour player. They target `data-tour` attributes in the app, and start once per browser (`fp_tour_seen_*`). The `signUp` helper in `e2e/helpers.ts` marks them as seen, or they would cover what tests click; pass `{ tours: true }` to test them. Empty pages use `FlowPilotBanner`, and the landing page's demo (`ProductDemo`) uses the demo player with generated screens.

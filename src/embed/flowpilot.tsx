@@ -3,6 +3,7 @@ import { createRoot, Root } from 'react-dom/client';
 import { Device, ProjectSettings, Triggers } from '../core/schema';
 import { MODULES } from '../core/modules';
 import { deviceForWidth, shouldShow } from '../core/triggers';
+import type { SiteCheckReport } from '../core/siteCheck';
 import { createPublicApi } from '../data/publicApi';
 import { PublishedSnapshot, TrackedEvent } from '../data/services';
 import { ExperiencePlayer, PlayerHost } from '../experience/ExperiencePlayer';
@@ -12,7 +13,25 @@ import { googleFontsUrl } from '../renderer/css';
 
 const NO_RULES: Triggers = { urlRules: [], delaySeconds: 0, frequency: 'once_per_visitor' };
 
-const api = createPublicApi(import.meta.env.VITE_SUPABASE_URL as string, import.meta.env.VITE_SUPABASE_ANON_KEY as string);
+const backendUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || '';
+const api = createPublicApi(backendUrl, import.meta.env.VITE_SUPABASE_ANON_KEY as string);
+/** A demo build keeps projects in the builder's browser, where no other site can reach them. */
+const isDemoBuild = !backendUrl;
+
+// Anything this script loads that the page's security policy blocks, so it can say exactly what to allow.
+const blocked = new Set<string>();
+let isWatchingPolicy = false;
+function watchSecurityPolicy() {
+  if (isWatchingPolicy) return;
+  isWatchingPolicy = true;
+  document.addEventListener('securitypolicyviolation', (event) => {
+    const url = event.blockedURI;
+    const ours = [backendUrl, 'fonts.googleapis.com', 'fonts.gstatic.com', 'youtube-nocookie.com', 'player.vimeo.com'].some((part) => part && url.includes(part));
+    if (!ours || blocked.has(`${event.effectiveDirective} ${url}`)) return;
+    blocked.add(`${event.effectiveDirective} ${url}`);
+    console.warn(`[FlowPilot] This page's Content Security Policy blocked ${url} (${event.effectiveDirective}). Add ${new URL(url, window.location.href).origin} to ${event.effectiveDirective} in your site's security settings. See the install guide's "Check that it works" step.`);
+  });
+}
 
 interface Experience {
   snapshot: PublishedSnapshot;
@@ -274,6 +293,12 @@ function evaluate(projectId: string, experience: Experience) {
 function register(projectId: string): Promise<void> {
   const existing = loading.get(projectId);
   if (existing) return existing;
+  if (isDemoBuild) {
+    console.warn('[FlowPilot] This FlowPilot is running in demo mode, so its projects are saved in the builder\'s browser and can\'t load on other sites. Connect Supabase to go live. Until then, use "Check it on my site" in the install guide to preview a project here.');
+    const nothing = Promise.resolve();
+    loading.set(projectId, nothing);
+    return nothing;
+  }
   const promise = api.getPublishedExperience(projectId).then((snapshot) => {
     if (!snapshot?.documents?.length) {
       console.warn(`[FlowPilot] Project ${projectId} isn't published, or the ID is wrong.`);
@@ -424,8 +449,8 @@ function startBuilder(nonce: string, origin: string) {
 }
 
 /** Plays the editor's unpublished draft here. Nothing is recorded, and only this tab sees it. */
-function startTest(nonce: string, origin: string) {
-  liveBar('Test mode: only you can see this');
+function startTest(nonce: string, origin: string, label = 'Test mode: only you can see this') {
+  liveBar(label);
   const onMessage = (event: MessageEvent) => {
     if (event.source !== window.opener || event.origin !== origin || event.data?.type !== 'flowpilot:draft' || event.data.nonce !== nonce) return;
     const snapshot = event.data.snapshot as PublishedSnapshot;
@@ -440,13 +465,42 @@ function startTest(nonce: string, origin: string) {
   window.addEventListener('message', onMessage);
 }
 
-/** Returns true when the editor opened this page, for picking, building or testing. */
+/**
+ * Reports what this page has: which projects it asks for, whether they load, and what its
+ * security policy blocks. Then it can preview a draft here, as test mode does.
+ */
+async function startCheck(nonce: string, origin: string) {
+  const ids = (selector: string, read: (el: HTMLElement) => string | undefined) =>
+    [...new Set([...document.querySelectorAll<HTMLElement>(selector)].map(read).filter((id): id is string => Boolean(id)))];
+  const scriptProjects = ids('script[data-project-id]', (el) => el.dataset.projectId);
+  const slotProjects = ids('[data-flowpilot]', (el) => el.dataset.flowpilot);
+  const projects: SiteCheckReport['projects'] = {};
+  let backend: SiteCheckReport['backend'] = isDemoBuild ? 'demo' : 'ok';
+  if (!isDemoBuild) {
+    for (const id of new Set([...scriptProjects, ...slotProjects])) {
+      try {
+        const snapshot = await api.getPublishedExperience(id);
+        projects[id] = snapshot?.documents?.length ? 'published' : 'not-published';
+      } catch {
+        projects[id] = 'error';
+        backend = 'unreachable';
+      }
+    }
+  }
+  // A violation is reported a moment after the request it stopped.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const report: SiteCheckReport = { scriptProjects, slotProjects, backend, projects, blocked: [...blocked], path: window.location.pathname };
+  window.opener?.postMessage({ type: 'flowpilot:check', nonce, report }, origin);
+  startTest(nonce, origin, 'FlowPilot check: only you can see this');
+}
+
+/** Returns true when the editor opened this page, for picking, building, testing or checking. */
 function checkLiveMode(allowedOrigin: string | null): boolean {
   if (!window.opener || !allowedOrigin) return false;
-  const match = window.location.hash.match(/^#fp-(pick|build|test)=([\w-]+)&origin=([^&]+)$/);
-  let live: { mode: LiveMode | 'pick'; nonce: string; origin: string } | null = null;
+  const match = window.location.hash.match(/^#fp-(pick|build|test|check)=([\w-]+)&origin=([^&]+)$/);
+  let live: { mode: LiveMode | 'pick' | 'check'; nonce: string; origin: string } | null = null;
   if (match) {
-    live = { mode: match[1] as LiveMode | 'pick', nonce: match[2], origin: decodeURIComponent(match[3]) };
+    live = { mode: match[1] as LiveMode | 'pick' | 'check', nonce: match[2], origin: decodeURIComponent(match[3]) };
   } else {
     // Build and test continue across the page changes of a site with full page loads.
     try {
@@ -462,6 +516,10 @@ function checkLiveMode(allowedOrigin: string | null): boolean {
 
   if (live.mode === 'pick') {
     startPicker(live.nonce, live.origin);
+    return true;
+  }
+  if (live.mode === 'check') {
+    void startCheck(live.nonce, live.origin);
     return true;
   }
   write('session', LIVE_KEY, JSON.stringify(live));
@@ -529,6 +587,7 @@ function boot(script: HTMLOrSVGScriptElement | null) {
   if (element?.dataset.fonts === 'off') useFonts = false;
 
   if (isFirst) {
+    watchSecurityPolicy();
     window.FlowPilot = publicApi;
     isLive = checkLiveMode(builderOrigin(element));
     if (isLive) return;

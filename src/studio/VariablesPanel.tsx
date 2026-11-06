@@ -12,6 +12,7 @@ import { projectVariableDefs } from '../templates';
 import { GlobalVariable } from '../types/auth';
 import { fieldClass, labelClass } from './fields';
 import { useStudio, variableKey } from './store';
+import { DataSourcesPanel } from './DataSourcesPanel';
 import { nodesUsingVariable, variableMatches, variablesOfNode } from './variableUsage';
 
 export { variableKey };
@@ -426,6 +427,8 @@ export const VariablesPanel: React.FC = () => {
           />
         )}
       </section>
+
+      {!term && (project.type === 'website' || project.type === 'page') && <DataSourcesPanel />}
 
       {globals.some(matches) && (
         <section aria-label="Global variables" className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">

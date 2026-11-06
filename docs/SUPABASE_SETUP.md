@@ -55,6 +55,20 @@ If signup fails with "Database error saving new user", the `on_auth_user_created
 
 There's no online checkout. New workspaces start on the free plan. A super admin (see below) changes a workspace's plan under **Super admin**, on the **Users** tab, or approves a request on the **Plan requests** tab. The same page sets each plan's limits, for projects overall, team members and each module.
 
+## Custom domains (optional)
+
+Customers can show a website or page at their own domain. This needs the hosting to accept their domains, and the `domains` Edge Function to check them.
+
+1. Deploy the function: `supabase functions deploy domains`.
+2. In Vercel, create an access token that can manage the project, and note the project ID (and team ID, if the project is in a team).
+3. Add them as secrets: `supabase secrets set VERCEL_TOKEN=... VERCEL_PROJECT_ID=... VERCEL_TEAM_ID=...`. They're only used by the function, never by the app.
+4. In the app's environment, set `VITE_APP_HOSTS` to the builder's own host names, comma separated, such as `app.yourcompany.com,yourproject.vercel.app`. Any other host is then treated as a customer's domain and shows their site. Without it, every host shows the builder, so a new deployment can't break.
+5. If you don't host on Vercel, also set `VITE_DOMAIN_CNAME` and `VITE_DOMAIN_A` to where customers' DNS should point, and change the hosting calls in `supabase/functions/domains/index.ts`.
+
+The function checks a TXT record proving the customer controls the domain, adds it to the hosting, and only then marks it connected. Customers can't mark a domain connected themselves.
+
+This hasn't been run against a live project yet. Try it with a domain you own first.
+
 ## Making someone a super admin
 
 A super admin sets every plan's limits, sees every user, sends nudges, approves plan requests and answers support. Nobody can become one from the app, so run this once in the SQL editor after that person has signed up:

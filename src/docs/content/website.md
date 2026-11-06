@@ -24,6 +24,14 @@ A link starting with `/` goes to a page in your site. For example, `/contact` op
 
 Add a **Pay button** to sell something. See [Take payments](payments). To show a form, demo, banner or FAQ you've already made, see [Use your projects inside a page](embedding).
 
+## Your own domain
+
+Connect a domain you own, or find where to buy one, from **Share and install**. See [Your own domain](domains).
+
+## Articles, docs and data
+
+For articles and help pages, open **Add** and look under **Articles and docs**: avatars for authors, icons, lists, quotes, callouts for tips and warnings, code, tables and badges. To show products or posts from your own system, see [Show data from your API](data).
+
 ## Search engines
 
-Sites are rendered in the visitor's browser. Major search engines can read them, but pages may take longer to be indexed than server-rendered sites. Custom domains aren't available yet.
+Sites are rendered in the visitor's browser. Major search engines can read them, but pages may take longer to be indexed than server-rendered sites.

@@ -1,3 +1,4 @@
+import { ICON_DATA } from './iconData';
 import { BlockField, BlockMeta } from './types';
 
 const text = (key: string, label: string, help?: string): BlockField => ({ key, label, type: 'text', help });
@@ -91,6 +92,69 @@ export const BLOCK_META: Record<string, BlockMeta> = {
     type: 'ProjectEmbed', label: 'Your project', category: 'content', icon: 'Blocks',
     defaultProps: { projectId: '' },
     fields: [{ key: 'projectId', label: 'Which project', type: 'project', help: 'Shows one of your forms, demos, banners, FAQs, menus or tours in this page. Publish it too, or visitors will not see it.' }],
+  },
+  Avatar: {
+    type: 'Avatar', label: 'Avatar', category: 'content', icon: 'CircleUser',
+    defaultProps: { src: '', name: 'Alex Morgan', subtitle: 'Author', size: 'medium', showText: true },
+    fields: [
+      { key: 'src', label: 'Photo', type: 'image', help: 'Optional. Without one, it shows their initials.' },
+      text('name', 'Name'),
+      text('subtitle', 'Line under the name', 'Such as a job title, or the date of an article.'),
+      { key: 'size', label: 'Size', type: 'select', options: [{ label: 'Small', value: 'small' }, { label: 'Medium', value: 'medium' }, { label: 'Large', value: 'large' }] },
+      { key: 'showText', label: 'Show the name beside the photo', type: 'boolean' },
+    ],
+  },
+  Icon: {
+    type: 'Icon', label: 'Icon', category: 'content', icon: 'Star',
+    defaultProps: { icon: 'star', size: 32, label: '' },
+    fields: [
+      { key: 'icon', label: 'Icon', type: 'icon', options: Object.entries(ICON_DATA).map(([value, item]) => ({ value, label: item.label })) },
+      { key: 'size', label: 'Size (px)', type: 'number' },
+      text('label', 'Description (for screen readers)', 'Leave empty when the icon is only decoration.'),
+    ],
+  },
+  List: {
+    type: 'List', label: 'List', category: 'content', icon: 'List',
+    defaultProps: { items: 'First point\nSecond point\nThird point', style: 'bullet' },
+    fields: [
+      { key: 'items', label: 'Items, one per line', type: 'longtext' },
+      { key: 'style', label: 'Style', type: 'select', options: [{ label: 'Bullets', value: 'bullet' }, { label: 'Numbers', value: 'number' }, { label: 'Ticks', value: 'check' }] },
+    ],
+  },
+  Quote: {
+    type: 'Quote', label: 'Quote', category: 'content', icon: 'Quote',
+    defaultProps: { text: 'A quote that stands out from the rest of the page.', cite: '' },
+    fields: [longtext('text', 'Quote'), text('cite', 'Who said it', 'Optional.')],
+  },
+  CodeBlock: {
+    type: 'CodeBlock', label: 'Code', category: 'content', icon: 'Code',
+    defaultProps: { code: 'npm install your-package', language: '' },
+    fields: [longtext('code', 'Code'), text('language', 'Label', 'Optional, such as JavaScript or Terminal.')],
+  },
+  Callout: {
+    type: 'Callout', label: 'Callout', category: 'content', icon: 'Info',
+    defaultProps: { tone: 'info', title: 'Good to know', text: 'Use a callout for a tip, a warning or an important note.' },
+    fields: [
+      { key: 'tone', label: 'Kind', type: 'select', options: [{ label: 'Note', value: 'info' }, { label: 'Tip', value: 'success' }, { label: 'Warning', value: 'warning' }, { label: 'Danger', value: 'danger' }] },
+      text('title', 'Title', 'Optional.'),
+      longtext('text', 'Text'),
+    ],
+  },
+  Table: {
+    type: 'Table', label: 'Table', category: 'content', icon: 'Table',
+    defaultProps: { rows: 'Plan | Price | Support\nStarter | $19 | Email\nPro | $49 | Phone and email', header: true },
+    fields: [
+      { key: 'rows', label: 'Rows', type: 'longtext', help: 'One row per line. Separate cells with a | sign.' },
+      { key: 'header', label: 'First row is the heading', type: 'boolean' },
+    ],
+  },
+  Badge: {
+    type: 'Badge', label: 'Badge', category: 'content', icon: 'Tag',
+    defaultProps: { text: 'New', tone: 'primary' },
+    fields: [
+      text('text', 'Text'),
+      { key: 'tone', label: 'Color', type: 'select', options: [{ label: 'Main color', value: 'primary' }, { label: 'Gray', value: 'neutral' }, { label: 'Green', value: 'success' }, { label: 'Amber', value: 'warning' }] },
+    ],
   },
   Divider: { type: 'Divider', label: 'Divider', category: 'content', icon: 'Minus', defaultProps: {}, fields: [] },
   Spacer: {

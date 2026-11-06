@@ -2,6 +2,7 @@ import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { safeImageUrl, safeUrl } from '../core/variables';
 import { parseVideoUrl } from '../core/video';
 import { RenderNode } from '../core/variables';
+import { ICON_DATA } from './iconData';
 import { BlockRenderProps, NavLink, RenderContext } from './types';
 
 type Block = React.FC<BlockRenderProps>;
@@ -150,6 +151,121 @@ const ProjectEmbed: Block = ({ node, attrs, ctx }) => {
   const content = id ? ctx.renderEmbed?.(id) : null;
   if (!content && ctx.mode !== 'edit') return null;
   return <div {...withClass(attrs, 'fp-embed')}>{content ?? <p className="fp-embed-empty">Choose which of your projects to show here.</p>}</div>;
+};
+
+const initialsOf = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((word) => word[0] ?? '').join('').toUpperCase();
+
+const Avatar: Block = ({ node, attrs }) => {
+  const src = safeImageUrl(node.props.src);
+  const name = asText(node.props.name);
+  const subtitle = asText(node.props.subtitle);
+  const size = ['small', 'medium', 'large'].includes(asText(node.props.size)) ? asText(node.props.size) : 'medium';
+  return (
+    <div {...withClass(attrs, `fp-avatar fp-avatar-${size}`)}>
+      {src ? <img className="fp-avatar-photo" src={src} alt={node.props.showText === false ? name : ''} loading="lazy" /> : <span className="fp-avatar-photo" aria-hidden={node.props.showText !== false}>{initialsOf(name) || '?'}</span>}
+      {node.props.showText !== false && (name || subtitle) && (
+        <span className="fp-avatar-text">
+          {name && <span className="fp-avatar-name">{name}</span>}
+          {subtitle && <span className="fp-avatar-subtitle">{subtitle}</span>}
+        </span>
+      )}
+    </div>
+  );
+};
+
+/** Drawn from shapes, since blocks can't import an icon library. */
+export const IconShape: React.FC<{ name: string; size: number; label?: string; className?: string }> = ({ name, size, label, className }) => {
+  const icon = ICON_DATA[name] ?? ICON_DATA.star;
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : true}>
+      {icon.node.map(([tag, shape], index) => React.createElement(tag, { key: index, ...shape }))}
+    </svg>
+  );
+};
+
+const Icon: Block = ({ node, attrs }) => {
+  const size = Math.min(256, Math.max(8, Number(node.props.size) || 32));
+  return <span {...withClass(attrs, 'fp-icon')}><IconShape name={asText(node.props.icon)} size={size} label={asText(node.props.label)} /></span>;
+};
+
+const List: Block = ({ node, attrs }) => {
+  const items = asText(node.props.items).split('\n').map((item) => item.trim()).filter(Boolean);
+  const style = ['bullet', 'number', 'check'].includes(asText(node.props.style)) ? asText(node.props.style) : 'bullet';
+  const content = items.map((item, index) => (
+    <li key={index}>
+      {style === 'check' && <IconShape name="check" size={18} className="fp-list-tick" />}
+      <span>{item}</span>
+    </li>
+  ));
+  return style === 'number'
+    ? <ol {...withClass(attrs, 'fp-list fp-list-number')}>{content}</ol>
+    : <ul {...withClass(attrs, `fp-list fp-list-${style}`)}>{content}</ul>;
+};
+
+const Quote: Block = ({ node, attrs }) => {
+  const cite = asText(node.props.cite);
+  return (
+    <figure {...withClass(attrs, 'fp-quote')}>
+      <blockquote>{asText(node.props.text)}</blockquote>
+      {cite && <figcaption>{cite}</figcaption>}
+    </figure>
+  );
+};
+
+const CodeBlock: Block = ({ node, attrs, ctx }) => {
+  const code = asText(node.props.code);
+  const [copied, setCopied] = useState(false);
+  return (
+    <div {...withClass(attrs, 'fp-code')}>
+      <div className="fp-code-bar">
+        <span>{asText(node.props.language)}</span>
+        <button type="button" className="fp-code-copy" onClick={() => {
+          if (ctx.mode === 'edit') return;
+          navigator.clipboard?.writeText(code).then(() => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1500);
+          }).catch(() => undefined);
+        }}>{copied ? 'Copied' : 'Copy'}</button>
+      </div>
+      <pre><code>{code}</code></pre>
+    </div>
+  );
+};
+
+const CALLOUT_ICONS: Record<string, string> = { info: 'info', success: 'lightbulb', warning: 'triangle-alert', danger: 'triangle-alert' };
+
+const Callout: Block = ({ node, attrs }) => {
+  const tone = CALLOUT_ICONS[asText(node.props.tone)] ? asText(node.props.tone) : 'info';
+  const title = asText(node.props.title);
+  return (
+    <aside {...withClass(attrs, `fp-callout fp-callout-${tone}`)}>
+      <IconShape name={CALLOUT_ICONS[tone]} size={20} className="fp-callout-icon" />
+      <div>
+        {title && <p className="fp-callout-title">{title}</p>}
+        <p className="fp-callout-text">{asText(node.props.text)}</p>
+      </div>
+    </aside>
+  );
+};
+
+const Table: Block = ({ node, attrs }) => {
+  const rows = asText(node.props.rows).split('\n').filter((row) => row.trim()).map((row) => row.split('|').map((cell) => cell.trim()));
+  const hasHeader = node.props.header !== false && rows.length > 1;
+  const head = hasHeader ? rows[0] : null;
+  const body = hasHeader ? rows.slice(1) : rows;
+  return (
+    <div {...withClass(attrs, 'fp-table')}>
+      <table>
+        {head && <thead><tr>{head.map((cell, index) => <th key={index} scope="col">{cell}</th>)}</tr></thead>}
+        <tbody>{body.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, index) => <td key={index}>{cell}</td>)}</tr>)}</tbody>
+      </table>
+    </div>
+  );
+};
+
+const Badge: Block = ({ node, attrs }) => {
+  const tone = ['primary', 'neutral', 'success', 'warning'].includes(asText(node.props.tone)) ? asText(node.props.tone) : 'primary';
+  return <span {...withClass(attrs, `fp-badge fp-badge-${tone}`)}>{asText(node.props.text)}</span>;
 };
 
 const Divider: Block = ({ attrs }) => <hr {...withClass(attrs, 'fp-divider')} />;
@@ -610,6 +726,14 @@ export const BLOCK_RENDERERS: Record<string, Block> = {
   Video,
   PaymentButton,
   ProjectEmbed,
+  Avatar,
+  Icon,
+  List,
+  Quote,
+  CodeBlock,
+  Callout,
+  Table,
+  Badge,
   Divider,
   Spacer,
   Navbar,

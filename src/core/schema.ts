@@ -103,6 +103,18 @@ export interface TourSettings {
   waitSeconds?: number;
 }
 
+/** A list loaded from the customer's own API. Its address is public, since browsers load it. */
+export interface DataSource {
+  /** Token-safe, so its rows are the list variable data.<key>. */
+  key: string;
+  label: string;
+  url: string;
+  /** Where the list is in the response, such as data.items. Empty means the response itself. */
+  path?: string;
+  /** Field names found when it was set up, offered in the editor. */
+  fields?: string[];
+}
+
 export interface ProjectSettings {
   triggers?: Triggers;
   tour?: TourSettings;
@@ -114,6 +126,7 @@ export interface ProjectSettings {
   webhookUrl?: string;
   /** Variables added in the editor, or carried over from a team template. */
   variableDefs?: VariableDef[];
+  dataSources?: DataSource[];
 }
 
 export type DocumentKind = 'page' | 'global' | 'experience';

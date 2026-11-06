@@ -4,6 +4,7 @@ import { ProjectSettings, ProjectType, Theme } from '../core/schema';
 import { VariableValues } from '../core/variables';
 import { Frame } from '../renderer/Frame';
 import { useEmbedRenderer } from './EmbeddedProject';
+import { useVariablesWithData } from './useDataSources';
 import { ExperiencePlayer, PlayerHost } from './ExperiencePlayer';
 import { pagesOf, SiteDocument, SiteView } from './SiteView';
 
@@ -62,6 +63,7 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
   );
 
   const renderEmbed = useEmbedRenderer('preview');
+  const values = useVariablesWithData(variables, settings);
   const pages = pagesOf(documents);
   const pageExists = pages.some((page) => page.slug === slug);
 
@@ -87,7 +89,7 @@ export const ProjectPreview: React.FC<ProjectPreviewProps> = ({
             documents={documents}
             slug={pageExists ? slug : (pages[0]?.slug ?? '')}
             theme={theme}
-            variables={variables}
+            variables={values}
             ctx={{
               mode: 'preview',
               renderEmbed,

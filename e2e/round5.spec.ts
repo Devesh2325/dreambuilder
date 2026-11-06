@@ -84,7 +84,7 @@ test.describe('installing on a live site', () => {
     await expect(page.getByRole('heading', { name: 'Put it on your live site' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Copy Web address' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Copy Show it inside a page' })).toBeVisible();
-    await expect(page.getByText(/own domain to FlowPilot isn't available yet/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Use your own domain' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Take payments on your site' })).toBeVisible();
   });
 
@@ -93,7 +93,7 @@ test.describe('installing on a live site', () => {
     await createFromTemplate(page, 'form-contact');
     await page.getByRole('tab', { name: 'Share and install' }).click();
     const guide = page.getByRole('region', { name: 'Put it on your live site' });
-    await expect(guide.getByRole('tab')).toHaveCount(8);
+    await expect(guide.getByRole('tablist', { name: 'Where your site is built' }).getByRole('tab')).toHaveCount(9);
     await guide.getByRole('tab', { name: 'Shopify' }).click();
     await expect(guide.getByText('Open theme.liquid')).toBeVisible();
     await guide.getByRole('tab', { name: 'WordPress' }).click();

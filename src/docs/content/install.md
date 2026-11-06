@@ -107,17 +107,45 @@ Inside GTM the script can't identify itself automatically in every setup. If not
 
 This shows the experience right away, ignoring its trigger rules.
 
+## Check that it works
+
+Open the project's **Share and install** tab, and under **Check that it works**, enter the address of a page with the code. FlowPilot opens it and tells you:
+
+- whether the script is on the page, and for which project
+- whether the spot for an inline project is there
+- whether it's published and loads
+- anything your site's security settings blocked
+
+It also shows your latest draft on that page, only to you, so you can see how it looks in place before publishing.
+
+If nothing answers, the most common reason is a Content Security Policy, below.
+
 ## Content Security Policy
 
-If your site uses a CSP, allow these sources:
+Many sites, including most built with Next.js, only allow scripts from addresses they list. This is called a Content Security Policy, and when it blocks FlowPilot, your browser's console says "violates the following Content Security Policy directive" with FlowPilot's address.
+
+Add these sources to the matching directives, keeping the ones already there:
 
 ```
 script-src {{ORIGIN}};
-connect-src <your-supabase-project-url>;
+connect-src <your FlowPilot database address>;
 style-src 'unsafe-inline' https://fonts.googleapis.com;
 font-src https://fonts.gstatic.com;
 img-src https: data:;
+frame-src https://www.youtube-nocookie.com https://player.vimeo.com;
 ```
+
+The **Check that it works** step shows the exact lines for your FlowPilot, including the database address, and a message you can send to whoever looks after your site. In Next.js the policy is usually in `next.config.js` or `middleware.ts`. Other places are `vercel.json`, `netlify.toml`, your server settings, or a `<meta http-equiv>` tag.
+
+The script also notices when the policy blocks something it needs, and says what to allow in the console, starting with `[FlowPilot]`.
+
+## Mobile apps
+
+- **An app made from web pages**, such as with Capacitor, Ionic or Cordova, or one that shows your website inside it: add the script exactly as for a website.
+- **A native screen**: forms, demos, FAQs, menus, websites and pages each have their own address once published, so show that address in a web view. **Share and install** has the code for React Native, Flutter, Android and iPhone.
+- **Tours and banners over native screens** aren't possible yet, since that needs a FlowPilot mobile SDK. They work wherever your app shows web pages.
+
+Changes appear in the app when you publish, with no new app release.
 
 ## Fonts and privacy
 

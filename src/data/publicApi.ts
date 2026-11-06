@@ -21,6 +21,7 @@ export function createPublicApi(url: string, anonKey: string): PublicApi {
 
   return {
     getPublishedSite: (slug) => rpc<PublishedSnapshot | null>('get_published_site', { p_slug: slug }),
+    getPublishedSiteByDomain: (domain) => rpc<PublishedSnapshot | null>('get_published_site_by_domain', { p_domain: domain }),
     getPublishedExperience: (projectId) => rpc<PublishedSnapshot | null>('get_published_experience', { p_project: projectId }),
     submitForm: async (projectId, data, visitorId) => {
       await rpc('submit_form', { p_project: projectId, p_data: data, p_visitor: visitorId ?? null });

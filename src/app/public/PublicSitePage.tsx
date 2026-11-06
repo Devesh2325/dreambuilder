@@ -6,6 +6,7 @@ import { resolveString } from '../../core/variables';
 import { getPublicApi } from '../../data';
 import { PublishedSnapshot } from '../../data/services';
 import { liveEmbedRenderer } from '../../experience/EmbeddedProject';
+import { useVariablesWithData } from '../../experience/useDataSources';
 import { ExperiencePlayer, PlayerHost } from '../../experience/ExperiencePlayer';
 import { pagesOf, SiteView } from '../../experience/SiteView';
 import { deviceName, getSessionId, getVisitorId } from '../../experience/visitor';
@@ -55,11 +56,13 @@ const setMeta = (name: string, content: string) => {
   tag.content = content;
 };
 
-/** A published project at /s/:slug, open to anyone without logging in. */
-export const PublicSitePage: React.FC = () => {
+/** A published project at /s/:slug, or at its own domain, open to anyone without logging in. */
+export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
   const params = useParams();
-  const slug = params.slug!;
+  const slug = params.slug ?? '';
   const pagePath = params['*'] ?? '';
+  // Links between pages stay on the domain, or under /s/slug.
+  const base = domain ? '' : `/s/${slug}`;
   const navigate = useNavigate();
   const [snapshot, setSnapshot] = useState<PublishedSnapshot | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
@@ -67,7 +70,7 @@ export const PublicSitePage: React.FC = () => {
   useEffect(() => {
     let active = true;
     setState('loading');
-    api.getPublishedSite(slug)
+    (domain ? api.getPublishedSiteByDomain(domain) : api.getPublishedSite(slug))
       .then((result) => {
         if (!active) return;
         setSnapshot(result);
@@ -79,9 +82,10 @@ export const PublicSitePage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [slug, domain]);
 
   const project = snapshot?.project;
+  const variables = useVariablesWithData(project?.variables, project?.settings);
 
   const track = useMemo(() => (eventType: string, metadata?: Record<string, unknown>) => {
     if (project) sendEvent(project.id, eventType, metadata);
@@ -132,7 +136,7 @@ export const PublicSitePage: React.FC = () => {
         documents={documents}
         slug={pagePath}
         theme={project.theme}
-        variables={project.variables}
+        variables={variables}
         ctx={{
           mode: 'live',
           renderEmbed,
@@ -142,7 +146,7 @@ export const PublicSitePage: React.FC = () => {
             const target = href.slice(1);
             if (pagesOf(documents).some((doc) => doc.slug === target)) {
               window.scrollTo(0, 0);
-              navigate(target ? `/s/${slug}/${target}` : `/s/${slug}`);
+              navigate(target ? `${base}/${target}` : base || '/');
             } else {
               window.location.href = href;
             }

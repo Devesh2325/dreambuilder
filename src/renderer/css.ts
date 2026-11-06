@@ -227,6 +227,43 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-demo-dots{display:flex;gap:6px}
 :where(.fp-root) .fp-demo-dots span{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--fp-text) 18%,transparent)}
 :where(.fp-root) .fp-demo-dots span[data-active=true]{background:var(--fp-primary)}
+:where(.fp-root) .fp-avatar{display:inline-flex;align-items:center;gap:12px;max-width:100%}
+:where(.fp-root) .fp-avatar-photo{flex-shrink:0;width:48px;height:48px;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--fp-primary) 15%,var(--fp-background));color:var(--fp-primary);font-weight:700}
+:where(.fp-root) .fp-avatar-small .fp-avatar-photo{width:32px;height:32px;font-size:.75rem}
+:where(.fp-root) .fp-avatar-large .fp-avatar-photo{width:80px;height:80px;font-size:1.5rem}
+:where(.fp-root) .fp-avatar-text{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+:where(.fp-root) .fp-avatar-name{font-weight:700}
+:where(.fp-root) .fp-avatar-subtitle{font-size:.875rem;color:var(--fp-muted)}
+:where(.fp-root) .fp-icon{display:inline-flex;color:var(--fp-primary)}
+:where(.fp-root) .fp-list{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:8px}
+:where(.fp-root) .fp-list-check{list-style:none;padding-left:0}
+:where(.fp-root) .fp-list-check li{display:flex;gap:10px;align-items:flex-start}
+:where(.fp-root) .fp-list-tick{flex-shrink:0;margin-top:.2em;color:var(--fp-primary)}
+:where(.fp-root) .fp-quote{margin:0;padding:4px 0 4px 20px;border-left:4px solid var(--fp-primary)}
+:where(.fp-root) .fp-quote blockquote{margin:0;font-size:1.25rem;line-height:1.5;font-style:italic}
+:where(.fp-root) .fp-quote figcaption{margin-top:10px;font-size:.9375rem;color:var(--fp-muted)}
+:where(.fp-root) .fp-quote figcaption::before{content:'— '}
+:where(.fp-root) .fp-code{border-radius:var(--fp-radius);overflow:hidden;background:#0f172a;color:#e2e8f0}
+:where(.fp-root) .fp-code-bar{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;font-size:.75rem;color:#94a3b8;background:#1e293b}
+:where(.fp-root) .fp-code-copy{border:0;background:transparent;color:#cbd5e1;font:inherit;font-weight:600;cursor:pointer}
+:where(.fp-root) .fp-code pre{margin:0;padding:16px;overflow-x:auto;font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre}
+:where(.fp-root) .fp-callout{display:flex;gap:12px;padding:16px;border-radius:var(--fp-radius);border:1px solid}
+:where(.fp-root) .fp-callout p{margin:0}
+:where(.fp-root) .fp-callout-icon{flex-shrink:0;margin-top:2px}
+:where(.fp-root) .fp-callout-title{font-weight:700;margin-bottom:4px!important}
+:where(.fp-root) .fp-callout-info{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}
+:where(.fp-root) .fp-callout-success{background:#ecfdf5;border-color:#a7f3d0;color:#064e3b}
+:where(.fp-root) .fp-callout-warning{background:#fffbeb;border-color:#fde68a;color:#78350f}
+:where(.fp-root) .fp-callout-danger{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
+:where(.fp-root) .fp-table{overflow-x:auto;width:100%}
+:where(.fp-root) .fp-table table{width:100%;border-collapse:collapse;font-size:.9375rem}
+:where(.fp-root) .fp-table th,:where(.fp-root) .fp-table td{padding:10px 12px;text-align:left;border-bottom:1px solid color-mix(in srgb,var(--fp-text) 12%,transparent)}
+:where(.fp-root) .fp-table th{font-weight:700;background:var(--fp-surface)}
+:where(.fp-root) .fp-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:.8125rem;font-weight:600;width:fit-content}
+:where(.fp-root) .fp-badge-primary{background:color-mix(in srgb,var(--fp-primary) 14%,var(--fp-background));color:var(--fp-primary)}
+:where(.fp-root) .fp-badge-neutral{background:color-mix(in srgb,var(--fp-text) 8%,var(--fp-background));color:var(--fp-text)}
+:where(.fp-root) .fp-badge-success{background:#dcfce7;color:#166534}
+:where(.fp-root) .fp-badge-warning{background:#fef3c7;color:#92400e}
 :where(.fp-root) .fp-pay{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 :where(.fp-root) .fp-pay-price{font-weight:800;font-size:1.25rem}
 :where(.fp-root) .fp-pay-hint{font-size:.8125rem;color:var(--fp-muted)}
