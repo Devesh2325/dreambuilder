@@ -32,11 +32,10 @@ const SideLink: React.FC<{ to: string; icon: React.ReactNode; label: string; col
     end={end}
     title={collapsed ? label : undefined}
     aria-label={collapsed ? label : undefined}
-    className={({ isActive }) => `flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors ${collapsed ? 'justify-center h-8 w-9 mx-auto' : 'px-2.5 h-8'} ${
-      isActive
-        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
-        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-    }`}
+    className={({ isActive }) => `flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors ${collapsed ? 'justify-center h-8 w-9 mx-auto' : 'px-2.5 h-8'} ${isActive
+      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+      }`}
   >
     <span className="shrink-0">{icon}</span>
     {!collapsed && <span className="truncate">{label}</span>}
@@ -256,7 +255,7 @@ export const Shell: React.FC = () => {
               {workspace?.name ? `Workspace: ${workspace.name}` : 'Workspace'}
             </span>
             <span className="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              Active
+              Active Workspace
             </span>
           </div>
 
@@ -285,20 +284,20 @@ export const Shell: React.FC = () => {
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
             </button>
 
-            {/* Direct 1-click Log out button */}
+            {/* Proper Profile Menu on Header */}
+            <HeaderProfileMenu user={user} onSignOut={handleSignOut} isSigningOut={isSigningOut} />
+
+            {/* Quick Log out button */}
             <button
               type="button"
               disabled={isSigningOut}
               onClick={handleSignOut}
               aria-label="Log out"
               title="Log out"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-400 dark:hover:bg-rose-950/30 transition-colors disabled:opacity-60"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-400 dark:hover:bg-rose-950/30 transition-colors"
             >
               {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <LogOut className="w-4 h-4" aria-hidden="true" />}
             </button>
-
-            {/* Proper Profile Menu on Header */}
-            <HeaderProfileMenu user={user} onSignOut={handleSignOut} isSigningOut={isSigningOut} />
           </div>
         </header>
 
