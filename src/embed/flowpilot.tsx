@@ -13,8 +13,9 @@ import { googleFontsUrl } from '../renderer/css';
 
 const NO_RULES: Triggers = { urlRules: [], delaySeconds: 0, frequency: 'once_per_visitor' };
 
-const backendUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || '';
-const api = createPublicApi(backendUrl, import.meta.env.VITE_SUPABASE_ANON_KEY as string);
+const backendUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || 'https://okyondzibjofbsafrzbm.supabase.co';
+const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9reW9uZHppYmpvZmJzYWZyemJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQyMDYzMjEsImV4cCI6MjEwOTc4MjMyMX0.1xYue63GdKabwvcWzQunbbM9FVSMsSDOLUX2ho4F6hs';
+const api = createPublicApi(backendUrl, anonKey);
 /** A demo build keeps projects in the builder's browser, where no other site can reach them. */
 const isDemoBuild = !backendUrl;
 

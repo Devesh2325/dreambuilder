@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
     publicDir: false,
     define: {
       'process.env.NODE_ENV': JSON.stringify('production'),
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL ?? ''),
-      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY ?? ''),
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL || 'https://okyondzibjofbsafrzbm.supabase.co'),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9reW9uZHppYmpvZmJzYWZyemJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQyMDYzMjEsImV4cCI6MjEwOTc4MjMyMX0.1xYue63GdKabwvcWzQunbbM9FVSMsSDOLUX2ho4F6hs'),
     },
     resolve: {
       alias: [
