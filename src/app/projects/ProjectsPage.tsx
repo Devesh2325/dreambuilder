@@ -130,7 +130,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
       {(query.isLoading || isLoadingWorkspace) && <TableSkeleton />}
       {query.isError && <ErrorNote message="We couldn't load your projects. Please refresh the page." />}
 
-      {query.isSuccess && moduleProjects.length === 0 && (
+      {(!organizationId || (query.isSuccess && moduleProjects.length === 0)) && (
         <ModuleEmptyBanner type={type} canCreate={can('create:project')} />
       )}
 

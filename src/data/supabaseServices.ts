@@ -84,20 +84,33 @@ const workspaces: WorkspaceRepository = {
       .select('role, organizations (id, name, slug, plan, branding)')
       .eq('user_id', userId)
       .order('created_at');
-    check(error);
-    return (data as unknown as MembershipRow[]).map((row) => ({
-      organizationId: row.organizations.id,
-      name: row.organizations.name,
-      slug: row.organizations.slug,
-      plan: row.organizations.plan,
-      role: row.role,
-      branding: row.organizations.branding ?? {},
-    }));
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+        console.warn('Database schema not initialized yet: public.organization_members table missing.');
+        return [];
+      }
+      check(error);
+    }
+    return ((data as unknown as MembershipRow[]) || [])
+      .map((row) => ({
+        organizationId: row.organizations?.id,
+        name: row.organizations?.name || 'Workspace',
+        slug: row.organizations?.slug || '',
+        plan: row.organizations?.plan || 'free',
+        role: row.role || 'owner',
+        branding: row.organizations?.branding ?? {},
+      }))
+      .filter((m) => Boolean(m.organizationId));
   },
 
   async createWorkspace(name) {
     const { data, error } = await db().rpc('create_organization', { workspace_name: name });
-    check(error);
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache') || error.code === '42883') {
+        throw new Error('Database schema is not initialized yet. Please run the migrations in Supabase SQL Editor.');
+      }
+      check(error);
+    }
     return data as string;
   },
 
@@ -559,8 +572,14 @@ const toTicketMessage = (row: Row): TicketMessage => ({ id: row.id as string, is
 const support: SupportRepository = {
   async listTickets() {
     const { data, error } = await db().from('support_tickets').select('id, subject, status, created_at, updated_at').order('updated_at', { ascending: false });
-    check(error);
-    return (data as Row[]).map(toTicket);
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+        console.warn('Database schema not initialized yet: public.support_tickets table missing.');
+        return [];
+      }
+      check(error);
+    }
+    return ((data as Row[]) || []).map(toTicket);
   },
   async createTicket(organizationId, subject, body) {
     const { data, error } = await db().from('support_tickets').insert({ organization_id: organizationId, subject }).select('id').single();
