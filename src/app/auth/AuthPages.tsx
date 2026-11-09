@@ -53,12 +53,20 @@ const Field: React.FC<{
   );
 };
 
-const FormError: React.FC<{ message: string | null }> = ({ message }) =>
-  message ? (
-    <p role="alert" className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 rounded-lg px-3 py-2">
-      {message}
-    </p>
-  ) : null;
+const FormError: React.FC<{ message: string | null }> = ({ message }) => {
+  if (!message) return null;
+  const isRateLimit = message.toLowerCase().includes('rate limit');
+  return (
+    <div role="alert" className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 rounded-lg px-3 py-2 space-y-1">
+      <p className="font-medium">{message}</p>
+      {isRateLimit && (
+        <p className="text-xs text-rose-600 dark:text-rose-400">
+          Supabase free tier limits confirmation emails to 3-4/hour. To fix this instantly: open your <strong>Supabase Dashboard &rarr; Auth &rarr; Providers &rarr; Email</strong> and toggle <strong>Confirm email</strong> OFF.
+        </p>
+      )}
+    </div>
+  );
+};
 
 const SubmitButton: React.FC<{ busy: boolean; children: React.ReactNode }> = ({ busy, children }) => (
   <button
