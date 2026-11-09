@@ -12,6 +12,7 @@ import { applyBranding, getTemplate, initialValues, projectFromTemplate, TEAM_TE
 import { ROUTES } from '../routes';
 import { useServices } from '../session';
 import { VariableForm } from '../shared/VariableForm';
+import { GLOBAL_LANGUAGES } from '../shared/GoogleTranslate';
 import { BusyLabel, EmptyState, ErrorNote, errorMessage, inputClass, primaryButton, Skeleton, LoadingArea } from '../shared/ui';
 import { useWorkspace } from '../workspace';
 import { useTeamTemplates } from './CreatePage';
@@ -71,8 +72,10 @@ const Wizard: React.FC<{ template: TemplateDefinition }> = ({ template }) => {
   const [themeIndex, setThemeIndex] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [device, setDevice] = useState<keyof typeof DEVICE_WIDTHS>('desktop');
+  const [language, setLanguage] = useState('en');
   const [slug, setSlug] = useState('');
-  const [projectName, setProjectName] = useState('');
+  const [projectName, setProjectName] = useState(template.title);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const theme: Theme = useMemo(() => applyBranding(template.themes[themeIndex].theme, branding), [template, themeIndex, branding]);
   const documents = useMemo(() => template.pages.map((page, position) => ({ ...page, position })), [template]);
@@ -80,18 +83,30 @@ const Wizard: React.FC<{ template: TemplateDefinition }> = ({ template }) => {
 
   const create = useMutation({
     mutationFn: async () => {
+      const trimmed = projectName.trim();
+      if (!trimmed) {
+        setNameError('Project name is required. You cannot create with a blank name.');
+        throw new Error('Project name is required.');
+      }
+      setNameError(null);
       const result = validateValues(template.variables, values);
       if (!result.ok) {
         setErrors(result.errors);
         throw new Error('Please fix the highlighted fields.');
       }
       setErrors({});
-      return projects.create(projectFromTemplate(template, workspace!.organizationId, result.values, theme, projectName));
+      const created = projectFromTemplate(template, workspace!.organizationId, result.values, theme, trimmed);
+      created.settings = {
+        ...created.settings,
+        targetDevice: device,
+        targetLanguage: language,
+      };
+      return projects.create(created);
     },
     onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['project-details'] });
-      navigate(ROUTES.studio(id), { state: { justCreated: true } });
+      navigate(ROUTES.studio(id), { state: { justCreated: true, initialDevice: device, initialLanguage: language } });
     },
   });
 
@@ -140,9 +155,64 @@ const Wizard: React.FC<{ template: TemplateDefinition }> = ({ template }) => {
             </div>
 
             <div>
-              <label htmlFor="project-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Project name (optional)</label>
-              <input id="project-name" maxLength={200} className={inputClass} placeholder={template.title} value={projectName} onChange={(event) => setProjectName(event.target.value)} />
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Only you see this, in your project list.</p>
+              <label htmlFor="project-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Project name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                id="project-name"
+                required
+                maxLength={200}
+                className={`${inputClass} ${nameError ? 'border-rose-500 focus:ring-rose-500' : ''}`}
+                placeholder="Enter project name..."
+                value={projectName}
+                onChange={(event) => {
+                  setProjectName(event.target.value);
+                  if (event.target.value.trim()) setNameError(null);
+                }}
+              />
+              {nameError ? (
+                <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">
+                  {nameError}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Identifies your project in the workspace.</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="target-device" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Design for Device
+                </label>
+                <select
+                  id="target-device"
+                  className={inputClass}
+                  value={device}
+                  onChange={(e) => setDevice(e.target.value as keyof typeof DEVICE_WIDTHS)}
+                >
+                  <option value="desktop">Desktop</option>
+                  <option value="tablet">Tablet</option>
+                  <option value="mobile">Mobile (Smartphone)</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="target-language" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Target Language
+                </label>
+                <select
+                  id="target-language"
+                  className={inputClass}
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                >
+                  {GLOBAL_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.native} ({l.label})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <VariableForm defs={questions} values={values} errors={errors} onChange={setValues} />

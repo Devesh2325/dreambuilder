@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm, UseFormRegisterReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { ShieldCheck, KeyRound, Sparkles } from 'lucide-react';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
 import { BusyLabel } from '../shared/ui';
@@ -108,7 +109,81 @@ export const LoginPage: React.FC = () => {
           Create account
         </Link>
       </div>
+      <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+        <Link to={ROUTES.superAdminLogin} className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 font-medium">
+          <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+          Platform Super Admin Portal →
+        </Link>
+      </div>
     </AuthCard>
+  );
+};
+
+export const SuperAdminLoginPage: React.FC = () => {
+  const { auth } = useServices();
+  const navigate = useNavigate();
+  const [formError, setFormError] = useState<string | null>(null);
+  const { register, handleSubmit, formState } = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: 'dmchaturvedi@gmail.com',
+      password: '',
+    },
+  });
+
+  const onSubmit = handleSubmit(async ({ email, password }) => {
+    setFormError(null);
+    const { error } = await auth.signIn(email, password);
+    if (error) {
+      setFormError(error);
+    } else {
+      navigate(ROUTES.admin);
+    }
+  });
+
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-slate-950 p-4 font-sans text-slate-100">
+      <div className="w-full max-w-md bg-slate-900 rounded-2xl border border-indigo-900/50 shadow-2xl p-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex items-center gap-2 mb-2">
+          <span className="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+            <ShieldCheck className="w-6 h-6" />
+          </span>
+          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wider uppercase bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+            Super Admin Only
+          </span>
+        </div>
+        <h1 className="text-2xl font-bold text-white mt-2">Super Admin Login</h1>
+        <p className="mt-1 text-sm text-slate-400">Exclusive access portal for system administrator.</p>
+
+        <div className="mt-4 p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-xs space-y-1 text-indigo-200">
+          <p className="font-semibold flex items-center gap-1.5 text-indigo-300">
+            <KeyRound className="w-3.5 h-3.5" /> Initial Admin Access:
+          </p>
+          <p>Email: <code className="bg-slate-800 px-1 py-0.5 rounded text-white">dmchaturvedi@gmail.com</code></p>
+          <p>Initial Password: <code className="bg-slate-800 px-1 py-0.5 rounded text-white">Admin@FlowPilot2026!</code></p>
+          <p className="text-[11px] text-slate-400 pt-1">
+            * You can securely change your password anytime after logging in via Profile settings.
+          </p>
+        </div>
+
+        <form onSubmit={onSubmit} noValidate className="space-y-4 mt-5">
+          <FormError message={formError} />
+          <Field label="Admin Email" type="email" autoComplete="email" error={formState.errors.email?.message} registration={register('email')} />
+          <Field label="Password" type="password" autoComplete="current-password" error={formState.errors.password?.message} registration={register('password')} />
+          <SubmitButton busy={formState.isSubmitting}>Log In as Super Admin</SubmitButton>
+        </form>
+
+        <div className="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+          <Link to={ROUTES.login} className="hover:text-white transition-colors">
+            ← Back to regular user login
+          </Link>
+          <Link to={ROUTES.home} className="hover:text-white transition-colors">
+            Return to Homepage
+          </Link>
+        </div>
+      </div>
+    </main>
   );
 };
 

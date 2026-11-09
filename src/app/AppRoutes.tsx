@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { Outlet, Route, Routes } from 'react-router-dom';
 import { MODULE_LIST } from '../core/modules';
 import { StudioPage } from '../studio/StudioPage';
-import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SignUpPage } from './auth/AuthPages';
+import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SignUpPage, SuperAdminLoginPage } from './auth/AuthPages';
 import { FullPageSpinner, RedirectIfAuthenticated, RequireAuth } from './auth/RequireAuth';
 import { PlansPage } from './account/PlansPage';
 import { ProfilePage } from './account/ProfilePage';
@@ -40,6 +40,7 @@ export const AppRoutes: React.FC = () => (
   <Routes>
     <Route element={<RedirectIfAuthenticated />}>
       <Route path="login" element={<LoginPage />} />
+      <Route path="admin/login" element={<SuperAdminLoginPage />} />
       <Route path="signup" element={<SignUpPage />} />
       <Route path="forgot-password" element={<ForgotPasswordPage />} />
     </Route>

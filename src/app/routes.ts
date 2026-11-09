@@ -22,6 +22,7 @@ export const ROUTES = {
   plans: '/plans',
   support: '/support',
   admin: '/admin',
+  superAdminLogin: '/admin/login',
   docs: '/docs',
   doc: (slug: string) => `/docs/${slug}`,
   invite: (token: string) => `/invite/${token}`,

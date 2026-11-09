@@ -64,10 +64,23 @@ export const BLOCK_META: Record<string, BlockMeta> = {
   },
   Video: {
     type: 'Video', label: 'Video', category: 'content', icon: 'Video',
-    defaultProps: { url: '', title: '' },
+    defaultProps: { url: '', title: '', controls: true, autoplay: false, loop: false, muted: false, aspectRatio: '16:9' },
     fields: [
-      { key: 'url', label: 'Video link', type: 'url', help: 'Paste a YouTube or Vimeo link, or a link to an MP4 file.' },
+      { key: 'url', label: 'Video source', type: 'video', help: 'Paste a YouTube or Vimeo link, or upload an MP4/WebM video file.' },
       text('title', 'Description (for screen readers)'),
+      {
+        key: 'aspectRatio', label: 'Aspect ratio', type: 'select',
+        options: [
+          { label: '16:9 (Widescreen)', value: '16:9' },
+          { label: '4:3 (Standard)', value: '4:3' },
+          { label: '1:1 (Square)', value: '1:1' },
+          { label: '9:16 (Vertical/Mobile)', value: '9:16' },
+        ],
+      },
+      { key: 'controls', label: 'Show video controls', type: 'boolean' },
+      { key: 'autoplay', label: 'Autoplay video', type: 'boolean' },
+      { key: 'loop', label: 'Loop video playback', type: 'boolean' },
+      { key: 'muted', label: 'Mute audio', type: 'boolean' },
     ],
   },
   PaymentButton: {

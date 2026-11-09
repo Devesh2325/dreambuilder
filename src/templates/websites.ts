@@ -57,16 +57,35 @@ const header = (): TemplatePage => ({
   ]),
 });
 
-const footer = (): TemplatePage => ({
+const richFooter = (): TemplatePage => ({
   kind: 'global',
   title: 'Footer',
   slug: GLOBAL_FOOTER_SLUG,
   content: buildContent('f', [
     section(
       [
-        el('Grid', {}, [
-          el('Box', {}, [heading('{{brand.name}}', 'h4'), text('{{brand.tagline}}', { color: 'var(--fp-muted)' })]),
-          el('Box', {}, [
+        el('Grid', { styles: { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '32px' }, responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+          el('Box', { styles: { gap: '10px' } }, [
+            heading('{{brand.name}}', 'h4'),
+            text('{{brand.tagline}}', { color: 'var(--fp-muted)' }),
+            text('© 2026 {{brand.name}}. All rights reserved.', { fontSize: '0.8125rem', color: 'var(--fp-muted)' }),
+          ]),
+          el('Box', { styles: { gap: '8px', alignItems: 'flex-start' } }, [
+            heading('Solutions', 'h4'),
+            button('Services & Features', '#services', 'link'),
+            button('Pricing Plans', '#pricing', 'link'),
+            button('Testimonials', '#testimonials', 'link'),
+            button('FAQ', '#faq', 'link'),
+          ]),
+          el('Box', { styles: { gap: '8px', alignItems: 'flex-start' } }, [
+            heading('Company', 'h4'),
+            button('About Us', '/about', 'link'),
+            button('Contact', '/contact', 'link'),
+            button('Privacy Policy', '#', 'link'),
+            button('Terms of Service', '#', 'link'),
+          ]),
+          el('Box', { styles: { gap: '8px', alignItems: 'flex-start' } }, [
+            heading('Contact', 'h4'),
             text('{{contact.email}}', {}, 'contact.email'),
             text('{{contact.phone}}', {}, 'contact.phone'),
             text('{{contact.address}}', {}, 'contact.address'),
@@ -74,10 +93,68 @@ const footer = (): TemplatePage => ({
           ]),
         ]),
       ],
-      { backgroundColor: 'var(--fp-surface)', paddingTop: '48px', paddingBottom: '48px' },
+      { backgroundColor: 'var(--fp-surface)', paddingTop: '56px', paddingBottom: '56px' },
     ),
   ]),
 });
+
+const testimonialsSection = (title = 'Loved by our clients', subtitle = 'Read how people achieve great results with us'): El =>
+  section([
+    sectionTitle(title, subtitle),
+    el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+      el('Card', {}, [
+        text('"The best experience we have ever had. Setup was fast and the results exceeded expectations."', { fontSize: '1rem', fontStyle: 'italic' }),
+        text('Alex Morgan', { fontWeight: 700 }),
+        text('Verified Client', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+      ]),
+      el('Card', {}, [
+        text('"Exceptional quality, attentive team, and intuitive tools that saved us countless hours every single week."', { fontSize: '1rem', fontStyle: 'italic' }),
+        text('Sophia Patel', { fontWeight: 700 }),
+        text('Operations Director', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+      ]),
+      el('Card', {}, [
+        text('"Completely transformed how we work. I cannot imagine running our operations without this solution."', { fontSize: '1rem', fontStyle: 'italic' }),
+        text('David Kim', { fontWeight: 700 }),
+        text('Founder & CEO', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+      ]),
+    ]),
+  ], { backgroundColor: 'var(--fp-surface)' }, { props: { anchor: 'testimonials' } });
+
+const pricingSection = (title = 'Simple, transparent pricing', subtitle = 'Choose the plan that fits your growth'): El =>
+  section([
+    sectionTitle(title, subtitle),
+    el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+      el('Card', {}, [
+        heading('Starter', 'h3'),
+        heading('$29', 'h2', { color: 'var(--fp-primary)' }),
+        text('Essential features to get up and running smoothly.', { color: 'var(--fp-muted)' }),
+        button('Get started', '/contact', 'secondary'),
+      ]),
+      el('Card', { styles: { border: '2px solid var(--fp-primary)' } }, [
+        heading('Professional', 'h3'),
+        heading('$79', 'h2', { color: 'var(--fp-primary)' }),
+        text('Advanced tools and priority assistance for growing businesses.', { color: 'var(--fp-muted)' }),
+        button('Start free trial', '/contact', 'primary'),
+      ]),
+      el('Card', {}, [
+        heading('Enterprise', 'h3'),
+        heading('Custom', 'h2', { color: 'var(--fp-primary)' }),
+        text('Dedicated support, custom integrations, and SLA guarantees.', { color: 'var(--fp-muted)' }),
+        button('Contact sales', '/contact', 'secondary'),
+      ]),
+    ]),
+  ], undefined, { props: { anchor: 'pricing' } });
+
+const faqSection = (title = 'Frequently asked questions', subtitle = 'Got questions? We have got answers.'): El =>
+  section([
+    sectionTitle(title, subtitle),
+    el('Box', { styles: { maxWidth: '720px', marginLeft: 'auto', marginRight: 'auto', width: '100%', gap: '8px' } }, [
+      el('Accordion', { props: { question: 'How do I get started?', answer: 'Pick your plan, submit your details, and you will be fully onboarded within minutes.' } }),
+      el('Accordion', { props: { question: 'Can I change or cancel my plan at any time?', answer: 'Yes, you can upgrade, downgrade, or cancel whenever you like without any hidden lock-in contracts.' } }),
+      el('Accordion', { props: { question: 'Is support included with all plans?', answer: 'Yes! We provide dedicated email and live assistance to ensure you succeed from day one.' } }),
+      el('Accordion', { props: { question: 'Do you support custom integrations?', answer: 'Absolutely. We offer complete API access and custom integrations on our higher tier plans.' } }),
+    ]),
+  ], { backgroundColor: 'var(--fp-surface)' }, { props: { anchor: 'faq' } });
 
 const splitHero = (ctaHref: string): El =>
   section(
@@ -199,7 +276,7 @@ const website = (
     titleVariable: 'brand.name',
     category: CATEGORY[rest.id],
     themes: [theme, ...ALL_THEMES.filter((other) => other !== theme)],
-    pages: [...pages, header(), footer()],
+    pages: [...pages, header(), richFooter()],
   };
 };
 
@@ -229,6 +306,9 @@ const business = website({
     home('{{hero.subheadline}}', [
       splitHero('/contact'),
       section([sectionTitle('What we do'), cardGrid('services', 'service', [heading('{{service.title}}', 'h3'), text('{{service.description}}', { color: 'var(--fp-muted)' })])], { backgroundColor: 'var(--fp-surface)' }),
+      testimonialsSection('What our customers say', 'Trusted by homeowners and businesses across the area'),
+      pricingSection('Transparent service rates', 'Clear quotes with no surprise charges'),
+      faqSection('Questions about our services', 'Answers to common maintenance and installation questions'),
       ctaBanner('Ready to get started?', '{{hero.cta}}', '/contact'),
     ]),
     aboutPage(),
@@ -269,6 +349,9 @@ const restaurant = website({
           text('{{dish.description}}', { color: 'var(--fp-muted)' }),
         ]),
       ], { backgroundColor: 'var(--fp-surface)' }),
+      testimonialsSection('Guest reviews', 'Stories from dining with us'),
+      pricingSection('Private dining & packages', 'Options for groups and special events'),
+      faqSection('Dining & reservations FAQ', 'Everything you need to know before your visit'),
     ]),
     aboutPage(),
     contactPage('Reservations', 'Send your preferred date, time and number of guests.', 'Request a table'),
@@ -304,6 +387,9 @@ const portfolio = website({
           button('View project', '{{project.link}}', 'link', 'project.link'),
         ]),
       ], undefined, { props: { anchor: 'work' } }),
+      testimonialsSection('Client feedback', 'What collaborators and partners say about working together'),
+      pricingSection('Project engagements', 'Clear collaboration tiers and deliverables'),
+      faqSection('Working together FAQ', 'Answers to common questions about timeline, scope and revisions'),
     ]),
     aboutPage(),
     contactPage('Work with me', 'Tell me about your project.', 'Send enquiry'),
@@ -339,6 +425,8 @@ const agency = website({
       centeredHero('/contact'),
       section([sectionTitle('What we do'), cardGrid('services', 'service', [heading('{{service.title}}', 'h3'), text('{{service.description}}', { color: 'var(--fp-muted)' })])], { backgroundColor: 'var(--fp-surface)' }),
       section([sectionTitle('What clients say'), cardGrid('quotes', 'item', [text('"{{item.quote}}"', { fontSize: '1.125rem' }), text('{{item.author}}', { fontWeight: 600 })])]),
+      pricingSection('Retainers & project tiers', 'Predictable pricing aligned with your business milestones'),
+      faqSection('Agency partnership FAQ', 'How we scope, staff and execute client engagements'),
       ctaBanner('Have a project in mind?', '{{hero.cta}}', '/contact'),
     ]),
     aboutPage(),
@@ -376,6 +464,9 @@ const saas = website({
     home('{{hero.subheadline}}', [
       splitHero('{{signupUrl}}'),
       section([sectionTitle('Why teams choose {{brand.name}}'), cardGrid('features', 'feature', [heading('{{feature.title}}', 'h3'), text('{{feature.description}}', { color: 'var(--fp-muted)' })])], { backgroundColor: 'var(--fp-surface)' }),
+      testimonialsSection('Loved by modern software teams', 'See why thousands of developers switch to {{brand.name}}'),
+      pricingSection('Plans for every stage', 'Choose what fits your team today and scale as you grow'),
+      faqSection('Frequently asked questions', 'Everything you need to know about billing, security and support'),
     ]),
     {
       kind: 'page',
@@ -431,6 +522,9 @@ const store = website({
           text('{{product.description}}', { color: 'var(--fp-muted)' }),
         ]),
       ], { backgroundColor: 'var(--fp-surface)' }),
+      testimonialsSection('Customer reviews', 'What buyers love about our handcrafted pieces'),
+      pricingSection('Curated bundles & gifts', 'Special packs with complimentary gift wrapping'),
+      faqSection('Ordering & shipping FAQ', 'Details on delivery times, packaging and care instructions'),
     ]),
     aboutPage(),
     contactPage('Place an order', 'Tell us which items you would like and we will confirm availability.', 'Send order'),

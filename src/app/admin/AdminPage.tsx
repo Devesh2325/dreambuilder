@@ -11,6 +11,7 @@ import { useServices, useSession } from '../session';
 import { formatDate, formatDateTime } from '../shared/format';
 import { Icon } from '../shared/Icon';
 import { BusyLabel, cardClass, EmptyState, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton, StatTile, TableSkeleton } from '../shared/ui';
+import { TemplatesManagementTab } from './TemplatesTab';
 
 const useRefresh = () => {
   const queryClient = useQueryClient();
@@ -458,10 +459,11 @@ const InboxTab: React.FC = () => {
 
 // ---- Page -------------------------------------------------------------------
 
-type AdminTab = 'overview' | 'users' | 'plans' | 'requests' | 'inbox';
+type AdminTab = 'overview' | 'users' | 'plans' | 'requests' | 'inbox' | 'templates';
 
 const TABS: { id: AdminTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'templates', label: 'Template management' },
   { id: 'users', label: 'Users' },
   { id: 'plans', label: 'Plans and limits' },
   { id: 'requests', label: 'Plan requests' },
@@ -496,6 +498,7 @@ export const AdminPage: React.FC = () => {
       </div>
       <div role="tabpanel">
         {tab === 'overview' && <OverviewTab />}
+        {tab === 'templates' && <TemplatesManagementTab />}
         {tab === 'users' && <UsersTab />}
         {tab === 'plans' && <PlansTab />}
         {tab === 'requests' && <RequestsTab />}

@@ -8,6 +8,7 @@ import { AppTour, useAppTour } from '../app/tours/AppTour';
 import { ROUTES } from '../app/routes';
 import { useServices } from '../app/session';
 import { BusyIcon, BusyLabel, EmptyState, primaryButton, secondaryButton, StudioSkeleton } from '../app/shared/ui';
+import { GoogleTranslateSelector } from '../app/shared/GoogleTranslate';
 import { useWorkspace } from '../app/workspace';
 import { EmbedLoaderContext } from '../experience/EmbeddedProject';
 import { moduleNoun } from '../core/modules';
@@ -137,8 +138,20 @@ const Editor: React.FC = () => {
   useEffect(() => {
     useStudio.getState().syncGlobals(globals ?? []);
   }, [globals]);
-  const arrival = location.state as { justCreated?: boolean; buildingTemplate?: boolean } | null;
+  const arrival = location.state as {
+    justCreated?: boolean;
+    buildingTemplate?: boolean;
+    initialDevice?: 'desktop' | 'tablet' | 'mobile';
+    initialLanguage?: string;
+  } | null;
   const [welcome, setWelcome] = useState(() => (arrival?.justCreated ? 'created' : arrival?.buildingTemplate ? 'template' : null));
+
+  useEffect(() => {
+    const target = arrival?.initialDevice ?? draft?.settings.targetDevice;
+    if (target && ['desktop', 'tablet', 'mobile'].includes(target)) {
+      useStudio.getState().setDevice(target);
+    }
+  }, [arrival?.initialDevice, draft?.settings.targetDevice]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleStudioShortcut);
@@ -199,6 +212,7 @@ const Editor: React.FC = () => {
         </div>
 
         <div data-tour="publish" className="flex items-center justify-end gap-2">
+          <GoogleTranslateSelector variant="compact" />
           {!readOnly && (
             <button type="button" aria-label="Save as template" title="Save as template" className={`${secondaryButton} !px-2.5 !py-1.5`} onClick={() => setIsSavingTemplate(true)}>
               <LayoutTemplate className="w-4 h-4" aria-hidden="true" />

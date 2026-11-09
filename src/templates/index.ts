@@ -12,8 +12,12 @@ import { LAYOUT_TEMPLATES } from './layouts';
 import { PAGE_INDUSTRY, PAGE_PARTS, withSections } from './pageSections';
 import { PAGE_TEMPLATES } from './pages';
 import { WEBSITE_TEMPLATES } from './websites';
+import { APIDOG_WEBSITE_TEMPLATES } from './apidogWebsites';
+import { getCustomTemplates, getTemplateOverrides, mergeTemplate } from './templateStore';
 
 export * from './dsl';
+export * from './templateStore';
+export * from './apidogWebsites';
 
 export const TEAM_TEMPLATE_PREFIX = 'team:';
 
@@ -24,11 +28,19 @@ const withPageExtras = (template: TemplateDefinition): TemplateDefinition => {
 };
 
 export const TEMPLATES: TemplateDefinition[] = [
-  ...WEBSITE_TEMPLATES, ...INDUSTRY_TEMPLATES, ...EXPERIENCE_TEMPLATES, ...PAGE_TEMPLATES, ...LAYOUT_TEMPLATES, ...INDUSTRY_PAGE_TEMPLATES, ...BANNER_TEMPLATES,
+  ...WEBSITE_TEMPLATES, ...APIDOG_WEBSITE_TEMPLATES, ...INDUSTRY_TEMPLATES, ...EXPERIENCE_TEMPLATES, ...PAGE_TEMPLATES, ...LAYOUT_TEMPLATES, ...INDUSTRY_PAGE_TEMPLATES, ...BANNER_TEMPLATES,
 ].map(withPageExtras);
 
 export function getTemplate(id: string): TemplateDefinition | undefined {
-  return TEMPLATES.find((template) => template.id === id);
+  const overrides = getTemplateOverrides();
+  const custom = getCustomTemplates();
+  const customFound = custom.find((t) => t.id === id);
+  if (customFound) {
+    return overrides[id] ? mergeTemplate(customFound, overrides[id]) : customFound;
+  }
+  const base = TEMPLATES.find((template) => template.id === id);
+  if (!base) return undefined;
+  return overrides[id] ? mergeTemplate(base, overrides[id]) : base;
 }
 
 /** A project's variables: those of its template, plus any added in the editor. */
@@ -39,7 +51,11 @@ export function projectVariableDefs(templateId: string | null | undefined, setti
 }
 
 export function templatesFor(type: ProjectType): TemplateDefinition[] {
-  return TEMPLATES.filter((template) => template.type === type);
+  const overrides = getTemplateOverrides();
+  const custom = getCustomTemplates().filter((t) => t.type === type);
+  const baseList = TEMPLATES.filter((template) => template.type === type);
+  const combined = [...baseList, ...custom];
+  return combined.map((template) => (overrides[template.id] ? mergeTemplate(template, overrides[template.id]) : template));
 }
 
 /** Uses the workspace's Brand Kit as the starting point for a new project. */

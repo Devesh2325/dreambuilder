@@ -10,6 +10,7 @@ import { teamTemplate } from '../../templates/library';
 import { ROUTES } from '../routes';
 import { useServices } from '../session';
 import { Icon } from '../shared/Icon';
+import { GLOBAL_LANGUAGES } from '../shared/GoogleTranslate';
 import { BusyLabel, ErrorNote, errorMessage, inputClass, primaryButton, secondaryButton } from '../shared/ui';
 import { useWorkspace } from '../workspace';
 import { CreateSteps } from './CreateSteps';
@@ -73,18 +74,36 @@ const BlankDialog: React.FC<{ type: ProjectType; onClose: () => void }> = ({ typ
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [name, setName] = useState('');
   const label = moduleNoun(type);
+  const [name, setName] = useState(`New ${label}`);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [language, setLanguage] = useState('en');
+
   useEffect(() => {
     dialogRef.current?.showModal?.();
   }, []);
 
   const create = useMutation({
-    mutationFn: () => projects.create(blankProject(type, workspace!.organizationId, name.trim() || `Untitled ${label}`)),
+    mutationFn: async () => {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        setNameError(`Name is required. You cannot create a blank name.`);
+        throw new Error('Project name is required.');
+      }
+      setNameError(null);
+      const blank = blankProject(type, workspace!.organizationId, trimmed);
+      blank.settings = {
+        ...blank.settings,
+        targetDevice: device,
+        targetLanguage: language,
+      };
+      return projects.create(blank);
+    },
     onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['project-details'] });
-      navigate(ROUTES.studio(id));
+      navigate(ROUTES.studio(id), { state: { justCreated: true, initialDevice: device, initialLanguage: language } });
     },
   });
 
@@ -96,10 +115,68 @@ const BlankDialog: React.FC<{ type: ProjectType; onClose: () => void }> = ({ typ
       }}>
         <h2 id="blank-title" className="text-lg font-bold">Start a blank {label}</h2>
         <ErrorNote message={create.isError ? errorMessage(create.error) : null} />
-        <label className="block text-sm font-medium">Name
-          <input autoFocus maxLength={200} placeholder={`Untitled ${label}`} className={`${inputClass} mt-1`} value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <div className="flex justify-end gap-2">
+
+        <div>
+          <label htmlFor="blank-name" className="block text-sm font-medium mb-1">
+            Name <span className="text-rose-500">*</span>
+          </label>
+          <input
+            id="blank-name"
+            autoFocus
+            required
+            maxLength={200}
+            placeholder={`Enter ${label} name...`}
+            className={`${inputClass} ${nameError ? 'border-rose-500 focus:ring-rose-500' : ''}`}
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              if (event.target.value.trim()) setNameError(null);
+            }}
+          />
+          {nameError && (
+            <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">
+              {nameError}
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="blank-device" className="block text-sm font-medium mb-1">
+              Design for Device
+            </label>
+            <select
+              id="blank-device"
+              className={inputClass}
+              value={device}
+              onChange={(e) => setDevice(e.target.value as 'desktop' | 'tablet' | 'mobile')}
+            >
+              <option value="desktop">Desktop</option>
+              <option value="tablet">Tablet</option>
+              <option value="mobile">Mobile (Smartphone)</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="blank-language" className="block text-sm font-medium mb-1">
+              Target Language
+            </label>
+            <select
+              id="blank-language"
+              className={inputClass}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
+              {GLOBAL_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.native} ({l.label})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
           <button type="button" className={secondaryButton} disabled={create.isPending} onClick={onClose}>Cancel</button>
           <button type="submit" className={primaryButton} disabled={create.isPending}>
             <BusyLabel busy={create.isPending} busyText="Creating...">Create and open editor</BusyLabel>

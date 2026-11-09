@@ -9,6 +9,7 @@ import { SECTION_LIBRARY } from '../../templates/sections';
 import { ROUTES } from '../routes';
 import { Icon } from '../shared/Icon';
 import { LiveThumbnail } from '../templates/LiveThumbnail';
+import { GoogleTranslateSelector } from '../shared/GoogleTranslate';
 import { ProductDemo } from './ProductDemo';
 
 const SHOWCASE = ['website-restaurant', 'page-fintech-app', 'website-saas', 'page-travel-package', 'website-clinic', 'page-gym-offer'];
@@ -87,6 +88,7 @@ export const LandingPage: React.FC = () => {
             <Link to={ROUTES.docs} className="hover:text-white">Docs</Link>
           </nav>
           <div className="flex items-center gap-2">
+            <GoogleTranslateSelector variant="pill" className="hidden sm:inline-block" />
             <Link to={ROUTES.login} className="px-3 py-2 text-sm font-semibold text-slate-200 hover:text-white">Log in</Link>
             <Cta className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-500">Start free</Cta>
           </div>
@@ -240,6 +242,48 @@ export const LandingPage: React.FC = () => {
             <div className="rounded-2xl bg-slate-900 border border-white/10 p-6 text-left">
               <p className="flex items-center gap-2 text-sm text-slate-400"><ShieldCheck className="w-4 h-4" aria-hidden="true" />Add before &lt;/body&gt;</p>
               <pre className="mt-3 text-sm text-indigo-200 overflow-x-auto"><code>{'<script\n  src="/flowpilot.js"\n  data-project-id="your-project"\n  defer\n></script>'}</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="compare" aria-labelledby="compare-title" className="py-24 px-6 bg-slate-50 border-y border-slate-200">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">Competitor Comparison</span>
+              <h2 id="compare-title" className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">How FlowPilot Compares</h2>
+              <p className="mt-3 text-lg text-slate-600">Why fast-growing software teams and creators choose FlowPilot over legacy tour tools.</p>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-100/70 text-slate-900">
+                    <th className="py-4 px-6 font-bold">Capabilities</th>
+                    <th className="py-4 px-6 font-bold text-indigo-600 bg-indigo-50/50">FlowPilot</th>
+                    <th className="py-4 px-6 font-semibold text-slate-600">Appcues / Pendo</th>
+                    <th className="py-4 px-6 font-semibold text-slate-600">Userflow / Chameleon</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {[
+                    ['Interactive Product Tours', '✓ Included', '✓ Included', '✓ Included'],
+                    ['Clickable Demos & Mockups', '✓ Included', '✗ Requires 3rd-party ($$$)', '✗ Missing'],
+                    ['Complete Websites & Landing Pages', '✓ Included (All-in-One)', '✗ Not supported', '✗ Not supported'],
+                    ['Section Library (Hero, CTA, Pricing)', '✓ 30+ Pre-built Sections', '✗ Basic blocks only', '✗ Limited'],
+                    ['On-Page Live Builder on Your URL', '✓ Instant Click-to-Add', '✓ Requires chrome extension', '✓ Extension needed'],
+                    ['Global Multi-Language Translation', '✓ 12+ Languages Built-in', '$$$ Enterprise add-on', '$$$ Enterprise add-on'],
+                    ['Free Forever Plan with Full Features', '✓ Yes, Free to start', '✗ $249+/mo minimum', '✗ $200+/mo minimum'],
+                    ['Shadow DOM Zero Style Conflicts', '✓ Guaranteed clean embed', '⚠️ Can clash with CSS', '⚠️ Can clash with CSS'],
+                  ].map(([feature, fp, legacy1, legacy2], idx) => (
+                    <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
+                      <td className="py-3.5 px-6 font-medium text-slate-900">{feature}</td>
+                      <td className="py-3.5 px-6 font-bold text-indigo-600 bg-indigo-50/30">{fp}</td>
+                      <td className="py-3.5 px-6 text-slate-600">{legacy1}</td>
+                      <td className="py-3.5 px-6 text-slate-600">{legacy2}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </section>

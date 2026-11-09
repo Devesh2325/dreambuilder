@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { CircleDot, ExternalLink, Hammer, Loader2, Play, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CircleDot, ExternalLink, Hammer, Loader2, Play, PlaySquare, Plus, Sparkles } from 'lucide-react';
 import { ProjectRecord } from '../data/services';
 import { embedSnippet } from '../app/projects/projectHelpers';
 import { ImageInput } from '../app/shared/VariableForm';
+import { ROUTES } from '../app/routes';
 import { fieldClass, labelClass } from './fields';
 import { LiveMode, useLiveSite } from './liveSite';
+import { useEmbeddableProjects } from './ProjectField';
 import { findSteps } from './steps';
 import { useStudio } from './store';
 
@@ -93,23 +96,43 @@ const LiveSite: React.FC<{ project: ProjectRecord }> = ({ project }) => {
 
   const open = (next: LiveMode) => {
     try {
-      const target = new URL(url);
+      let raw = url.trim();
+      if (!raw) {
+        setUrlError('Enter the web address of a page in your app.');
+        return;
+      }
+      if (!/^https?:\/\//i.test(raw)) {
+        if (/^(localhost|127\.0\.0\.1)(:\d+)?/i.test(raw)) {
+          raw = `http://${raw}`;
+        } else {
+          raw = `https://${raw}`;
+        }
+      }
+      const target = new URL(raw);
       if (!/^https?:$/.test(target.protocol)) throw new Error('bad protocol');
       setUrlError(null);
+      if (raw !== url) {
+        updateDraft((d) => { d.settings.builderUrl = raw; }, 'builderUrl');
+      }
       useLiveSite.getState().open(target, next);
     } catch {
-      setUrlError('Enter the full address of a page in your app, starting with https://');
+      setUrlError('Enter a valid address (e.g. https://app.example.com or http://localhost:3000)');
     }
   };
 
   return (
     <section aria-label="Your site" className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Build it on your real site</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Build it on your real site</h4>
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+          <Sparkles className="w-3 h-3" /> Live Sync
+        </span>
+      </div>
       <label className={labelClass}>Address of your app
         <input
           type="url"
           disabled={readOnly}
-          placeholder="https://app.example.com"
+          placeholder="https://app.example.com or http://localhost:3000"
           className={`${fieldClass} mt-1`}
           value={url}
           onChange={(event) => updateDraft((d) => {
@@ -120,31 +143,40 @@ const LiveSite: React.FC<{ project: ProjectRecord }> = ({ project }) => {
       </label>
       {urlError && <p role="alert" className="text-[13px] text-rose-600 dark:text-rose-400">{urlError}</p>}
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" disabled={readOnly} className="h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60" onClick={() => open('build')}>
+        <button type="button" disabled={readOnly} className="h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 transition-all shadow-sm shadow-indigo-600/20" onClick={() => open('build')}>
           <Hammer className="w-4 h-4" aria-hidden="true" />
           Build on my site
         </button>
-        <button type="button" className="h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400" onClick={() => open('test')}>
+        <button type="button" className="h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 transition-colors" onClick={() => open('test')}>
           <Play className="w-4 h-4" aria-hidden="true" />
           Test on my site
         </button>
       </div>
-      <p className="text-xs text-slate-500 dark:text-slate-400">Your site opens in a new tab. With Build, click things there and each click adds a step here. With Test, the tour plays there, even before you publish.</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">Your site opens in a new tab. In <strong>Build</strong> mode, click any element on your page to add it as a tour step. In <strong>Test</strong> mode, your tour runs live.</p>
       {status === 'waiting' && (
-        <p role="status" className="flex items-center gap-1.5 text-[13px] text-slate-600 dark:text-slate-300">
+        <p role="status" className="flex items-center gap-1.5 text-[13px] text-indigo-600 dark:text-indigo-400 font-medium">
           <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
           Connecting to your site...
         </p>
       )}
       {status === 'blocked' && <p role="alert" className="text-[13px] text-rose-600 dark:text-rose-400">Your browser blocked the new tab. Allow pop-ups for this page, then try again.</p>}
       {status === 'missing' && (
-        <div role="alert" className="rounded-lg p-2.5 text-[13px] space-y-2 bg-amber-50 text-amber-950 dark:bg-amber-950 dark:text-amber-100">
-          <p>We couldn't find FlowPilot on that page. Add this script to your site, before <code>&lt;/body&gt;</code>, then try again:</p>
+        <div role="alert" className="rounded-xl p-3 text-[13px] space-y-2 bg-amber-50 text-amber-950 dark:bg-amber-950/70 dark:text-amber-100 border border-amber-200 dark:border-amber-800">
+          <p className="font-semibold">We couldn't detect FlowPilot on that page.</p>
+          <p className="text-xs">Add this embed snippet before <code>&lt;/body&gt;</code> on your site, then try again:</p>
           <pre className="text-xs p-2 rounded bg-slate-900 text-slate-100 overflow-x-auto"><code>{embedSnippet(window.location.origin, project.id)}</code></pre>
-          <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold underline">
-            Open your site
-            <ExternalLink className="w-3 h-3" aria-hidden="true" />
-          </a>
+          <div className="flex items-center justify-between pt-1 text-xs">
+            <a href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold underline text-indigo-700 dark:text-indigo-300">
+              Open your site directly <ExternalLink className="w-3 h-3" />
+            </a>
+            <button
+              type="button"
+              className="font-semibold text-slate-600 dark:text-slate-300 hover:underline"
+              onClick={() => open('test')}
+            >
+              Retry connection
+            </button>
+          </div>
         </div>
       )}
     </section>
@@ -158,6 +190,87 @@ const CheckRow: React.FC<{ label: string; checked: boolean; onChange: (checked: 
   </label>
 );
 
+const DemoIntegration: React.FC = () => {
+  const list = useEmbeddableProjects();
+  const readOnly = useStudio((s) => s.readOnly);
+  const activeDocumentId = useStudio((s) => s.activeDocumentId);
+  const documents = useStudio((s) => s.documents);
+  const active = documents.find((doc) => doc.id === activeDocumentId);
+  const draft = useStudio((s) => s.draft);
+  const activeStepKey = useStudio((s) => s.activeStepKey);
+  const { addBlock, updateProps, updateDraft } = useStudio.getState();
+
+  const demos = list.data?.filter((p) => p.type === 'demo') ?? [];
+  const integratedDemoId = draft?.settings.tour?.integratedDemoId ?? '';
+
+  const setIntegratedDemo = (demoId: string) => {
+    updateDraft((d) => {
+      d.settings.tour = { ...d.settings.tour, integratedDemoId: demoId || undefined };
+    }, 'tour:demo');
+  };
+
+  const insertDemoIntoStep = (demoId: string) => {
+    if (!active) return;
+    const steps = findSteps(active.content, draft?.variables ?? {});
+    const step = steps?.steps.find((s) => s.key === activeStepKey) ?? steps?.steps[0];
+    if (!step) return;
+    const addedId = addBlock('ProjectEmbed', step.sourceId);
+    if (addedId) {
+      updateProps(addedId, { projectId: demoId });
+    }
+  };
+
+  return (
+    <section aria-label="Demo integration" className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Integrate Interactive Demo</h4>
+        <PlaySquare className="w-4 h-4 text-indigo-500" />
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        Connect an interactive clickable demo to this tour or insert it directly into your step.
+      </p>
+
+      <div>
+        <label className={`${labelClass} mb-1`}>Workspace Demo</label>
+        <select
+          disabled={readOnly}
+          className={fieldClass}
+          value={integratedDemoId}
+          onChange={(e) => setIntegratedDemo(e.target.value)}
+        >
+          <option value="">Choose a demo...</option>
+          {demos.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.title} {d.status === 'published' ? '' : '(Draft)'}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 pt-1">
+        {integratedDemoId ? (
+          <button
+            type="button"
+            disabled={readOnly}
+            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 transition-colors"
+            onClick={() => insertDemoIntoStep(integratedDemoId)}
+          >
+            + Embed demo in current step
+          </button>
+        ) : <span className="text-xs text-slate-400">Select a demo to embed</span>}
+
+        <Link
+          to={ROUTES.create('demo')}
+          target="_blank"
+          className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+        >
+          <Plus className="w-3.5 h-3.5" /> Create demo
+        </Link>
+      </div>
+    </section>
+  );
+};
+
 /** How a whole tour looks and behaves. Each step has its own settings as well. */
 export const TourPanel: React.FC<{ project: ProjectRecord }> = ({ project }) => {
   const tour = useStudio((s) => s.draft?.settings.tour);
@@ -170,6 +283,7 @@ export const TourPanel: React.FC<{ project: ProjectRecord }> = ({ project }) => 
   return (
     <>
       <LiveSite project={project} />
+      <DemoIntegration />
       <section aria-label="Tour options" className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tour options</h4>
         <CheckRow label="Show progress (Step 1 of 5)" checked={Boolean(settings.showProgress)} onChange={(showProgress) => set({ showProgress })} />

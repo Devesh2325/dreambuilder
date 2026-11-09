@@ -24,7 +24,7 @@ const ARTICLE = ['Avatar', 'Icon', 'List', 'Quote', 'Callout', 'CodeBlock', 'Tab
 const BLOCK_GROUPS: Record<ProjectType, { title: string; types: string[] }[]> = {
   website: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion', 'Banner'] }, { title: 'Articles and docs', types: ARTICLE }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
   page: [{ title: 'Layout', types: LAYOUT }, { title: 'Content', types: [...CONTENT, 'Navbar', 'Accordion', 'Banner'] }, { title: 'Articles and docs', types: ARTICLE }, { title: 'Moving', types: MOVING }, { title: 'Forms', types: FORM }],
-  tour: [{ title: 'Tour', types: ['TourStep'] }, { title: 'Inside a step', types: ['Heading', 'Text', 'Button', 'Image', 'Video', 'Row'] }],
+  tour: [{ title: 'Tour', types: ['TourStep'] }, { title: 'Inside a step', types: ['Heading', 'Text', 'Button', 'Image', 'Video', 'ProjectEmbed', 'Row'] }],
   form: [{ title: 'Form', types: FORM }, { title: 'Content', types: ['Heading', 'Text', 'Image', 'Divider', 'Spacer'] }],
   demo: [{ title: 'Demo', types: ['DemoScreen', 'DemoHotspot'] }],
   banner: [

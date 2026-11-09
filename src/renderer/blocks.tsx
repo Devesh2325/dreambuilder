@@ -93,24 +93,58 @@ const Image: Block = ({ node, attrs }) => {
 const Video: Block = ({ node, attrs, ctx }) => {
   const source = parseVideoUrl(node.props.url);
   const title = asText(node.props.title) || 'Video';
+  const autoplay = Boolean(node.props.autoplay);
+  const controls = node.props.controls !== false;
+  const loop = Boolean(node.props.loop);
+  const muted = Boolean(node.props.muted || autoplay);
+  const ratio = asText(node.props.aspectRatio) || '16:9';
+
+  const ratioStyle: React.CSSProperties = {
+    aspectRatio: ratio === '4:3' ? '4/3' : ratio === '1:1' ? '1/1' : ratio === '9:16' ? '9/16' : '16/9',
+  };
+
   if (!source) {
     if (ctx.mode !== 'edit') return null;
-    return <div {...withClass(attrs, 'fp-video')} data-empty="true">Paste a YouTube, Vimeo or MP4 link</div>;
+    return (
+      <div {...withClass(attrs, 'fp-video fp-video-empty')} style={ratioStyle} data-empty="true">
+        <p style={{ margin: 0 }}>Paste a YouTube link or upload a video file</p>
+      </div>
+    );
   }
+
+  let iframeSrc = source.src;
+  if (source.kind === 'iframe' && iframeSrc.includes('youtube')) {
+    const params: string[] = ['rel=0'];
+    if (autoplay) params.push('autoplay=1');
+    if (muted) params.push('mute=1');
+    if (loop) params.push('loop=1');
+    if (!controls) params.push('controls=0');
+    iframeSrc += (iframeSrc.includes('?') ? '&' : '?') + params.join('&');
+  }
+
   return (
-    <div {...withClass(attrs, 'fp-video')}>
+    <div {...withClass(attrs, 'fp-video')} style={ratioStyle}>
       {source.kind === 'iframe' ? (
         <iframe
-          src={source.src}
+          src={iframeSrc}
           title={title}
           loading="lazy"
-          allow="encrypted-media; picture-in-picture; fullscreen"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
           sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
         />
       ) : (
-        <video src={source.src} title={title} controls preload="metadata" />
+        <video
+          src={source.src}
+          title={title}
+          controls={controls}
+          autoPlay={autoplay}
+          loop={loop}
+          muted={muted}
+          playsInline
+          preload="metadata"
+        />
       )}
     </div>
   );
@@ -283,11 +317,11 @@ const Navbar: Block = ({ node, attrs, ctx }) => {
   // With no links of its own, the menu lists the website's pages.
   const links: NavLink[] = custom.length > 0
     ? custom
-        .filter((link) => asText(link.label))
-        .map((link) => {
-          const href = safeUrl(link.href);
-          return { label: asText(link.label), href, current: ctx.navLinks?.some((page) => page.current && page.href === href) };
-        })
+      .filter((link) => asText(link.label))
+      .map((link) => {
+        const href = safeUrl(link.href);
+        return { label: asText(link.label), href, current: ctx.navLinks?.some((page) => page.current && page.href === href) };
+      })
     : (ctx.navLinks ?? []);
   const logo = safeImageUrl(node.props.logo);
   const brand = asText(node.props.brand);
@@ -365,10 +399,10 @@ const Form: Block = ({ node, attrs, children, ctx }) => {
 
   const visibleChildren = isMultiStep
     ? children.map((child, index) => (
-        node.children[index].type === 'FormStep'
-          ? stepWrapper(child, index === steps[stepIndex].index, node.children[index].key)
-          : child
-      ))
+      node.children[index].type === 'FormStep'
+        ? stepWrapper(child, index === steps[stepIndex].index, node.children[index].key)
+        : child
+    ))
     : children;
 
   const stepIsValid = () => {

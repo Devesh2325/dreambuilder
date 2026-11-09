@@ -339,6 +339,177 @@ export const SECTION_LIBRARY: LibrarySection[] = [
   { id: 'layout-3', title: 'Three columns', category: 'Layout', element: section([el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [column(), column(), column()])]) },
   { id: 'layout-4', title: 'Four columns', category: 'Layout', element: section([el('Grid', { styles: { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [column(), column(), column(), column()])]) },
   { id: 'layout-sidebar', title: 'Sidebar and content', category: 'Layout', element: section([el('Grid', { styles: { gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 3fr)' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [column(), column()])]) },
+
+  // ---- Added Hero sections ----
+  {
+    id: 'hero-saas-modern', title: 'Modern product hero with badge', category: 'Hero',
+    element: section([
+      el('Box', { styles: { ...center, ...narrow, gap: '20px' } }, [
+        el('Badge', { props: { text: 'New Release: Version 2.0 Live', tone: 'primary' } }),
+        heading('Build and launch interactive tours faster', 'h1'),
+        text('Engage visitors, capture qualified leads, and guide users step-by-step with no code required.', { ...muted, fontSize: '1.25rem' }),
+        el('Row', { styles: { justifyContent: 'center', gap: '12px' } }, [
+          button('Start building free', '#', 'primary'),
+          button('Book live demo', '#', 'secondary'),
+        ]),
+      ]),
+      image(photo('dashboard'), 'Product analytics dashboard', { height: '460px', borderRadius: '16px' }),
+    ], { paddingTop: '80px', paddingBottom: '80px' }),
+  },
+  {
+    id: 'hero-minimal-clean', title: 'Clean typography hero', category: 'Hero',
+    element: section([
+      el('Box', { styles: { ...center, ...narrow, gap: '24px' } }, [
+        heading('Turn casual visitors into loyal power users', 'h1'),
+        text('The all-in-one onboarding and experience engine designed for high-growth digital products.', { ...muted, fontSize: '1.25rem' }),
+        el('Row', { styles: { justifyContent: 'center', gap: '12px' } }, [
+          button('Get started free', '#', 'primary'),
+          button('View documentation', '#', 'link'),
+        ]),
+        text('No credit card required · Free 14-day trial · 5-minute setup', { fontSize: '0.875rem', ...muted }),
+      ]),
+    ], { paddingTop: '100px', paddingBottom: '100px' }),
+  },
+  {
+    id: 'hero-split-interactive', title: 'Split hero with checklist', category: 'Hero',
+    element: section([
+      el('Grid', { styles: { alignItems: 'center', gap: '48px' } }, [
+        el('Box', { styles: { gap: '20px', alignItems: 'flex-start' } }, [
+          el('Badge', { props: { text: 'Enterprise Ready', tone: 'success' } }),
+          heading('Onboarding that actually converts', 'h1'),
+          text('Guide every customer through your product features with interactive tooltips and guided walkthroughs.', muted),
+          el('List', { props: { items: 'Interactive step-by-step guided tours\nEmbeddable on any website or web app\nReal-time visitor drop-off analytics', style: 'check' } }),
+          el('Row', { styles: { gap: '12px' } }, [
+            button('Start free trial', '#', 'primary'),
+            button('Explore templates', '#', 'secondary'),
+          ]),
+        ]),
+        image(photo('laptop'), 'Interactive preview', { height: '400px' }),
+      ]),
+    ], { paddingTop: '80px', paddingBottom: '80px' }),
+  },
+
+  // ---- Added CTA sections ----
+  {
+    id: 'cta-glow-card', title: 'High-converting glow CTA card', category: 'Call to action',
+    element: section([
+      el('Card', { styles: { ...center, padding: '64px 32px', gap: '20px', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%)', color: '#ffffff' } }, [
+        el('Badge', { props: { text: 'Limited Time Offer', tone: 'warning' } }),
+        heading('Ready to transform your user onboarding?', 'h2', { color: '#ffffff' }),
+        text('Join over 10,000 forward-thinking teams creating delightful user walkthroughs and websites.', { color: 'rgba(255,255,255,0.85)', fontSize: '1.125rem' }),
+        el('Row', { styles: { justifyContent: 'center', gap: '12px' } }, [
+          el('Button', { props: { text: 'Create your first project', href: '#', variant: 'primary', action: 'link' }, styles: { background: '#ffffff', color: '#0f172a' } }),
+          button('Schedule walkthrough', '#', 'secondary'),
+        ]),
+        text('Free plan available · Instant activation · Cancel anytime', { fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)' }),
+      ]),
+    ]),
+  },
+  {
+    id: 'cta-split-newsletter', title: 'Split CTA with consultation form', category: 'Call to action',
+    element: section([
+      el('Grid', { styles: { alignItems: 'center', gap: '48px' } }, [
+        el('Box', { styles: { gap: '16px' } }, [
+          heading('Get expert growth guidance', 'h2'),
+          text('Speak directly with our onboarding specialists to audit your product flow and double conversion rates.', muted),
+          el('List', { props: { items: 'Custom product tour architecture review\nUX friction points diagnosis\nTailored growth strategy report', style: 'check' } }),
+        ]),
+        el('Card', {}, [
+          el('Form', { props: { submitText: 'Request consultation', successMessage: 'We have received your request and will contact you within 24 hours.' } }, [
+            el('FormField', { props: { name: 'fullName', label: 'Full name', required: true } }),
+            el('FormField', { props: { name: 'workEmail', label: 'Work email', inputType: 'email', required: true } }),
+            el('FormField', { props: { name: 'companyWebsite', label: 'Company website', inputType: 'url', required: true } }),
+          ]),
+        ]),
+      ]),
+    ], { background: 'var(--fp-surface)', paddingTop: '64px', paddingBottom: '64px' }),
+  },
+  {
+    id: 'cta-banner-stats', title: 'CTA banner with trust metrics', category: 'Call to action',
+    element: section([
+      el('Box', { styles: { ...center, gap: '20px' } }, [
+        heading('Speed up activation and reduce support tickets', 'h2', { color: '#ffffff' }),
+        text('Deliver real-time guidance right when your users need it most.', { color: 'rgba(255,255,255,0.9)', fontSize: '1.125rem' }),
+        el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', width: '100%', maxWidth: '680px', gap: '16px' } }, [
+          el('Box', { styles: { textAlign: 'center' } }, [heading('45%', 'h2', { color: '#ffffff' }), text('Higher Completion', { color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' })]),
+          el('Box', { styles: { textAlign: 'center' } }, [heading('3x', 'h2', { color: '#ffffff' }), text('Faster Time-to-Value', { color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' })]),
+          el('Box', { styles: { textAlign: 'center' } }, [heading('-60%', 'h2', { color: '#ffffff' }), text('Support Enquiries', { color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' })]),
+        ]),
+        el('Button', { props: { text: 'Claim your free account', href: '#', variant: 'primary', action: 'link' }, styles: { background: '#ffffff', color: '#0f172a' } }),
+      ]),
+    ], { background: 'linear-gradient(135deg, var(--fp-primary), #4338ca)', paddingTop: '56px', paddingBottom: '56px' }),
+  },
+
+  // ---- Added Profile & Team sections ----
+  {
+    id: 'profile-founder', title: 'Founder and executive profile', category: 'Content',
+    element: section([
+      el('Card', { styles: { padding: '40px 32px' } }, [
+        el('Grid', { styles: { alignItems: 'center', gap: '36px' } }, [
+          el('Box', { styles: center }, [
+            el('Avatar', { props: { src: photo('doctor', 400, 400), name: 'Dr. Elena Vance', subtitle: 'Chief Executive Officer', size: 'large', showText: false } }),
+            heading('Dr. Elena Vance', 'h3'),
+            text('Founder & Chief Executive Officer', muted),
+          ]),
+          el('Box', { styles: { gap: '14px' } }, [
+            el('Quote', { props: { text: 'Our mission is to democratize product adoption so any team can build unforgettable software experiences.', cite: 'Dr. Vance, Product Leader of the Year' } }),
+            text('Over 15 years leading product engineering across enterprise technology and SaaS platforms.', { ...muted, fontSize: '0.9375rem' }),
+            el('Row', { styles: { gap: '10px' } }, [
+              button('Connect on LinkedIn', '#', 'secondary'),
+              button('Read founder letter', '#', 'link'),
+            ]),
+          ]),
+        ]),
+      ]),
+    ], { background: 'var(--fp-surface)' }),
+  },
+  {
+    id: 'profile-author-card', title: 'Creator and author profile', category: 'Content',
+    element: section([
+      el('Box', { styles: { ...center, ...narrow, gap: '18px' } }, [
+        el('Avatar', { props: { src: photo('writing', 400, 400), name: 'Marcus Sterling', subtitle: 'Author & Designer', size: 'large', showText: false } }),
+        heading('Marcus Sterling', 'h2'),
+        text('Design Systems Architect & Author', muted),
+        text('Writing about interaction design, product onboarding architecture, and scalable design systems for high-traffic web applications.', { fontSize: '1.0625rem' }),
+        el('Row', { styles: { justifyContent: 'center', gap: '12px' } }, [
+          button('Follow updates', '#', 'primary'),
+          button('Browse articles', '#', 'secondary'),
+        ]),
+      ]),
+    ], { paddingTop: '64px', paddingBottom: '64px' }),
+  },
+  {
+    id: 'profile-team-showcase', title: 'Executive leadership team', category: 'Content',
+    element: section([
+      titleBlock('Leadership team', 'Dedicated individuals guiding our vision and operations'),
+      el('Grid', { styles: { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '24px' }, responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+        el('Card', { styles: center }, [
+          el('Avatar', { props: { src: photo('meeting', 400, 400), name: 'Aria Montgomery', subtitle: 'Product VP', size: 'large', showText: false } }),
+          heading('Aria Montgomery', 'h4'),
+          text('VP of Product', muted),
+          text('Former Head of Experience at Apex Systems.', { fontSize: '0.8125rem', ...muted }),
+        ]),
+        el('Card', { styles: center }, [
+          el('Avatar', { props: { src: photo('coding', 400, 400), name: 'Devon Lee', subtitle: 'CTO', size: 'large', showText: false } }),
+          heading('Devon Lee', 'h4'),
+          text('Chief Technology Officer', muted),
+          text('Distinguished engineer and open source maintainer.', { fontSize: '0.8125rem', ...muted }),
+        ]),
+        el('Card', { styles: center }, [
+          el('Avatar', { props: { src: photo('office', 400, 400), name: 'Zoe Nakamura', subtitle: 'Head of Growth', size: 'large', showText: false } }),
+          heading('Zoe Nakamura', 'h4'),
+          text('Head of Growth', muted),
+          text('Leading user acquisition and viral product loops.', { fontSize: '0.8125rem', ...muted }),
+        ]),
+        el('Card', { styles: center }, [
+          el('Avatar', { props: { src: photo('team', 400, 400), name: 'Liam Hughes', subtitle: 'Customer Success', size: 'large', showText: false } }),
+          heading('Liam Hughes', 'h4'),
+          text('Head of Customer Success', muted),
+          text('Empowering customers with round-the-clock guidance.', { fontSize: '0.8125rem', ...muted }),
+        ]),
+      ]),
+    ]),
+  },
 ];
 
 export interface SectionNodes {

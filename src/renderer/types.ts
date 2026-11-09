@@ -41,7 +41,7 @@ export interface BlockRenderProps {
   ctx: RenderContext;
 }
 
-export type FieldType = 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'color' | 'image' | 'url' | 'menu' | 'placement' | 'project' | 'icon';
+export type FieldType = 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'color' | 'image' | 'video' | 'url' | 'menu' | 'placement' | 'project' | 'icon';
 
 export interface BlockField {
   key: string;

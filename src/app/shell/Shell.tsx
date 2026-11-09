@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { BarChart3, BookOpen, Crown, Image, LayoutDashboard, LayoutTemplate, LifeBuoy, Loader2, LogOut, Moon, PanelLeft, Palette, Settings, ShieldCheck, Sun, Users } from 'lucide-react';
+import { BarChart3, BookOpen, ChevronDown, Crown, Image, LayoutDashboard, LayoutTemplate, LifeBuoy, Loader2, LogOut, Moon, PanelLeft, Palette, Settings, ShieldCheck, Sun, Users } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
 import { isLocalBackend } from '../../data';
+import { AuthUser } from '../../data/services';
 import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
 import { Icon } from '../shared/Icon';
 import { DashboardSkeleton } from '../shared/ui';
+import { GoogleTranslateSelector } from '../shared/GoogleTranslate';
 import { useIsSuperAdmin } from '../admin/AdminPage';
 import { initials } from '../shared/format';
 import { useTheme } from '../theme';
@@ -51,6 +53,95 @@ const Group: React.FC<{ label: string; collapsed: boolean; children: React.React
 );
 
 const iconSize = 'w-[18px] h-[18px]';
+
+const HeaderProfileMenu: React.FC<{
+  user: AuthUser | null;
+  onSignOut: () => void;
+  isSigningOut: boolean;
+}> = ({ user, onSignOut, isSigningOut }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const { workspace } = useWorkspace();
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        data-tour="profile"
+        aria-label="Account menu"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 p-1 rounded-full border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-white dark:bg-slate-800 transition-colors shadow-sm"
+      >
+        <span aria-hidden="true" className="w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold text-white bg-gradient-to-br from-indigo-500 to-fuchsia-500 shadow-sm">
+          {initials(user?.fullName, user?.email)}
+        </span>
+        <span className="hidden md:block pr-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[120px]">
+          {user?.fullName || 'My Account'}
+        </span>
+        <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden md:block" />
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} aria-hidden="true" />
+          <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 p-2 space-y-1 font-sans">
+            <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800">
+              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.fullName || 'User'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+              {workspace && (
+                <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                  {workspace.name}
+                </span>
+              )}
+            </div>
+
+            <Link
+              to={ROUTES.profile}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Users className="w-4 h-4 text-slate-400" />
+              <span>Profile & Password</span>
+            </Link>
+
+            <Link
+              to={ROUTES.plans}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Crown className="w-4 h-4 text-amber-500" />
+              <span>Subscription & Plans</span>
+            </Link>
+
+            <Link
+              to={ROUTES.support}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              <LifeBuoy className="w-4 h-4 text-slate-400" />
+              <span>Support & Help</span>
+            </Link>
+
+            <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                disabled={isSigningOut}
+                onClick={() => {
+                  setIsOpen(false);
+                  onSignOut();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+              >
+                {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+                <span>Log out</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export const Shell: React.FC = () => {
   const { auth } = useServices();
@@ -140,7 +231,6 @@ export const Shell: React.FC = () => {
           <Group label="Workspace" collapsed={collapsed}>
             <SideLink to={ROUTES.analytics} collapsed={collapsed} label="Analytics" icon={<BarChart3 className={iconSize} aria-hidden="true" />} />
             <SideLink to={ROUTES.team} collapsed={collapsed} label="Team" icon={<Users className={iconSize} aria-hidden="true" />} />
-            <SideLink to={ROUTES.plans} collapsed={collapsed} label="Plans" icon={<Crown className={iconSize} aria-hidden="true" />} />
             <SideLink to={ROUTES.settings} collapsed={collapsed} label="Settings" icon={<Settings className={iconSize} aria-hidden="true" />} />
           </Group>
           <Group label="Help" collapsed={collapsed}>
@@ -149,34 +239,70 @@ export const Shell: React.FC = () => {
           </Group>
         </nav>
 
-        <div className={`shrink-0 border-t border-slate-200 dark:border-slate-800 ${collapsed ? 'p-2 space-y-1' : 'p-2'}`}>
-          {isLocalBackend && !collapsed && (
-            <p role="note" title="Everything is saved only in this browser. Connect Supabase to go live." className="mb-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-500/10">
-              Demo mode: saved in this browser only
+        {isLocalBackend && !collapsed && (
+          <div className="shrink-0 p-2 border-t border-slate-200 dark:border-slate-800">
+            <p role="note" title="Everything is saved only in this browser. Connect Supabase to go live." className="px-2 py-1 rounded-md text-[11px] font-medium text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-500/10">
+              Demo mode: saved in this browser
             </p>
-          )}
-          <div className={collapsed ? 'flex flex-col items-center gap-1' : 'flex items-center gap-0.5'}>
-            <Link to={ROUTES.profile} data-tour="profile" aria-label="Your profile" title={collapsed ? 'Your profile' : undefined} className={`flex items-center gap-2 min-w-0 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${collapsed ? 'p-1' : 'flex-1 p-1.5'}`}>
-              <span aria-hidden="true" className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[11px] font-bold text-white bg-gradient-to-br from-indigo-500 to-fuchsia-500">{initials(user?.fullName, user?.email)}</span>
-              {!collapsed && (
-                <span className="min-w-0">
-                  <span className="block text-xs font-semibold truncate">{user?.fullName || 'Your profile'}</span>
-                  <span className="block text-[11px] truncate text-slate-500 dark:text-slate-400">{user?.email}</span>
-                </span>
-              )}
-            </Link>
-            <button type="button" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} title={theme === 'dark' ? 'Use light theme' : 'Use dark theme'} className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <button type="button" disabled={isSigningOut} onClick={handleSignOut} aria-label="Log out" title="Log out" className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 disabled:opacity-60">
-              {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <LogOut className="w-4 h-4" aria-hidden="true" />}
-            </button>
           </div>
-        </div>
+        )}
       </aside>
 
-      <main className="relative flex-1 min-w-0 overflow-y-auto">
-        <div className="px-6 py-6">
+      <main className="relative flex-1 min-w-0 flex flex-col overflow-hidden">
+        {/* Sleek Modern Application Header with Profile, Plan, Theme, and Translation */}
+        <header className="h-14 shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between gap-4 z-10">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
+              {workspace?.name ? `Workspace: ${workspace.name}` : 'Workspace'}
+            </span>
+            <span className="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              Active
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Google Translation Global Selector */}
+            <GoogleTranslateSelector variant="header" />
+
+            {/* Current Plan Badge shifted to Header */}
+            <Link
+              to={ROUTES.plans}
+              title="Manage your subscription and usage limits"
+              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-900 dark:from-amber-950/40 dark:to-orange-950/40 dark:border-amber-800/60 dark:text-amber-200 hover:border-amber-400 dark:hover:border-amber-500 transition-all shadow-sm"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" aria-hidden="true" />
+              <span className="capitalize">{workspace?.plan ? `${workspace.plan} Plan` : 'Free Plan'}</span>
+            </Link>
+
+            {/* Dark / Light Theme Toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
+              title={theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </button>
+
+            {/* Direct 1-click Log out button */}
+            <button
+              type="button"
+              disabled={isSigningOut}
+              onClick={handleSignOut}
+              aria-label="Log out"
+              title="Log out"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-400 dark:hover:bg-rose-950/30 transition-colors disabled:opacity-60"
+            >
+              {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <LogOut className="w-4 h-4" aria-hidden="true" />}
+            </button>
+
+            {/* Proper Profile Menu on Header */}
+            <HeaderProfileMenu user={user} onSignOut={handleSignOut} isSigningOut={isSigningOut} />
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-6 py-6">
           <NudgeBanner />
           {isLoading ? <DashboardSkeleton /> : <Outlet />}
         </div>

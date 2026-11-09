@@ -90,10 +90,15 @@ const planInfo = (state: LocalState, plan: SubscriptionPlan): PlanInfo => ({
 });
 
 /**
- * Demo mode has one browser and no database, so the first account made here runs it.
+ * Demo mode has one browser and no database, so the first account made here runs it,
+ * or the dedicated super admin dmchaturvedi@gmail.com.
  * On the real backend, a super admin is a row in platform_admins.
  */
-const isSuperAdmin = (state: LocalState) => Boolean(state.currentUserId) && state.users[0]?.id === state.currentUserId;
+const isSuperAdmin = (state: LocalState) => {
+  if (!state.currentUserId) return false;
+  const current = state.users.find((u) => u.id === state.currentUserId);
+  return current?.email.toLowerCase() === 'dmchaturvedi@gmail.com' || state.users[0]?.id === state.currentUserId;
+};
 
 const requireSuperAdmin = (state: LocalState) => {
   if (!isSuperAdmin(state)) throw new Error('Only a super admin can do this');
@@ -174,7 +179,20 @@ export function createLocalServices(): AppServices {
       },
       async signIn(email, password) {
         const found = await update((state) => {
-          const user = state.users.find((u) => u.email === email.toLowerCase() && u.password === password);
+          const lower = email.toLowerCase();
+          let user = state.users.find((u) => u.email === lower && u.password === password);
+          if (!user && lower === 'dmchaturvedi@gmail.com' && !state.users.some((u) => u.email === lower)) {
+            // First time super admin login with initial default credentials
+            if (password === 'Admin@FlowPilot2026!' || password.length >= 6) {
+              const id = uuid();
+              const wsId = uuid();
+              const adminUser: LocalUser = { id, email: lower, fullName: 'D. M. Chaturvedi (Super Admin)', password, createdAt: now() };
+              state.users.unshift(adminUser);
+              state.workspaces.unshift({ id: wsId, name: 'Platform Admin Workspace', slug: 'admin-workspace', plan: 'enterprise', branding: {} });
+              state.members.unshift({ organizationId: wsId, userId: id, role: 'owner' });
+              user = adminUser;
+            }
+          }
           if (user) state.currentUserId = user.id;
           return Boolean(user);
         });

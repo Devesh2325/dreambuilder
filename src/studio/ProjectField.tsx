@@ -54,7 +54,13 @@ export const ProjectField: React.FC<{ node: DocNode; field: BlockField }> = ({ n
         </p>
       )}
       {chosen && <Link to={ROUTES.studio(chosen.id)} target="_blank" className="mt-2 inline-block text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Edit "{chosen.title}"</Link>}
-      {list.isSuccess && list.data?.length === 0 && <p className="mt-2 text-[13px] text-slate-500 dark:text-slate-400">You don't have any forms, demos, banners, FAQs, menus or tours yet. Create one first, and it appears here.</p>}
+      <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+        <span className="text-slate-500 dark:text-slate-400">Need another demo?</span>
+        <Link to={ROUTES.create('demo')} target="_blank" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+          + Create new demo
+        </Link>
+      </div>
+      {list.isSuccess && list.data?.length === 0 && <p className="mt-2 text-[13px] text-slate-500 dark:text-slate-400">You don't have any forms, demos, banners, FAQs, menus or tours yet. Click "+ Create new demo" above to get started.</p>}
     </div>
   );
 };

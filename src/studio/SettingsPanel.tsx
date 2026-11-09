@@ -4,7 +4,7 @@ import { DEFAULT_TRIGGERS, DEVICES, DocNode, ProjectSettings, Triggers } from '.
 import { MODULES } from '../core/modules';
 import { getAncestors } from '../core/tree';
 import { hasToken, resolveString, resolveValue, VariableDef, VariableValues } from '../core/variables';
-import { ImageInput } from '../app/shared/VariableForm';
+import { ImageInput, VideoInput } from '../app/shared/VariableForm';
 import { pagesOf } from '../experience/SiteView';
 import { BLOCK_META } from '../renderer/blockMeta';
 import { IconShape } from '../renderer/blocks';
@@ -404,6 +404,8 @@ const PropField: React.FC<{ node: DocNode; field: BlockField; pickSelector?: () 
         </select>
       ) : field.type === 'image' ? (
         <ImageInput id={fieldId} value={text} onChange={set} />
+      ) : field.type === 'video' ? (
+        <VideoInput id={fieldId} value={text} onChange={set} />
       ) : (
         <input id={fieldId} type={field.type === 'number' ? 'number' : 'text'} disabled={readOnly} className={fieldClass} value={friendly} onChange={(e) => (field.type === 'number' ? set(e.target.value === '' ? '' : Number(e.target.value)) : setFriendly(e.target.value))} />
       )}

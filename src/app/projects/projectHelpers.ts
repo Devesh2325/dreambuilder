@@ -2,8 +2,11 @@ import { DEFAULT_TRIGGERS, ProjectSettings } from '../../core/schema';
 import { expandContent, RenderNode } from '../../core/variables';
 import { AppServices, DocumentRecord, ProjectRecord, SubmissionRecord } from '../../data/services';
 
-export const embedSnippet = (origin: string, projectId: string) =>
-  `<script src="${origin}/flowpilot.js" data-project-id="${projectId}" defer></script>`;
+export const embedSnippet = (origin: string, projectId: string, options?: { language?: string; device?: string }) => {
+  const langAttr = options?.language && options.language !== 'en' ? ` data-language="${options.language}"` : '';
+  const devAttr = options?.device && options.device !== 'desktop' ? ` data-device="${options.device}"` : '';
+  return `<script src="${origin}/flowpilot.js" data-project-id="${projectId}"${langAttr}${devAttr} defer></script>`;
+};
 
 export const inlineSnippet = (projectId: string) => `<div data-flowpilot="${projectId}"></div>`;
 

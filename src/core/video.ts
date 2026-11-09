@@ -6,13 +6,20 @@ export type VideoSource = { kind: 'iframe' | 'file'; src: string };
  */
 export function parseVideoUrl(value: unknown): VideoSource | null {
   if (typeof value !== 'string' || !value.trim()) return null;
+  const trimmed = value.trim();
+
+  // Support uploaded videos via data URL or object URL
+  if (trimmed.startsWith('data:video/') || trimmed.startsWith('blob:')) {
+    return { kind: 'file', src: trimmed };
+  }
+
   let url: URL;
   try {
-    url = new URL(value.trim());
+    url = new URL(trimmed);
   } catch {
     return null;
   }
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+  if (url.protocol !== 'https:') return null;
   const host = url.hostname.replace(/^(www|m|music)\./, '');
   const path = url.pathname.split('/').filter(Boolean);
   const youtube = (id: string | null | undefined): VideoSource | null =>
@@ -28,6 +35,6 @@ export function parseVideoUrl(value: unknown): VideoSource | null {
     const id = path[path.length - 1];
     return id && /^\d{5,12}$/.test(id) ? { kind: 'iframe', src: `https://player.vimeo.com/video/${id}` } : null;
   }
-  if (url.protocol === 'https:' && /\.(mp4|webm|ogg)$/i.test(url.pathname)) return { kind: 'file', src: url.href };
+  if (url.protocol === 'https:' && /\.(mp4|webm|ogg)($|\?)/i.test(url.pathname)) return { kind: 'file', src: url.href };
   return null;
 }

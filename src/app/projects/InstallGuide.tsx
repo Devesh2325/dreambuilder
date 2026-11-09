@@ -4,7 +4,8 @@ import { Check, Copy, ExternalLink } from 'lucide-react';
 import { MODULES, moduleNoun } from '../../core/modules';
 import { ProjectRecord } from '../../data/services';
 import { publicSitePath, ROUTES } from '../routes';
-import { cardClass, primaryButton } from '../shared/ui';
+import { cardClass, inputClass, primaryButton } from '../shared/ui';
+import { GLOBAL_LANGUAGES } from '../shared/GoogleTranslate';
 import { DomainSetup } from './DomainSetup';
 import { MobileSteps } from './MobileSteps';
 import { embedSnippet, inlineSnippet } from './projectHelpers';
@@ -143,11 +144,50 @@ const PLATFORMS: Platform[] = [
 
 const ScriptSteps: React.FC<{ project: ProjectRecord }> = ({ project }) => {
   const [platformId, setPlatformId] = useState('html');
+  const [lang, setLang] = useState(project.settings.targetLanguage ?? 'en');
+  const [device, setDevice] = useState(project.settings.targetDevice ?? 'desktop');
   const platform = PLATFORMS.find((item) => item.id === platformId)!;
-  const snippet = embedSnippet(window.location.origin, project.id);
+  const snippet = embedSnippet(window.location.origin, project.id, { language: lang, device });
+
   return (
     <>
       <p>Where is your site built? Choose it, and follow the steps.</p>
+
+      {/* Language & Device Integration Check */}
+      <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Target Language
+          </label>
+          <select
+            className={inputClass}
+            value={lang}
+            onChange={(e) => setLang(e.target.value)}
+          >
+            {GLOBAL_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.native} ({l.label})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Target Device
+          </label>
+          <select
+            className={inputClass}
+            value={device}
+            onChange={(e) => setDevice(e.target.value as 'desktop' | 'tablet' | 'mobile')}
+          >
+            <option value="desktop">Desktop</option>
+            <option value="tablet">Tablet</option>
+            <option value="mobile">Mobile (Smartphone)</option>
+          </select>
+        </div>
+      </div>
+
       <div role="tablist" aria-label="Where your site is built" className="no-scrollbar flex flex-wrap gap-1.5">
         {PLATFORMS.map((item) => (
           <button

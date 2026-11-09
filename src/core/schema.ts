@@ -101,6 +101,8 @@ export interface TourSettings {
   finishUrl?: string;
   /** How long to wait for an element to appear, in seconds. */
   waitSeconds?: number;
+  /** Optional interactive demo ID integrated with this tour. */
+  integratedDemoId?: string;
 }
 
 /** A list loaded from the customer's own API. Its address is public, since browsers load it. */
@@ -127,6 +129,10 @@ export interface ProjectSettings {
   /** Variables added in the editor, or carried over from a team template. */
   variableDefs?: VariableDef[];
   dataSources?: DataSource[];
+  /** Target device selected on creation: desktop, tablet, or mobile. */
+  targetDevice?: 'desktop' | 'tablet' | 'mobile';
+  /** Target language selected on creation (e.g. en, hi, es, fr, de, ja). */
+  targetLanguage?: string;
 }
 
 export type DocumentKind = 'page' | 'global' | 'experience';

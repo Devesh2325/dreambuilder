@@ -59,6 +59,122 @@ export const ImageInput: React.FC<{
   );
 };
 
+export const VideoInput: React.FC<{
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  describedBy?: string;
+}> = ({ id, value, onChange, describedBy }) => {
+  const { assets } = useServices();
+  const { workspace } = useWorkspace();
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sourceType, setSourceType] = useState<'url' | 'upload'>(() =>
+    value.startsWith('data:video/') || value.startsWith('blob:') ? 'upload' : 'url'
+  );
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    setIsUploading(true);
+    setError(null);
+    try {
+      if (workspace) {
+        try {
+          const asset = await assets.upload(workspace.organizationId, file);
+          onChange(asset.url);
+          return;
+        } catch {
+          // fallback to data url
+        }
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          onChange(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-semibold">
+        <button
+          type="button"
+          className={`flex-1 py-1 rounded-md transition-colors ${sourceType === 'url' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+          onClick={() => setSourceType('url')}
+        >
+          YouTube / Link
+        </button>
+        <button
+          type="button"
+          className={`flex-1 py-1 rounded-md transition-colors ${sourceType === 'upload' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
+          onClick={() => setSourceType('upload')}
+        >
+          Upload Video
+        </button>
+      </div>
+
+      {sourceType === 'url' ? (
+        <div className="space-y-1.5">
+          <input
+            id={id}
+            type="url"
+            className={inputClass}
+            value={value.startsWith('data:') ? '' : value}
+            placeholder="https://youtube.com/watch?v=... or .mp4"
+            aria-describedby={describedBy}
+            onChange={(event) => onChange(event.target.value)}
+          />
+          <div className="flex gap-2 text-xs">
+            <button
+              type="button"
+              className="text-indigo-600 dark:text-indigo-400 hover:underline"
+              onClick={() => onChange('https://www.youtube.com/watch?v=ScMzIvxBSi4')}
+            >
+              Use demo YouTube video
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400 rounded-lg p-3 text-center cursor-pointer transition-colors bg-slate-50 dark:bg-slate-800/40">
+            <Upload className="w-5 h-5 text-indigo-600 dark:text-indigo-400 mb-1" aria-hidden="true" />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+              {isUploading ? 'Processing video...' : 'Select MP4, WebM or MOV video'}
+            </span>
+            <span className="text-[11px] text-slate-400">Click to browse your computer</span>
+            <input
+              type="file"
+              accept="video/mp4,video/webm,video/ogg,video/quicktime"
+              className="sr-only"
+              onChange={(event) => handleFile(event.target.files?.[0])}
+            />
+          </label>
+          {value && (
+            <div className="flex items-center justify-between text-xs px-2 py-1 rounded bg-slate-100 dark:bg-slate-800">
+              <span className="truncate max-w-[200px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Video ready</span>
+              <button
+                type="button"
+                className="text-rose-500 hover:underline"
+                onClick={() => onChange('')}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
+    </div>
+  );
+};
+
 /** Items are named by their first bit of text, which says more than a number. */
 const itemTitle = (def: VariableDef, item: Record<string, unknown>, index: number) => {
   const first = def.itemFields?.find((field) => field.type === 'text' || field.type === 'longtext');
