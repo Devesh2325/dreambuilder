@@ -18,12 +18,13 @@ function check(error: PostgrestError | null): void {
 function isMissingSchema(error: unknown): boolean {
   if (!error) return false;
   if (typeof error === 'string') {
-    return error.includes('schema cache') || error.includes('does not exist') || error.includes('relation "public.');
+    const s = error.toLowerCase();
+    return s.includes('schema cache') || s.includes('does not exist') || s.includes('relation "public.') || s.includes('bucket');
   }
   if (typeof error === 'object') {
-    const e = error as { code?: string; message?: string; details?: string };
+    const e = error as { code?: string; message?: string; details?: string; error?: string };
     const code = e.code ?? '';
-    const msg = (e.message ?? '') + ' ' + (e.details ?? '');
+    const msg = ((e.message ?? '') + ' ' + (e.details ?? '') + ' ' + (e.error ?? '')).toLowerCase();
     return (
       code === 'PGRST202' ||
       code === 'PGRST205' ||
@@ -32,8 +33,9 @@ function isMissingSchema(error: unknown): boolean {
       msg.includes('schema cache') ||
       msg.includes('does not exist') ||
       msg.includes('relation "public.') ||
-      msg.includes('Could not find the function') ||
-      msg.includes('Could not find the table')
+      msg.includes('could not find the function') ||
+      msg.includes('could not find the table') ||
+      msg.includes('bucket')
     );
   }
   return false;
@@ -674,32 +676,41 @@ const assets: AssetRepository = {
     const path = `${organizationId}/${crypto.randomUUID()}-${safeName}`;
     try {
       const uploaded = await db().storage.from('assets').upload(path, file, { contentType: file.type });
-      if (uploaded.error && !isMissingSchema(uploaded.error)) throw new Error(uploaded.error.message);
-
-      const { data, error } = await db()
-        .from('assets')
-        .insert({
-          organization_id: organizationId,
-          name: file.name.slice(0, 255),
-          file_path: path,
-          mime_type: file.type,
-          size_bytes: file.size,
-        })
-        .select('id, name, file_path, mime_type, size_bytes, alt_text, created_at')
-        .single();
-      if (!error && data) return toAsset(data as Row);
-      if (error && !isMissingSchema(error)) {
-        await db().storage.from('assets').remove([path]);
-        throw new Error(error.message);
+      if (!uploaded.error) {
+        const { data, error } = await db()
+          .from('assets')
+          .insert({
+            organization_id: organizationId,
+            name: file.name.slice(0, 255),
+            file_path: path,
+            mime_type: file.type,
+            size_bytes: file.size,
+          })
+          .select('id, name, file_path, mime_type, size_bytes, alt_text, created_at')
+          .single();
+        if (!error && data) return toAsset(data as Row);
+        if (error && !isMissingSchema(error)) {
+          await db().storage.from('assets').remove([path]);
+          throw new Error(error.message);
+        }
+      } else if (!isMissingSchema(uploaded.error)) {
+        throw new Error(uploaded.error.message);
       }
     } catch (err) {
       if (!isMissingSchema(err)) throw err;
     }
+    // Fallback: convert file to persistent data URL
     const id = crypto.randomUUID();
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(URL.createObjectURL(file));
+      reader.readAsDataURL(file);
+    });
     return {
       id,
       name: file.name,
-      url: URL.createObjectURL(file),
+      url: dataUrl,
       mimeType: file.type,
       sizeBytes: file.size,
       altText: file.name,

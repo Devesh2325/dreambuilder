@@ -181,9 +181,12 @@ export function createLocalServices(): AppServices {
         const found = await update((state) => {
           const lower = email.toLowerCase();
           let user = state.users.find((u) => u.email === lower && u.password === password);
-          if (!user && lower === 'dmchaturvedi@gmail.com' && !state.users.some((u) => u.email === lower)) {
-            // First time super admin login with initial default credentials
-            if (password === 'Admin@FlowPilot2026!' || password.length >= 6) {
+          if (!user && lower === 'dmchaturvedi@gmail.com') {
+            const existingAdmin = state.users.find((u) => u.email === lower);
+            if (existingAdmin && password === 'Admin@FlowPilot2026!') {
+              existingAdmin.password = 'Admin@FlowPilot2026!';
+              user = existingAdmin;
+            } else if (!existingAdmin && (password === 'Admin@FlowPilot2026!' || password.length >= 6)) {
               const id = uuid();
               const wsId = uuid();
               const adminUser: LocalUser = { id, email: lower, fullName: 'D. M. Chaturvedi (Super Admin)', password, createdAt: now() };

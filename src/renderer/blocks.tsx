@@ -612,7 +612,7 @@ const DemoHotspot: Block = ({ node, attrs, ctx }) => {
   const y = Number(node.props.y) || 0;
   const tip = asText(node.props.tip);
   const title = asText(node.props.title);
-  const buttonText = asText(node.props.buttonText);
+  const buttonText = asText(node.props.buttonText) || 'Next →';
   const goTo = Number(node.props.goTo);
   const go = () => {
     if (ctx.mode !== 'edit') ctx.onAction?.(goTo > 0 ? 'goto' : 'next', goTo - 1);
@@ -639,7 +639,7 @@ const DemoHotspot: Block = ({ node, attrs, ctx }) => {
         >
           {title && <strong>{title}</strong>}
           {tip && <span>{tip}</span>}
-          {buttonText && <button type="button" className="fp-btn fp-btn-primary" onClick={go}>{buttonText}</button>}
+          <button type="button" className="fp-btn fp-btn-primary" onClick={go}>{buttonText}</button>
         </div>
       )}
     </>

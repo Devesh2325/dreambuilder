@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Outlet, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { MODULE_LIST } from '../core/modules';
 import { StudioPage } from '../studio/StudioPage';
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SignUpPage, SuperAdminLoginPage } from './auth/AuthPages';
@@ -40,7 +40,8 @@ export const AppRoutes: React.FC = () => (
   <Routes>
     <Route element={<RedirectIfAuthenticated />}>
       <Route path="login" element={<LoginPage />} />
-      <Route path="admin/login" element={<SuperAdminLoginPage />} />
+      <Route path="system-console-gate-x92" element={<SuperAdminLoginPage />} />
+      <Route path="admin/login" element={<Navigate to="/login" replace />} />
       <Route path="signup" element={<SignUpPage />} />
       <Route path="forgot-password" element={<ForgotPasswordPage />} />
     </Route>

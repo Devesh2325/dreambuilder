@@ -1734,3 +1734,29 @@ begin
   end if;
 end;
 $$;
+
+
+-- ========================================
+-- Storage Bucket: assets
+-- ========================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'assets',
+  'assets',
+  true,
+  52428800,
+  array['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml', 'video/mp4', 'video/webm']
+)
+on conflict (id) do update set public = true;
+
+alter table storage.objects enable row level security;
+
+drop policy if exists "Assets are publicly viewable" on storage.objects;
+create policy "Assets are publicly viewable" on storage.objects for select using (bucket_id = 'assets');
+
+drop policy if exists "Authenticated users can upload assets" on storage.objects;
+create policy "Authenticated users can upload assets" on storage.objects for insert to authenticated with check (bucket_id = 'assets');
+
+drop policy if exists "Authenticated users can delete assets" on storage.objects;
+create policy "Authenticated users can delete assets" on storage.objects for delete to authenticated using (bucket_id = 'assets');
+

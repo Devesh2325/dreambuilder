@@ -278,10 +278,13 @@ const DemoPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
   }, [index]);
 
   const goTo = (next: number) => {
-    if (next >= screens.length || next < 0 || Number.isNaN(next)) {
+    if (next >= screens.length || Number.isNaN(next)) {
       host.track?.('demo_completed');
       setIsDone(true);
       host.onFinish?.('completed');
+    } else if (next < 0) {
+      setIndex(0);
+      setIsDone(false);
     } else {
       setIsDone(false);
       setIndex(next);
@@ -290,29 +293,96 @@ const DemoPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
 
   const ctx: RenderContext = {
     ...ctxBase,
-    onAction: (action, value) => goTo(action === 'goto' ? Number(value) : index + 1),
+    onAction: (action, value) => {
+      if (action === 'goto') goTo(Number(value));
+      else if (action === 'prev') goTo(index - 1);
+      else goTo(index + 1);
+    },
   };
 
   if (!screens[index]) return null;
+  const progressPercent = Math.round(((index + 1) / Math.max(screens.length, 1)) * 100);
+
   return (
-    <div>
+    <div className="fp-demo-player-container">
       <div className="fp-demo-bar">
-        <span>Step {index + 1} of {screens.length}</span>
-        <div className="fp-demo-dots" aria-hidden="true">
-          {screens.map((screen, i) => <span key={screen.key} data-active={i === index} />)}
+        <div className="fp-demo-chapters">
+          {screens.map((screen, i) => {
+            const title = (screen.props.title as string) || (screen.props.alt as string) || `Screen ${i + 1}`;
+            const isActive = i === index && !isDone;
+            const isPast = i < index;
+            return (
+              <button
+                key={screen.key || i}
+                type="button"
+                className="fp-demo-chapter-btn"
+                data-active={isActive}
+                data-completed={isPast}
+                onClick={() => goTo(i)}
+                title={title}
+              >
+                <span className="fp-demo-chapter-num">{isPast ? '✓' : i + 1}</span>
+                <span className="fp-demo-chapter-label">{title}</span>
+              </button>
+            );
+          })}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {isDone ? (
-            <button type="button" className="fp-btn fp-btn-primary" onClick={() => goTo(0)}>Restart</button>
-          ) : (
-            <>
-              {index > 0 && <button type="button" className="fp-btn fp-btn-secondary" onClick={() => goTo(index - 1)}>Back</button>}
-              <button type="button" className="fp-btn fp-btn-primary" onClick={() => goTo(index + 1)}>{index === screens.length - 1 ? 'Finish' : 'Next'}</button>
-            </>
-          )}
+        <div className="fp-demo-actions">
+          <span className="fp-demo-step-text">Step {Math.min(index + 1, screens.length)} of {screens.length}</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {index > 0 && !isDone && (
+              <button type="button" className="fp-btn fp-btn-secondary" onClick={() => goTo(index - 1)}>
+                Back
+              </button>
+            )}
+            {isDone ? (
+              <button type="button" className="fp-btn fp-btn-primary" onClick={() => goTo(0)}>
+                Restart
+              </button>
+            ) : (
+              <button type="button" className="fp-btn fp-btn-primary" onClick={() => goTo(index + 1)}>
+                {index === screens.length - 1 ? 'Finish' : 'Next'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
-      <RenderedNode node={screens[index]} ctx={ctx} />
+      <div className="fp-demo-progress-track">
+        <div className="fp-demo-progress-fill" style={{ width: `${isDone ? 100 : progressPercent}%` }} />
+      </div>
+      <div style={{ position: 'relative' }}>
+        <RenderedNode node={screens[index]} ctx={ctx} />
+        {isDone && (
+          <div className="fp-demo-complete-overlay">
+            <div className="fp-demo-complete-card">
+              <div className="fp-demo-complete-icon">🎉</div>
+              <h3 className="fp-heading fp-h3">Demo Completed!</h3>
+              <p style={{ color: 'var(--fp-muted)', margin: '12px 0 24px', fontSize: '0.9375rem' }}>
+                You've completed the interactive product walkthrough. Ready to see more or build your own?
+              </p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  className="fp-btn fp-btn-secondary"
+                  onClick={() => goTo(0)}
+                >
+                  Start Over
+                </button>
+                <button
+                  type="button"
+                  className="fp-btn fp-btn-primary"
+                  onClick={() => {
+                    if (host.goToPath) host.goToPath('/');
+                    else if (host.onFinish) host.onFinish('completed');
+                  }}
+                >
+                  Get Started Free
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

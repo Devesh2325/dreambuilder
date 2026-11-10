@@ -261,14 +261,36 @@ const formTemplates = [
 
 // ---- Demos ------------------------------------------------------------------
 
-const screen = (imageKey: string, x: number, y: number, tip: string): El =>
-  el('DemoScreen', { props: { image: imageKey, alt: 'Product screen' } }, [el('DemoHotspot', { props: { x, y, tip, placement: y > 70 ? 'top' : 'bottom', align: x < 25 ? 'start' : x > 75 ? 'end' : 'center' } })]);
+const screen = (imageKey: string, x: number, y: number, tip: string, title?: string, buttonText?: string): El =>
+  el('DemoScreen', { props: { image: imageKey, alt: title || 'Product screen', title: title || 'Screen' } }, [
+    el('DemoHotspot', { props: { x, y, tip, title, buttonText, placement: y > 70 ? 'top' : 'bottom', align: x < 25 ? 'start' : x > 75 ? 'end' : 'center' } }),
+  ]);
 
 const screenVar = (key: string, label: string, kind: Parameters<typeof mockScreen>[0], accent?: string): VariableDef => ({
   key, label, type: 'image', required: true, default: mockScreen(kind, accent), group: 'Screenshots', help: 'Replace with a screenshot of your product.',
 });
 
 const demoTemplates = [
+  make('demo', 'userpilot-tour', 'Userpilot-Style Product Tour', 'Interactive SaaS walkthrough with chapter tabs, pulsing beacons, and lead conversion.', ['userpilot', 'tour', 'onboarding', 'saas'], THEME_INDIGO, [
+    screenVar('screen.overview', 'Overview Screen', 'dashboard', '#6366f1'),
+    screenVar('screen.builder', 'Feature Builder', 'detail', '#6366f1'),
+    screenVar('screen.analytics', 'Analytics Dashboard', 'report', '#6366f1'),
+    screenVar('screen.success', 'Results & Activation', 'success', '#6366f1'),
+    textVar('title.overview', 'Step 1 Title', '1. Product Overview', 'Steps'),
+    textVar('tip.overview', 'Step 1 Tip', 'Welcome to the dashboard. Click the beacon to explore the in-app builder.', 'Steps'),
+    textVar('title.builder', 'Step 2 Title', '2. In-App Builder', 'Steps'),
+    textVar('tip.builder', 'Step 2 Tip', 'Build flows and modals without writing any code.', 'Steps'),
+    textVar('title.analytics', 'Step 3 Title', '3. Product Analytics', 'Steps'),
+    textVar('tip.analytics', 'Step 3 Tip', 'Track drop-offs, goal completions, and user engagement live.', 'Steps'),
+    textVar('title.success', 'Step 4 Title', '4. Activation & Growth', 'Steps'),
+    textVar('tip.success', 'Step 4 Tip', 'Deliver personalized user journeys and boost conversions.', 'Steps'),
+  ], [experience([
+    screen('{{screen.overview}}', 18, 22, '{{tip.overview}}', '{{title.overview}}'),
+    screen('{{screen.builder}}', 32, 45, '{{tip.builder}}', '{{title.builder}}'),
+    screen('{{screen.analytics}}', 75, 30, '{{tip.analytics}}', '{{title.analytics}}'),
+    screen('{{screen.success}}', 52, 60, '{{tip.success}}', '{{title.success}}'),
+  ])]),
+
   make('demo', 'walkthrough', 'Product walkthrough', 'Three clickable screens showing your main flow.', ['walkthrough', 'sales'], THEME_INDIGO, [
     screenVar('screen.one', 'First screen', 'dashboard'),
     screenVar('screen.two', 'Second screen', 'list'),
@@ -277,9 +299,9 @@ const demoTemplates = [
     textVar('tip.two', 'Second tip', 'Then choose an option', 'Tips'),
     textVar('tip.three', 'Last tip', 'And see the result', 'Tips'),
   ], [experience([
-    screen('{{screen.one}}', 12, 15, '{{tip.one}}'),
-    screen('{{screen.two}}', 90, 5, '{{tip.two}}'),
-    screen('{{screen.three}}', 58, 68, '{{tip.three}}'),
+    screen('{{screen.one}}', 12, 15, '{{tip.one}}', '1. Dashboard'),
+    screen('{{screen.two}}', 90, 5, '{{tip.two}}', '2. Options'),
+    screen('{{screen.three}}', 58, 68, '{{tip.three}}', '3. Results'),
   ])]),
 
   make('demo', 'feature', 'Single feature demo', 'Two screens to show one feature in action.', ['feature', 'marketing'], THEME_MIDNIGHT, [
@@ -287,7 +309,7 @@ const demoTemplates = [
     screenVar('screen.after', 'After', 'detail', '#7c3aed'),
     textVar('tip.action', 'Tip', 'Click to see the magic', 'Tips'),
     textVar('tip.done', 'Closing tip', "That's it!", 'Tips'),
-  ], [experience([screen('{{screen.before}}', 40, 26, '{{tip.action}}'), screen('{{screen.after}}', 28, 83, '{{tip.done}}')])]),
+  ], [experience([screen('{{screen.before}}', 40, 26, '{{tip.action}}', 'Before'), screen('{{screen.after}}', 28, 83, '{{tip.done}}', 'After')])]),
 
   make('demo', 'dashboard', 'Dashboard tour', 'Explore a dashboard with several stops.', ['dashboard', 'analytics'], THEME_EMERALD, [
     screenVar('screen.overview', 'Overview', 'dashboard', '#059669'),
@@ -297,9 +319,9 @@ const demoTemplates = [
     textVar('tip.report', 'Report tip', 'Share with your team', 'Tips'),
     textVar('tip.share', 'Share tip', 'All done', 'Tips'),
   ], [experience([
-    screen('{{screen.overview}}', 40, 20, '{{tip.overview}}'),
-    screen('{{screen.report}}', 90, 5, '{{tip.report}}'),
-    screen('{{screen.share}}', 58, 68, '{{tip.share}}'),
+    screen('{{screen.overview}}', 40, 20, '{{tip.overview}}', '1. Overview'),
+    screen('{{screen.report}}', 90, 5, '{{tip.report}}', '2. Reports'),
+    screen('{{screen.share}}', 58, 68, '{{tip.share}}', '3. Share'),
   ])]),
 ];
 

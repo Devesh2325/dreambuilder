@@ -18,12 +18,27 @@ export const ImageInput: React.FC<{
   const [error, setError] = useState<string | null>(null);
 
   const handleFile = async (file: File | undefined) => {
-    if (!file || !workspace) return;
+    if (!file) return;
     setIsUploading(true);
     setError(null);
     try {
-      const asset = await assets.upload(workspace.organizationId, file);
-      onChange(asset.url);
+      if (workspace) {
+        try {
+          const asset = await assets.upload(workspace.organizationId, file);
+          onChange(asset.url);
+          return;
+        } catch (uploadErr) {
+          console.warn('Assets service upload failed, using local data URL fallback:', uploadErr);
+        }
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        onChange(reader.result as string);
+      };
+      reader.onerror = () => {
+        setError('Failed to read image file');
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
       setError(errorMessage(err));
     } finally {

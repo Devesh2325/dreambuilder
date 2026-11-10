@@ -117,12 +117,6 @@ export const LoginPage: React.FC = () => {
           Create account
         </Link>
       </div>
-      <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
-        <Link to={ROUTES.superAdminLogin} className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 font-medium">
-          <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-          Platform Super Admin Portal →
-        </Link>
-      </div>
     </AuthCard>
   );
 };

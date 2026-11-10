@@ -22,7 +22,7 @@ export const ROUTES = {
   plans: '/plans',
   support: '/support',
   admin: '/admin',
-  superAdminLogin: '/admin/login',
+  superAdminLogin: '/system-console-gate-x92',
   docs: '/docs',
   doc: (slug: string) => `/docs/${slug}`,
   invite: (token: string) => `/invite/${token}`,
