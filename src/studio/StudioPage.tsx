@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, CloudOff, Eye, LayoutTemplate, Loader2, Monitor, Redo2, Smartphone, Tablet, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Check, CloudOff, Eye, LayoutTemplate, Loader2, Monitor, Redo2, Share2, Smartphone, Tablet, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useDraftEmbedLoader } from '../app/projects/embedLoader';
 import { PublishDialog } from '../app/projects/PublishDialog';
 import { AppTour, useAppTour } from '../app/tours/AppTour';
@@ -130,6 +130,7 @@ const Editor: React.FC = () => {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [copiedLiveLink, setCopiedLiveLink] = useState(false);
   const tour = useAppTour('editor', !readOnly);
   const navigate = useNavigate();
   const location = useLocation();
@@ -213,6 +214,23 @@ const Editor: React.FC = () => {
 
         <div data-tour="publish" className="flex items-center justify-end gap-2">
           <GoogleTranslateSelector variant="compact" />
+          {project.status === 'published' && project.slug && (
+            <button
+              type="button"
+              aria-label="Copy share link"
+              title="Copy public link (One Link)"
+              className={`${secondaryButton} !px-2.5 !py-1.5 text-xs flex items-center gap-1.5`}
+              onClick={async () => {
+                const url = `${window.location.origin}/s/${project.slug}`;
+                await navigator.clipboard.writeText(url);
+                setCopiedLiveLink(true);
+                setTimeout(() => setCopiedLiveLink(false), 2000);
+              }}
+            >
+              {copiedLiveLink ? <Check className="w-4 h-4 text-emerald-500" /> : <Share2 className="w-4 h-4" />}
+              <span className="hidden xl:inline">{copiedLiveLink ? 'Copied Link!' : 'Copy Link'}</span>
+            </button>
+          )}
           {!readOnly && (
             <button type="button" aria-label="Save as template" title="Save as template" className={`${secondaryButton} !px-2.5 !py-1.5`} onClick={() => setIsSavingTemplate(true)}>
               <LayoutTemplate className="w-4 h-4" aria-hidden="true" />

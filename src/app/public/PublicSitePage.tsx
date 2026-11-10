@@ -66,18 +66,23 @@ export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
   const navigate = useNavigate();
   const [snapshot, setSnapshot] = useState<PublishedSnapshot | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     setState('loading');
+    setErrorMessage(null);
     (domain ? api.getPublishedSiteByDomain(domain) : api.getPublishedSite(slug))
       .then((result) => {
         if (!active) return;
         setSnapshot(result);
         setState(result ? 'ready' : 'missing');
       })
-      .catch(() => {
-        if (active) setState('error');
+      .catch((err) => {
+        if (active) {
+          setErrorMessage(err instanceof Error ? err.message : null);
+          setState('error');
+        }
       });
     return () => {
       active = false;
@@ -126,7 +131,22 @@ export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
   const host = useMemo<PlayerHost>(() => ({ targetDocument: document, submitForm, track }), [submitForm, track]);
 
   if (state === 'loading') return <div role="status" aria-label="Loading" style={{ minHeight: '100vh', background: '#fff' }} />;
-  if (state === 'error') return <Message title="We couldn't load this page">Please check your connection and try again.</Message>;
+  if (state === 'error') {
+    const isMissingRpc = errorMessage?.toLowerCase().includes('schema cache') || errorMessage?.toLowerCase().includes('get_published_site');
+    return (
+      <Message title="We couldn't load this page">
+        {isMissingRpc ? (
+          <span style={{ display: 'block', maxWidth: 520, margin: '8px auto 0', fontSize: '0.9rem', color: '#64748b', lineHeight: 1.6 }}>
+            The database publication function <code>get_published_site</code> is not in the schema cache yet.
+            <br />
+            If you are the administrator, run <code>supabase/FIX_PUBLISHED_SITE_RPC.sql</code> in your Supabase SQL Editor.
+          </span>
+        ) : (
+          errorMessage || 'Please check your connection and try again.'
+        )}
+      </Message>
+    );
+  }
   if (state === 'missing' || !project) return <Message title="Page not found">This site doesn't exist or isn't published.</Message>;
 
   if (isSite) {

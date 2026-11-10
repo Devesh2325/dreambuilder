@@ -36,3 +36,4 @@ create policy "Authenticated users can delete assets"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'assets');
+

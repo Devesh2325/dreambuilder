@@ -219,21 +219,22 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
   const liveUrl = project.slug ? `${window.location.origin}${publicSitePath(project.slug)}` : null;
   const showsInline = module.delivery === 'inline' || project.settings.position === 'inline';
   const isSite = module.delivery === 'site';
-  const iframeCode = liveUrl ? `<iframe src="${liveUrl}" title="${project.title.replace(/"/g, '&quot;')}" style="width:100%;height:800px;border:0"></iframe>` : '';
+  const iframeCode = liveUrl ? `<iframe src="${liveUrl}" title="${project.title.replace(/"/g, '&quot;')}" width="100%" height="750px" style="border:0;border-radius:12px;width:100%;max-width:100%;box-shadow:0 12px 36px rgba(0,0,0,0.12);" allow="clipboard-write" allowfullscreen></iframe>` : '';
+  const [integrateTab, setIntegrateTab] = useState<'iframe' | 'script'>('iframe');
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px] items-start">
       <section aria-labelledby="install-title" className={`${cardClass} p-6`}>
-        <h2 id="install-title" className="text-lg font-semibold">Put it on your live site</h2>
+        <h2 id="install-title" className="text-lg font-semibold">Share and integrate your {noun}</h2>
         <p className="mt-1 mb-5 text-sm text-slate-500 dark:text-slate-400">
-          {isSite ? `Your ${noun} is hosted for you, so you only need to send people to it.` : `A few steps, and your ${noun} is live on your own site. You only do this once. After that, changes go live when you publish.`}
+          Share your direct One Link with anyone, or integrate it into your site and app using an iframe or script.
         </p>
 
-        {!isPublished && <p role="note" className="mb-5 text-sm rounded-lg px-3 py-2 bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">Publish first. This code won't show anything until then.</p>}
+        {!isPublished && <p role="note" className="mb-5 text-sm rounded-lg px-3 py-2 bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">Publish first. Your link and embed code won't show anything until then.</p>}
 
         <ol>
           <Step number={1} title="Publish it" done={isPublished}>
-            {isPublished ? <p>It's published. Publish again whenever you change something.</p> : (
+            {isPublished ? <p>It's published. Publish again whenever you change something in the editor.</p> : (
               <>
                 <p>Publishing makes the current version public.</p>
                 {canEdit && <button type="button" className={primaryButton} onClick={onPublish}>Publish now</button>}
@@ -241,51 +242,76 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
             )}
           </Step>
 
-          {isSite ? (
-            <>
-              <Step number={2} title="Copy your web address">
-                {isPublished && liveUrl ? <CopyBlock label="Web address" code={liveUrl} /> : <p>You choose your address when you publish.</p>}
-                {isPublished && liveUrl && <a href={liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Open it <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" /></a>}
-              </Step>
-              <Step number={3} title="Send people to it">
-                <p className="font-medium text-slate-800 dark:text-slate-100">Pick whichever suits you:</p>
-                <ul className="space-y-2.5">
-                  <li><strong className="font-semibold">Share the link.</strong> Put it in your email signature, social profiles, ads or QR codes.</li>
-                  <li><strong className="font-semibold">Link from the site you already have.</strong> Add a menu item or button there, and paste the address as its link.</li>
-                  <li><strong className="font-semibold">Show it inside an existing page.</strong> Paste this where it should appear. If it stays blank, your host has blocked it, so use a link instead.</li>
-                </ul>
-                {isPublished && iframeCode && <CopyBlock label="Show it inside a page" code={iframeCode} />}
-              </Step>
-              <Step number={4} title="Use your own domain">
-                <DomainSetup project={project} />
-              </Step>
-              <Step number={5} title="In a mobile app">
-                <MobileSteps project={project} />
-              </Step>
-            </>
-          ) : (
-            <>
-              <Step number={2} title="Add one script to your site">
+          <Step number={2} title="Share your direct link (One Link)" done={isPublished}>
+            {isPublished && liveUrl ? (
+              <div className="space-y-3">
+                <CopyBlock label="Direct Share URL (One Link)" code={liveUrl} />
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  <a href={liveUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                    Open Live in new tab <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                  </a>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-slate-500 dark:text-slate-400">Great for emails, LinkedIn, sales pitches, Notion, or website buttons.</span>
+                </div>
+              </div>
+            ) : (
+              <p>You choose your custom web address when you publish.</p>
+            )}
+          </Step>
+
+          <Step number={3} title="Integrate in code (Embed & In-App)">
+            <p className="font-medium text-slate-800 dark:text-slate-100">Choose how you want to integrate:</p>
+            
+            <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+              <button
+                type="button"
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${integrateTab === 'iframe' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}
+                onClick={() => setIntegrateTab('iframe')}
+              >
+                Iframe Embed (Recommended for Demos & Sites)
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${integrateTab === 'script' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}
+                onClick={() => setIntegrateTab('script')}
+              >
+                In-App Script Tag (Frameworks & CMS)
+              </button>
+            </div>
+
+            {integrateTab === 'iframe' && (
+              <div className="space-y-3 pt-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Paste this responsive iframe into Webflow, WordPress, Squarespace, Wix, Notion, HubSpot, or any custom HTML page.
+                </p>
+                {isPublished && iframeCode ? (
+                  <CopyBlock label="Iframe Embed Code" code={iframeCode} />
+                ) : (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">Publish your project first to get your embed code.</p>
+                )}
+              </div>
+            )}
+
+            {integrateTab === 'script' && (
+              <div className="space-y-3 pt-2">
                 <ScriptSteps project={project} />
-              </Step>
-              {showsInline && (
-                <Step number={3} title="Choose where it appears">
-                  <p>Paste this into your page, at the spot where it should show.</p>
-                  <CopyBlock label="Place where it should appear" code={inlineSnippet(project.id)} />
-                </Step>
-              )}
-              <Step number={showsInline ? 4 : 3} title="Check that it works">
-                <SiteCheck project={project} showsInline={showsInline} />
-                <ul className="list-disc pl-5 space-y-1">
-                  {module.delivery === 'overlay' && <li>Visitors see it on pages that match the rules you set in the editor, under When it appears.</li>}
-                  <li>Still stuck? See <Link to={ROUTES.doc('troubleshooting')} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Troubleshooting</Link>.</li>
-                </ul>
-              </Step>
-              <Step number={showsInline ? 5 : 4} title="In a mobile app">
-                <MobileSteps project={project} />
-              </Step>
-            </>
-          )}
+                {showsInline && (
+                  <div className="pt-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Place this tag in your page where the {noun} should appear:</p>
+                    <CopyBlock label="Placeholder element" code={inlineSnippet(project.id)} />
+                  </div>
+                )}
+              </div>
+            )}
+          </Step>
+
+          <Step number={4} title="Use your own domain">
+            <DomainSetup project={project} />
+          </Step>
+
+          <Step number={5} title="In a mobile app">
+            <MobileSteps project={project} />
+          </Step>
         </ol>
       </section>
 

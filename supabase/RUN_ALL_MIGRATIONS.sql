@@ -1760,3 +1760,10 @@ create policy "Authenticated users can upload assets" on storage.objects for ins
 drop policy if exists "Authenticated users can delete assets" on storage.objects;
 create policy "Authenticated users can delete assets" on storage.objects for delete to authenticated using (bucket_id = 'assets');
 
+-- Ensure PostgREST cache has latest public functions
+grant execute on function public.public_snapshot(uuid) to anon, authenticated;
+grant execute on function public.get_published_site(text) to anon, authenticated;
+grant execute on function public.get_published_experience(uuid) to anon, authenticated;
+grant execute on function public.get_published_site_by_domain(text) to anon, authenticated;
+notify pgrst, 'reload schema';
+
