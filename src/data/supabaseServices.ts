@@ -3,11 +3,11 @@ import { DEFAULT_THEME } from '../core/schema';
 import { createPublicApi } from './publicApi';
 import {
   AdminOverview, AdminRepository, AppServices, DomainRecord, DomainRepository, AssetRecord, AssetRepository, AuthGateway, AuthUser, DocumentRecord, LibraryItem, LibraryRepository, MemberRecord,
-  NudgeRepository, PlanRepository, PlanRequestRecord, ProfileRepository, ProjectRecord, ProjectRepository, PublishingRepository, SupportRepository, TeamRepository,
+  NudgeRepository, PlanInfo, PlanRepository, PlanRequestRecord, ProfileRepository, ProjectRecord, ProjectRepository, PublishingRepository, SupportRepository, TeamRepository,
   TicketMessage, TicketRecord, TicketStatus, WorkspaceMembership, WorkspaceRepository,
 } from './services';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabaseClient';
-import { SubscriptionPlan } from '../types/auth';
+import { SubscriptionPlan, PLAN_LABELS, PLAN_DESCRIPTIONS, PLAN_LIMITS } from '../types/auth';
 
 const db = () => getSupabase();
 
@@ -169,8 +169,11 @@ const projects: ProjectRepository = {
       .select(PROJECT_COLUMNS)
       .eq('organization_id', organizationId)
       .order('updated_at', { ascending: false });
-    check(error);
-    return (data as Row[]).map(toProject);
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
+      check(error);
+    }
+    return ((data as Row[]) || []).map(toProject);
   },
 
   async get(id) {
@@ -222,8 +225,11 @@ const projects: ProjectRepository = {
       .from('documents')
       .select(`, organization_id`)
       .eq('organization_id', organizationId);
-    check(error);
-    return (data as unknown as Row[]).map(toDocument);
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
+      check(error);
+    }
+    return ((data as unknown as Row[]) || []).map(toDocument);
   },
 
   async createDocument(project, doc, position) {
@@ -363,12 +369,15 @@ const team: TeamRepository = {
       .select('role, user_id, user_profiles (email, full_name)')
       .eq('organization_id', organizationId)
       .order('created_at');
-    check(error);
-    return (data as unknown as { role: MemberRecord['role']; user_id: string; user_profiles: { email: string; full_name: string | null } }[]).map((row) => ({
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
+      check(error);
+    }
+    return ((data as unknown as { role: MemberRecord['role']; user_id: string; user_profiles: { email: string; full_name: string | null } }[]) || []).map((row) => ({
       userId: row.user_id,
       role: row.role,
-      email: row.user_profiles.email,
-      fullName: row.user_profiles.full_name,
+      email: row.user_profiles?.email ?? '',
+      fullName: row.user_profiles?.full_name ?? null,
     }));
   },
 
@@ -389,8 +398,11 @@ const team: TeamRepository = {
       .eq('organization_id', organizationId)
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString());
-    check(error);
-    return (data as Row[]).map((row) => ({
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
+      check(error);
+    }
+    return ((data as Row[]) || []).map((row) => ({
       id: row.id as string,
       email: row.email as string,
       role: row.role as MemberRecord['role'],
@@ -437,8 +449,11 @@ const library: LibraryRepository = {
       .eq('organization_id', organizationId)
       .eq('kind', kind)
       .order('created_at', { ascending: false });
-    check(error);
-    return (data as Row[]).map(toLibraryItem);
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
+      check(error);
+    }
+    return ((data as Row[]) || []).map(toLibraryItem);
   },
 
   async create(organizationId, item) {
@@ -500,7 +515,10 @@ const profile: ProfileRepository = {
     const id = session.session?.user.id;
     if (!id) return null;
     const { data, error } = await db().from('user_profiles').select('email, full_name, job_title, timezone').eq('id', id).maybeSingle();
-    check(error);
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return null;
+      check(error);
+    }
     if (!data) return null;
     const row = data as Row;
     return { fullName: (row.full_name as string) ?? '', email: row.email as string, jobTitle: (row.job_title as string) ?? '', timezone: (row.timezone as string) ?? '' };
@@ -514,55 +532,106 @@ const profile: ProfileRepository = {
     if (jobTitle !== undefined) patch.job_title = jobTitle;
     if (timezone !== undefined) patch.timezone = timezone;
     const { error } = await db().from('user_profiles').update(patch).eq('id', id);
-    check(error);
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return;
+      check(error);
+    }
     // The session's copy of the name is what the rest of the app reads.
     if (fullName !== undefined) await db().auth.updateUser({ data: { full_name: fullName } });
   },
   async touchActivity() {
     const { error } = await db().rpc('touch_last_active');
-    check(error);
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === 'PGRST205' || error.code === '42883' || error.message?.includes('schema cache')) return;
+      check(error);
+    }
   },
 };
 
+const DEFAULT_PLANS: PlanInfo[] = (['free', 'starter', 'pro', 'agency', 'enterprise'] as SubscriptionPlan[]).map((plan) => ({
+  plan,
+  label: PLAN_LABELS[plan] ?? plan,
+  priceText: plan === 'free' ? 'Free' : 'Ask us',
+  description: PLAN_DESCRIPTIONS[plan] ?? '',
+  maxProjects: PLAN_LIMITS[plan]?.maxProjects ?? 10,
+  maxMembers: PLAN_LIMITS[plan]?.teamMembersLimit ?? 1,
+  moduleQuotas: {},
+}));
+
 const plans: PlanRepository = {
   async list() {
-    const [settings, quotas] = await Promise.all([
-      db().from('plan_settings').select('plan, label, price_text, description, max_projects, max_members').order('position'),
-      db().from('plan_module_quotas').select('plan, module, max_projects'),
-    ]);
-    check(settings.error);
-    check(quotas.error);
-    return (settings.data as Row[]).map((row) => ({
-      plan: row.plan as SubscriptionPlan,
-      label: row.label as string,
-      priceText: row.price_text as string,
-      description: row.description as string,
-      maxProjects: row.max_projects as number,
-      maxMembers: row.max_members as number,
-      moduleQuotas: Object.fromEntries((quotas.data as Row[]).filter((quota) => quota.plan === row.plan).map((quota) => [quota.module, quota.max_projects])),
-    }));
+    try {
+      const [settings, quotas] = await Promise.all([
+        db().from('plan_settings').select('plan, label, price_text, description, max_projects, max_members').order('position'),
+        db().from('plan_module_quotas').select('plan, module, max_projects'),
+      ]);
+
+      const isQuotaMissing = quotas.error?.code === 'PGRST205' || quotas.error?.message?.includes('schema cache');
+      const isSettingsMissing = settings.error?.code === 'PGRST205' || settings.error?.message?.includes('schema cache');
+
+      if (isSettingsMissing) {
+        return DEFAULT_PLANS;
+      }
+      check(settings.error);
+
+      if (!isQuotaMissing) {
+        check(quotas.error);
+      }
+
+      const quotaRows = isQuotaMissing ? [] : ((quotas.data as Row[]) || []);
+
+      return ((settings.data as Row[]) || []).map((row) => ({
+        plan: row.plan as SubscriptionPlan,
+        label: row.label as string,
+        priceText: row.price_text as string,
+        description: row.description as string,
+        maxProjects: row.max_projects as number,
+        maxMembers: row.max_members as number,
+        moduleQuotas: Object.fromEntries(
+          quotaRows.filter((quota) => quota.plan === row.plan).map((quota) => [quota.module, quota.max_projects])
+        ),
+      }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('schema cache') || msg.includes('plan_module_quotas') || msg.includes('plan_settings')) {
+        return DEFAULT_PLANS;
+      }
+      throw err;
+    }
   },
   async requestChange(organizationId, plan, note) {
     const { error } = await db().from('plan_requests').insert({ organization_id: organizationId, plan, note });
     if (error?.code === '23505') throw new Error('You already have a request waiting. We will reply to that first.');
+    if (error?.code === 'PGRST205' || error?.message?.includes('schema cache')) {
+      throw new Error('Database schema for plan requests is not initialized yet.');
+    }
     check(error);
   },
   async listRequests(organizationId) {
     const { data, error } = await db().from('plan_requests').select('id, plan, note, status, created_at').eq('organization_id', organizationId).order('created_at', { ascending: false });
-    check(error);
-    return (data as Row[]).map((row) => ({ id: row.id as string, plan: row.plan as SubscriptionPlan, note: row.note as string, status: row.status as PlanRequestRecord['status'], createdAt: row.created_at as string }));
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
+      check(error);
+    }
+    return ((data as Row[]) || []).map((row) => ({ id: row.id as string, plan: row.plan as SubscriptionPlan, note: row.note as string, status: row.status as PlanRequestRecord['status'], createdAt: row.created_at as string }));
   },
 };
 
 const nudges: NudgeRepository = {
   async listUnread() {
     const { data, error } = await db().from('user_nudges').select('id, title, body, link_url, created_at').is('read_at', null).order('created_at', { ascending: false });
-    check(error);
-    return (data as Row[]).map((row) => ({ id: row.id as string, title: row.title as string, body: row.body as string, linkUrl: row.link_url as string | null, createdAt: row.created_at as string }));
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
+      check(error);
+    }
+    return ((data as Row[]) || []).map((row) => ({ id: row.id as string, title: row.title as string, body: row.body as string, linkUrl: row.link_url as string | null, createdAt: row.created_at as string }));
   },
   async markRead(id) {
     const { error } = await db().from('user_nudges').update({ read_at: new Date().toISOString() }).eq('id', id);
-    check(error);
+    if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return;
+      check(error);
+    }
   },
 };
 
@@ -693,9 +762,12 @@ export const supabaseServices: AppServices = {
         .select('project_id')
         .eq('organization_id', organizationId)
         .limit(10000);
-      check(error);
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return {};
+        check(error);
+      }
       const counts: Record<string, number> = {};
-      for (const row of data as { project_id: string }[]) counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
+      for (const row of ((data as { project_id: string }[]) || [])) counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
       return counts;
     },
     async removeSubmission(id) {
@@ -706,8 +778,11 @@ export const supabaseServices: AppServices = {
   analytics: {
     async summary(organizationId, days) {
       const { data, error } = await db().rpc('analytics_summary', { p_org: organizationId, p_days: days });
-      check(error);
-      return (data as Row[]).map((row) => ({
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === 'PGRST205' || error.code === '42883' || error.message?.includes('schema cache')) return [];
+        check(error);
+      }
+      return ((data as Row[]) || []).map((row) => ({
         projectId: row.project_id as string,
         eventType: row.event_type as string,
         day: row.day as string,
