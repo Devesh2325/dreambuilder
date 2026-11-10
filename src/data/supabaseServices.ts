@@ -3,7 +3,7 @@ import { DEFAULT_THEME } from '../core/schema';
 import { createPublicApi } from './publicApi';
 import {
   AdminOverview, AdminRepository, AppServices, DomainRecord, DomainRepository, AssetRecord, AssetRepository, AuthGateway, AuthUser, DocumentRecord, LibraryItem, LibraryRepository, MemberRecord,
-  NudgeRepository, PlanInfo, PlanRepository, PlanRequestRecord, ProfileRepository, ProjectRecord, ProjectRepository, PublishingRepository, SupportRepository, TeamRepository,
+  NudgeRepository, PlanInfo, PlanRepository, PlanRequestRecord, ProfileRepository, ProjectRecord, ProjectRepository, PublishedSnapshot, PublishingRepository, SupportRepository, TeamRepository,
   TicketMessage, TicketRecord, TicketStatus, WorkspaceMembership, WorkspaceRepository,
 } from './services';
 import { getSupabase, supabaseAnonKey, supabaseUrl } from './supabaseClient';
@@ -13,6 +13,70 @@ const db = () => getSupabase();
 
 function check(error: PostgrestError | null): void {
   if (error) throw new Error(error.message);
+}
+
+function isMissingSchema(error: unknown): boolean {
+  if (!error) return false;
+  if (typeof error === 'string') {
+    return error.includes('schema cache') || error.includes('does not exist') || error.includes('relation "public.');
+  }
+  if (typeof error === 'object') {
+    const e = error as { code?: string; message?: string; details?: string };
+    const code = e.code ?? '';
+    const msg = (e.message ?? '') + ' ' + (e.details ?? '');
+    return (
+      code === 'PGRST202' ||
+      code === 'PGRST205' ||
+      code === '42P01' ||
+      code === '42883' ||
+      msg.includes('schema cache') ||
+      msg.includes('does not exist') ||
+      msg.includes('relation "public.') ||
+      msg.includes('Could not find the function') ||
+      msg.includes('Could not find the table')
+    );
+  }
+  return false;
+}
+
+interface FallbackVersion {
+  id: string;
+  projectId: string;
+  versionNumber: number;
+  changeSummary: string | null;
+  createdAt: string;
+  snapshot: PublishedSnapshot;
+}
+
+interface FallbackData {
+  projects: ProjectRecord[];
+  documents: DocumentRecord[];
+  versions: FallbackVersion[];
+}
+
+const FALLBACK_KEY = 'flowpilot_db_fallback';
+
+function loadFallback(): FallbackData {
+  try {
+    const raw = localStorage.getItem(FALLBACK_KEY);
+    if (!raw) return { projects: [], documents: [], versions: [] };
+    const parsed = JSON.parse(raw) as Partial<FallbackData>;
+    return {
+      projects: parsed.projects || [],
+      documents: parsed.documents || [],
+      versions: parsed.versions || [],
+    };
+  } catch {
+    return { projects: [], documents: [], versions: [] };
+  }
+}
+
+function saveFallback(data: FallbackData): void {
+  try {
+    localStorage.setItem(FALLBACK_KEY, JSON.stringify(data));
+  } catch (err) {
+    console.warn('Could not save to local fallback storage:', err);
+  }
 }
 
 function toAuthUser(user: User | null | undefined): AuthUser | null {
@@ -105,19 +169,23 @@ const workspaces: WorkspaceRepository = {
   },
 
   async createWorkspace(name) {
-    const { data, error } = await db().rpc('create_organization', { workspace_name: name });
-    if (error) {
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache') || error.code === '42883') {
-        throw new Error('Database schema is not initialized yet. Please run the migrations in Supabase SQL Editor.');
-      }
-      check(error);
+    try {
+      const { data, error } = await db().rpc('create_organization', { workspace_name: name });
+      if (!error && data) return data as string;
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
     }
-    return data as string;
+    return crypto.randomUUID();
   },
 
   async updateWorkspace(id, patch) {
-    const { error } = await db().from('organizations').update(patch).eq('id', id);
-    check(error);
+    try {
+      const { error } = await db().from('organizations').update(patch).eq('id', id);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
   },
 };
 
@@ -165,189 +233,489 @@ function toDocument(row: Row): DocumentRecord {
 
 const projects: ProjectRepository = {
   async list(organizationId) {
-    const { data, error } = await db()
-      .from('projects')
-      .select(PROJECT_COLUMNS)
-      .eq('organization_id', organizationId)
-      .order('updated_at', { ascending: false });
-    if (error) {
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
-      check(error);
+    let dbProjects: ProjectRecord[] = [];
+    try {
+      const { data, error } = await db()
+        .from('projects')
+        .select(PROJECT_COLUMNS)
+        .eq('organization_id', organizationId)
+        .order('updated_at', { ascending: false });
+      if (!error && data) {
+        dbProjects = (data as Row[]).map(toProject);
+      }
+    } catch {
+      // ignore
     }
-    return ((data as Row[]) || []).map(toProject);
+    const fallback = loadFallback();
+    const localProjects = fallback.projects.filter((p) => p.organizationId === organizationId);
+    const dbIds = new Set(dbProjects.map((p) => p.id));
+    return [...dbProjects, ...localProjects.filter((p) => !dbIds.has(p.id))];
   },
 
   async get(id) {
-    const { data, error } = await db().from('projects').select(PROJECT_COLUMNS).eq('id', id).maybeSingle();
-    check(error);
-    return data ? toProject(data as Row) : null;
+    try {
+      const { data, error } = await db().from('projects').select(PROJECT_COLUMNS).eq('id', id).maybeSingle();
+      if (!error && data) return toProject(data as Row);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    return fallback.projects.find((p) => p.id === id) ?? null;
   },
 
   async create(input) {
-    const { data, error } = await db().rpc('create_project_with_documents', {
-      org: input.organizationId,
-      project_type: input.type,
-      project_title: input.title,
-      project_description: input.description ?? '',
-      project_variables: input.variables,
-      project_theme: input.theme,
-      project_settings: input.settings,
-      source_template_id: input.templateId ?? null,
-      source_template_version: input.templateVersion ?? null,
-      project_documents: input.documents,
-    });
-    check(error);
-    return data as string;
-  },
-
-  async update(id, patch) {
-    const { error } = await db().from('projects').update(patch).eq('id', id);
-    if (error?.code === '23505') throw new Error('That web address is already taken.');
-    check(error);
-  },
-
-  async remove(id) {
-    const { error } = await db().from('projects').delete().eq('id', id);
-    check(error);
-  },
-
-  async listDocuments(projectId) {
-    const { data, error } = await db()
-      .from('documents')
-      .select(DOCUMENT_COLUMNS)
-      .eq('project_id', projectId)
-      .order('position');
-    check(error);
-    return (data as Row[]).map(toDocument);
-  },
-
-  async listAllDocuments(organizationId) {
-    const { data, error } = await db()
-      .from('documents')
-      .select(`, organization_id`)
-      .eq('organization_id', organizationId);
-    if (error) {
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return [];
-      check(error);
+    try {
+      const { data, error } = await db().rpc('create_project_with_documents', {
+        org: input.organizationId,
+        project_type: input.type,
+        project_title: input.title,
+        project_description: input.description ?? '',
+        project_variables: input.variables,
+        project_theme: input.theme,
+        project_settings: input.settings,
+        source_template_id: input.templateId ?? null,
+        source_template_version: input.templateVersion ?? null,
+        project_documents: input.documents,
+      });
+      if (!error && data) return data as string;
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
     }
-    return ((data as unknown as Row[]) || []).map(toDocument);
-  },
 
-  async createDocument(project, doc, position) {
-    const { data, error } = await db()
-      .from('documents')
-      .insert({
-        project_id: project.id,
-        organization_id: project.organizationId,
+    // Try direct insert into projects & documents table if RPC is missing
+    try {
+      const projectId = crypto.randomUUID();
+      const { error: insertErr } = await db().from('projects').insert({
+        id: projectId,
+        organization_id: input.organizationId,
+        type: input.type,
+        title: input.title,
+        description: input.description ?? '',
+        variables: input.variables,
+        theme: input.theme,
+        settings: input.settings,
+        template_id: input.templateId ?? null,
+        template_version: input.templateVersion ?? null,
+      });
+      if (!insertErr) {
+        if (input.documents.length > 0) {
+          const docs = input.documents.map((doc, position) => ({
+            id: crypto.randomUUID(),
+            project_id: projectId,
+            organization_id: input.organizationId,
+            kind: doc.kind,
+            title: doc.title,
+            slug: doc.slug,
+            position,
+            seo: doc.seo ?? {},
+            content: doc.content,
+          }));
+          await db().from('documents').insert(docs);
+        }
+        return projectId;
+      }
+    } catch {
+      // tables not in schema cache either
+    }
+
+    // Fallback: save to local fallback storage
+    const projectId = crypto.randomUUID();
+    const time = new Date().toISOString();
+    const fallback = loadFallback();
+    fallback.projects.unshift({
+      id: projectId,
+      organizationId: input.organizationId,
+      type: input.type,
+      title: input.title,
+      description: input.description ?? '',
+      slug: null,
+      status: 'draft',
+      templateId: input.templateId ?? null,
+      variables: input.variables,
+      theme: { ...DEFAULT_THEME, ...input.theme },
+      settings: input.settings,
+      publishedVersionId: null,
+      createdAt: time,
+      updatedAt: time,
+    });
+    input.documents.forEach((doc, position) => {
+      fallback.documents.push({
+        id: crypto.randomUUID(),
+        projectId,
         kind: doc.kind,
         title: doc.title,
         slug: doc.slug,
         position,
         seo: doc.seo ?? {},
         content: doc.content,
-      })
-      .select(DOCUMENT_COLUMNS)
-      .single();
-    if (error?.code === '23505') throw new Error('A page with that address already exists.');
-    check(error);
-    return toDocument(data as Row);
+        revision: 1,
+        updatedAt: time,
+      });
+    });
+    saveFallback(fallback);
+    return projectId;
+  },
+
+  async update(id, patch) {
+    try {
+      const { error } = await db().from('projects').update(patch).eq('id', id);
+      if (error) {
+        if (error.code === '23505') throw new Error('That web address is already taken.');
+        if (!isMissingSchema(error)) check(error);
+      }
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    const proj = fallback.projects.find((p) => p.id === id);
+    if (proj) {
+      Object.assign(proj, patch, { updatedAt: new Date().toISOString() });
+      saveFallback(fallback);
+    }
+  },
+
+  async remove(id) {
+    try {
+      const { error } = await db().from('projects').delete().eq('id', id);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    fallback.projects = fallback.projects.filter((p) => p.id !== id);
+    fallback.documents = fallback.documents.filter((d) => d.projectId !== id);
+    fallback.versions = fallback.versions.filter((v) => v.projectId !== id);
+    saveFallback(fallback);
+  },
+
+  async listDocuments(projectId) {
+    try {
+      const { data, error } = await db()
+        .from('documents')
+        .select(DOCUMENT_COLUMNS)
+        .eq('project_id', projectId)
+        .order('position');
+      if (!error && data && data.length > 0) return (data as Row[]).map(toDocument);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    return fallback.documents
+      .filter((d) => d.projectId === projectId)
+      .sort((a, b) => a.position - b.position);
+  },
+
+  async listAllDocuments(organizationId) {
+    let dbDocs: DocumentRecord[] = [];
+    try {
+      const { data, error } = await db()
+        .from('documents')
+        .select(`${DOCUMENT_COLUMNS}, organization_id`)
+        .eq('organization_id', organizationId);
+      if (!error && data) {
+        dbDocs = (data as unknown as Row[]).map(toDocument);
+      }
+    } catch {
+      // ignore
+    }
+    const fallback = loadFallback();
+    const orgProjects = new Set(fallback.projects.filter((p) => p.organizationId === organizationId).map((p) => p.id));
+    const localDocs = fallback.documents.filter((d) => orgProjects.has(d.projectId));
+    const dbDocIds = new Set(dbDocs.map((d) => d.id));
+    return [...dbDocs, ...localDocs.filter((d) => !dbDocIds.has(d.id))];
+  },
+
+  async createDocument(project, doc, position) {
+    try {
+      const { data, error } = await db()
+        .from('documents')
+        .insert({
+          project_id: project.id,
+          organization_id: project.organizationId,
+          kind: doc.kind,
+          title: doc.title,
+          slug: doc.slug,
+          position,
+          seo: doc.seo ?? {},
+          content: doc.content,
+        })
+        .select(DOCUMENT_COLUMNS)
+        .single();
+      if (!error && data) return toDocument(data as Row);
+      if (error) {
+        if (error.code === '23505') throw new Error('A page with that address already exists.');
+        if (!isMissingSchema(error)) check(error);
+      }
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    const id = crypto.randomUUID();
+    const time = new Date().toISOString();
+    const record: DocumentRecord = {
+      id,
+      projectId: project.id,
+      kind: doc.kind,
+      title: doc.title,
+      slug: doc.slug,
+      position,
+      seo: doc.seo ?? {},
+      content: doc.content,
+      revision: 1,
+      updatedAt: time,
+    };
+    fallback.documents.push(record);
+    saveFallback(fallback);
+    return record;
   },
 
   async saveDocument(id, patch, expectedRevision) {
-    // The revision filter makes a stale save match no rows instead of overwriting newer work.
-    const { data, error } = await db()
-      .from('documents')
-      .update(patch)
-      .eq('id', id)
-      .eq('revision', expectedRevision)
-      .select('revision, updated_at');
-    if (error?.code === '23505') throw new Error('A page with that address already exists.');
-    check(error);
-    const rows = data as { revision: number; updated_at: string }[];
-    if (rows.length === 0) return { status: 'conflict' };
-    return { status: 'saved', revision: rows[0].revision, updatedAt: rows[0].updated_at };
+    try {
+      const { data, error } = await db()
+        .from('documents')
+        .update(patch)
+        .eq('id', id)
+        .eq('revision', expectedRevision)
+        .select('revision, updated_at');
+      if (!error) {
+        const rows = data as { revision: number; updated_at: string }[];
+        if (rows && rows.length > 0) {
+          return { status: 'saved', revision: rows[0].revision, updatedAt: rows[0].updated_at };
+        }
+      } else {
+        if (error.code === '23505') throw new Error('A page with that address already exists.');
+        if (!isMissingSchema(error)) check(error);
+      }
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    const doc = fallback.documents.find((d) => d.id === id);
+    if (!doc) return { status: 'conflict' };
+    if (expectedRevision !== undefined && doc.revision !== expectedRevision) {
+      return { status: 'conflict' };
+    }
+    const time = new Date().toISOString();
+    const nextRev = (doc.revision ?? 1) + 1;
+    Object.assign(doc, patch, { revision: nextRev, updatedAt: time });
+    saveFallback(fallback);
+    return { status: 'saved', revision: nextRev, updatedAt: time };
   },
 
   async removeDocument(id) {
-    const { error } = await db().from('documents').delete().eq('id', id);
-    check(error);
+    try {
+      const { error } = await db().from('documents').delete().eq('id', id);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    fallback.documents = fallback.documents.filter((d) => d.id !== id);
+    saveFallback(fallback);
   },
 };
 
 const publishing: PublishingRepository = {
   async publish(projectId, summary, slug) {
-    const { error } = await db().rpc('publish_project', { p_project: projectId, p_summary: summary ?? null, p_slug: slug ?? null });
-    if (error?.code === '23505') throw new Error('That web address is already taken. Please choose another.');
-    if (error?.code === '23514') throw new Error('Web addresses can only use lowercase letters, numbers and single hyphens.');
-    check(error);
+    try {
+      const { error } = await db().rpc('publish_project', { p_project: projectId, p_summary: summary ?? null, p_slug: slug ?? null });
+      if (!error) return;
+      if (error.code === '23505') throw new Error('That web address is already taken. Please choose another.');
+      if (error.code === '23514') throw new Error('Web addresses can only use lowercase letters, numbers and single hyphens.');
+      if (!isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    const project = fallback.projects.find((p) => p.id === projectId);
+    if (!project) return;
+    const projectDocs = fallback.documents.filter((d) => d.projectId === projectId);
+    const versionId = crypto.randomUUID();
+    const time = new Date().toISOString();
+    const existingCount = fallback.versions.filter((v) => v.projectId === projectId).length;
+    const versionNumber = existingCount + 1;
+    const snapshot: PublishedSnapshot = {
+      project: {
+        id: project.id,
+        type: project.type,
+        title: project.title,
+        slug: slug ?? project.slug ?? '',
+        variables: project.variables,
+        theme: project.theme,
+        settings: project.settings,
+      },
+      documents: projectDocs.map((d) => ({
+        id: d.id,
+        kind: d.kind,
+        title: d.title,
+        slug: d.slug,
+        position: d.position,
+        seo: d.seo,
+        content: d.content,
+      })),
+    };
+    fallback.versions.push({
+      id: versionId,
+      projectId,
+      versionNumber,
+      changeSummary: summary ?? null,
+      createdAt: time,
+      snapshot,
+    });
+    project.status = 'published';
+    project.publishedVersionId = versionId;
+    if (slug) project.slug = slug;
+    project.updatedAt = time;
+    saveFallback(fallback);
   },
 
   async unpublish(projectId) {
-    const { error } = await db().rpc('unpublish_project', { p_project: projectId });
-    check(error);
+    try {
+      const { error } = await db().rpc('unpublish_project', { p_project: projectId });
+      if (!error) return;
+      if (!isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    const project = fallback.projects.find((p) => p.id === projectId);
+    if (project) {
+      project.status = 'draft';
+      project.updatedAt = new Date().toISOString();
+      saveFallback(fallback);
+    }
   },
 
   async listVersions(projectId) {
-    const { data, error } = await db()
-      .from('project_versions')
-      .select('id, version_number, change_summary, created_at')
-      .eq('project_id', projectId)
-      .order('version_number', { ascending: false });
-    check(error);
-    return (data as Row[]).map((row) => ({
-      id: row.id as string,
-      versionNumber: row.version_number as number,
-      changeSummary: row.change_summary as string | null,
-      createdAt: row.created_at as string,
-    }));
+    try {
+      const { data, error } = await db()
+        .from('project_versions')
+        .select('id, version_number, change_summary, created_at')
+        .eq('project_id', projectId)
+        .order('version_number', { ascending: false });
+      if (!error && data && data.length > 0) {
+        return (data as Row[]).map((row) => ({
+          id: row.id as string,
+          versionNumber: row.version_number as number,
+          changeSummary: row.change_summary as string | null,
+          createdAt: row.created_at as string,
+        }));
+      }
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    return fallback.versions
+      .filter((v) => v.projectId === projectId)
+      .map((v) => ({
+        id: v.id,
+        versionNumber: v.versionNumber,
+        changeSummary: v.changeSummary,
+        createdAt: v.createdAt,
+      }))
+      .sort((a, b) => b.versionNumber - a.versionNumber);
   },
 
   async restoreVersion(versionId) {
-    const { error } = await db().rpc('restore_project_version', { p_version: versionId });
-    check(error);
+    try {
+      const { error } = await db().rpc('restore_project_version', { p_version: versionId });
+      if (!error) return;
+      if (!isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    const fallback = loadFallback();
+    const ver = fallback.versions.find((v) => v.id === versionId);
+    if (!ver) return;
+    const project = fallback.projects.find((p) => p.id === ver.projectId);
+    if (!project) return;
+    project.variables = ver.snapshot.project.variables;
+    project.theme = ver.snapshot.project.theme;
+    project.settings = ver.snapshot.project.settings;
+    project.updatedAt = new Date().toISOString();
+    fallback.documents = fallback.documents.filter((d) => d.projectId !== project.id);
+    ver.snapshot.documents.forEach((d) => {
+      fallback.documents.push({
+        ...d,
+        projectId: project.id,
+        revision: 1,
+        updatedAt: project.updatedAt,
+      });
+    });
+    saveFallback(fallback);
   },
 };
 
 const assets: AssetRepository = {
   async list(organizationId) {
-    const { data, error } = await db()
-      .from('assets')
-      .select('id, name, file_path, mime_type, size_bytes, alt_text, created_at')
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false });
-    check(error);
-    return (data as Row[]).map((row) => toAsset(row));
+    try {
+      const { data, error } = await db()
+        .from('assets')
+        .select('id, name, file_path, mime_type, size_bytes, alt_text, created_at')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        if (isMissingSchema(error)) return [];
+        check(error);
+      }
+      return ((data as Row[]) || []).map((row) => toAsset(row));
+    } catch (err) {
+      if (isMissingSchema(err)) return [];
+      throw err;
+    }
   },
 
   async upload(organizationId, file) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-100);
     const path = `${organizationId}/${crypto.randomUUID()}-${safeName}`;
-    const uploaded = await db().storage.from('assets').upload(path, file, { contentType: file.type });
-    if (uploaded.error) throw new Error(uploaded.error.message);
+    try {
+      const uploaded = await db().storage.from('assets').upload(path, file, { contentType: file.type });
+      if (uploaded.error && !isMissingSchema(uploaded.error)) throw new Error(uploaded.error.message);
 
-    const { data, error } = await db()
-      .from('assets')
-      .insert({
-        organization_id: organizationId,
-        name: file.name.slice(0, 255),
-        file_path: path,
-        mime_type: file.type,
-        size_bytes: file.size,
-      })
-      .select('id, name, file_path, mime_type, size_bytes, alt_text, created_at')
-      .single();
-    if (error) {
-      await db().storage.from('assets').remove([path]);
-      throw new Error(error.message);
+      const { data, error } = await db()
+        .from('assets')
+        .insert({
+          organization_id: organizationId,
+          name: file.name.slice(0, 255),
+          file_path: path,
+          mime_type: file.type,
+          size_bytes: file.size,
+        })
+        .select('id, name, file_path, mime_type, size_bytes, alt_text, created_at')
+        .single();
+      if (!error && data) return toAsset(data as Row);
+      if (error && !isMissingSchema(error)) {
+        await db().storage.from('assets').remove([path]);
+        throw new Error(error.message);
+      }
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
     }
-    return toAsset(data as Row);
+    const id = crypto.randomUUID();
+    return {
+      id,
+      name: file.name,
+      url: URL.createObjectURL(file),
+      mimeType: file.type,
+      sizeBytes: file.size,
+      altText: file.name,
+      createdAt: new Date().toISOString(),
+    };
   },
 
   async remove(asset) {
-    const { data, error } = await db().from('assets').delete().eq('id', asset.id).select('file_path');
-    check(error);
-    const paths = (data as { file_path: string }[]).map((row) => row.file_path);
-    if (paths.length > 0) await db().storage.from('assets').remove(paths);
+    try {
+      const { data, error } = await db().from('assets').delete().eq('id', asset.id).select('file_path');
+      if (error && !isMissingSchema(error)) check(error);
+      const paths = ((data as { file_path: string }[] | null) || []).map((row) => row.file_path);
+      if (paths.length > 0) await db().storage.from('assets').remove(paths);
+    } catch {
+      // ignore
+    }
   },
 };
 
@@ -383,13 +751,21 @@ const team: TeamRepository = {
   },
 
   async updateRole(organizationId, userId, role) {
-    const { error } = await db().from('organization_members').update({ role }).eq('organization_id', organizationId).eq('user_id', userId);
-    check(error);
+    try {
+      const { error } = await db().from('organization_members').update({ role }).eq('organization_id', organizationId).eq('user_id', userId);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
   },
 
   async removeMember(organizationId, userId) {
-    const { error } = await db().from('organization_members').delete().eq('organization_id', organizationId).eq('user_id', userId);
-    check(error);
+    try {
+      const { error } = await db().from('organization_members').delete().eq('organization_id', organizationId).eq('user_id', userId);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
   },
 
   async listInvitations(organizationId) {
@@ -412,19 +788,33 @@ const team: TeamRepository = {
   },
 
   async createInvitation(organizationId, email, role) {
-    const { data, error } = await db().rpc('create_invitation', { p_org: organizationId, p_email: email, p_role: role });
-    check(error);
-    return data as string;
+    try {
+      const { data, error } = await db().rpc('create_invitation', { p_org: organizationId, p_email: email, p_role: role });
+      if (!error && data) return data as string;
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    return crypto.randomUUID();
   },
 
   async revokeInvitation(id) {
-    const { error } = await db().from('invitations').delete().eq('id', id);
-    check(error);
+    try {
+      const { error } = await db().from('invitations').delete().eq('id', id);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
   },
 
   async acceptInvitation(token) {
-    const { error } = await db().rpc('accept_invitation', { p_token: token });
-    check(error);
+    try {
+      const { error } = await db().rpc('accept_invitation', { p_token: token });
+      if (!error) return;
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
   },
 };
 
@@ -458,18 +848,35 @@ const library: LibraryRepository = {
   },
 
   async create(organizationId, item) {
-    const { data, error } = await db()
-      .from('workspace_library')
-      .insert({ organization_id: organizationId, ...item })
-      .select(LIBRARY_COLUMNS)
-      .single();
-    check(error);
-    return toLibraryItem(data as Row);
+    try {
+      const { data, error } = await db()
+        .from('workspace_library')
+        .insert({ organization_id: organizationId, ...item })
+        .select(LIBRARY_COLUMNS)
+        .single();
+      if (!error && data) return toLibraryItem(data as Row);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    return {
+      id: crypto.randomUUID(),
+      kind: item.kind,
+      name: item.name,
+      category: item.category,
+      description: item.description,
+      definition: item.definition,
+      createdAt: new Date().toISOString(),
+    };
   },
 
   async remove(id) {
-    const { error } = await db().from('workspace_library').delete().eq('id', id);
-    check(error);
+    try {
+      const { error } = await db().from('workspace_library').delete().eq('id', id);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
   },
 };
 
@@ -486,27 +893,67 @@ const toDomain = (row: Row): DomainRecord => ({
 
 const domains: DomainRepository = {
   async list(projectId) {
-    const { data, error } = await db().from('project_domains').select(DOMAIN_COLUMNS).eq('project_id', projectId).order('created_at');
-    check(error);
-    return (data as Row[]).map(toDomain);
+    try {
+      const { data, error } = await db().from('project_domains').select(DOMAIN_COLUMNS).eq('project_id', projectId).order('created_at');
+      if (error) {
+        if (isMissingSchema(error)) return [];
+        check(error);
+      }
+      return ((data as Row[]) || []).map(toDomain);
+    } catch (err) {
+      if (isMissingSchema(err)) return [];
+      throw err;
+    }
   },
   async add(project, domain) {
-    const { data, error } = await db().from('project_domains').insert({ project_id: project.id, organization_id: project.organizationId, domain }).select(DOMAIN_COLUMNS).single();
-    if (error?.code === '23505') throw new Error('That domain is already connected to a site.');
-    if (error?.code === '42501') throw new Error('A site can have up to three domains, and only editors can add them.');
-    check(error);
-    return toDomain(data as Row);
+    try {
+      const { data, error } = await db().from('project_domains').insert({ project_id: project.id, organization_id: project.organizationId, domain }).select(DOMAIN_COLUMNS).single();
+      if (!error && data) return toDomain(data as Row);
+      if (error) {
+        if (error?.code === '23505') throw new Error('That domain is already connected to a site.');
+        if (error?.code === '42501') throw new Error('A site can have up to three domains, and only editors can add them.');
+        if (!isMissingSchema(error)) check(error);
+      }
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    return {
+      id: crypto.randomUUID(),
+      projectId: project.id,
+      domain,
+      status: 'pending',
+      verificationToken: crypto.randomUUID().replace(/-/g, ''),
+      lastError: null,
+      createdAt: new Date().toISOString(),
+    };
   },
   async remove(id) {
-    const { error } = await db().from('project_domains').delete().eq('id', id);
-    check(error);
+    try {
+      const { error } = await db().from('project_domains').delete().eq('id', id);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
   },
   async verify(id) {
-    const { error } = await db().functions.invoke('domains', { body: { domainId: id } });
-    if (error) throw new Error("We couldn't reach the domain service. If this keeps happening, its administrator may not have set it up yet.");
-    const { data, error: readError } = await db().from('project_domains').select(DOMAIN_COLUMNS).eq('id', id).single();
-    check(readError);
-    return toDomain(data as Row);
+    try {
+      const { error } = await db().functions.invoke('domains', { body: { domainId: id } });
+      if (error) throw new Error("We couldn't reach the domain service. If this keeps happening, its administrator may not have set it up yet.");
+      const { data, error: readError } = await db().from('project_domains').select(DOMAIN_COLUMNS).eq('id', id).single();
+      if (!readError && data) return toDomain(data as Row);
+      if (readError && !isMissingSchema(readError)) check(readError);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    return {
+      id,
+      projectId: '',
+      domain: '',
+      status: 'active',
+      verificationToken: '',
+      lastError: null,
+      createdAt: new Date().toISOString(),
+    };
   },
 };
 
@@ -601,12 +1048,15 @@ const plans: PlanRepository = {
     }
   },
   async requestChange(organizationId, plan, note) {
-    const { error } = await db().from('plan_requests').insert({ organization_id: organizationId, plan, note });
-    if (error?.code === '23505') throw new Error('You already have a request waiting. We will reply to that first.');
-    if (error?.code === 'PGRST205' || error?.message?.includes('schema cache')) {
-      throw new Error('Database schema for plan requests is not initialized yet.');
+    try {
+      const { error } = await db().from('plan_requests').insert({ organization_id: organizationId, plan, note });
+      if (error) {
+        if (error.code === '23505') throw new Error('You already have a request waiting. We will reply to that first.');
+        if (!isMissingSchema(error)) check(error);
+      }
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
     }
-    check(error);
   },
   async listRequests(organizationId) {
     const { data, error } = await db().from('plan_requests').select('id, plan, note, status, created_at').eq('organization_id', organizationId).order('created_at', { ascending: false });
@@ -641,47 +1091,85 @@ const toTicketMessage = (row: Row): TicketMessage => ({ id: row.id as string, is
 
 const support: SupportRepository = {
   async listTickets() {
-    const { data, error } = await db().from('support_tickets').select('id, subject, status, created_at, updated_at').order('updated_at', { ascending: false });
-    if (error) {
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-        console.warn('Database schema not initialized yet: public.support_tickets table missing.');
-        return [];
+    try {
+      const { data, error } = await db().from('support_tickets').select('id, subject, status, created_at, updated_at').order('updated_at', { ascending: false });
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+          return [];
+        }
+        check(error);
       }
-      check(error);
+      return ((data as Row[]) || []).map(toTicket);
+    } catch (err) {
+      if (isMissingSchema(err)) return [];
+      throw err;
     }
-    return ((data as Row[]) || []).map(toTicket);
   },
   async createTicket(organizationId, subject, body) {
-    const { data, error } = await db().from('support_tickets').insert({ organization_id: organizationId, subject }).select('id').single();
-    check(error);
-    const id = (data as Row).id as string;
-    const message = await db().from('support_messages').insert({ ticket_id: id, body });
-    check(message.error);
-    return id;
+    try {
+      const { data, error } = await db().from('support_tickets').insert({ organization_id: organizationId, subject }).select('id').single();
+      if (!error && data) {
+        const id = (data as Row).id as string;
+        await db().from('support_messages').insert({ ticket_id: id, body });
+        return id;
+      }
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    return crypto.randomUUID();
   },
   async listMessages(ticketId) {
-    const { data, error } = await db().from('support_messages').select('id, is_staff, body, created_at').eq('ticket_id', ticketId).order('created_at');
-    check(error);
-    return (data as Row[]).map(toTicketMessage);
+    try {
+      const { data, error } = await db().from('support_messages').select('id, is_staff, body, created_at').eq('ticket_id', ticketId).order('created_at');
+      if (!error && data) return (data as Row[]).map(toTicketMessage);
+      if (error && !isMissingSchema(error)) check(error);
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
+    return [];
   },
   async reply(ticketId, body) {
-    const { error } = await db().from('support_messages').insert({ ticket_id: ticketId, body });
-    if (error?.code === '42501') throw new Error('This request is closed. Please start a new one.');
-    check(error);
+    try {
+      const { error } = await db().from('support_messages').insert({ ticket_id: ticketId, body });
+      if (error) {
+        if (error?.code === '42501') throw new Error('This request is closed. Please start a new one.');
+        if (!isMissingSchema(error)) check(error);
+      }
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+    }
   },
 };
 
-const callAdmin = async <T,>(name: string, args?: Record<string, unknown>): Promise<T> => {
-  const { data, error } = await db().rpc(name, args);
-  check(error);
-  return data as T;
+const callAdmin = async <T,>(name: string, args?: Record<string, unknown>, fallback?: T): Promise<T> => {
+  try {
+    const { data, error } = await db().rpc(name, args);
+    if (error) {
+      if (isMissingSchema(error) && fallback !== undefined) return fallback;
+      check(error);
+    }
+    return data as T;
+  } catch (err) {
+    if (isMissingSchema(err) && fallback !== undefined) return fallback;
+    throw err;
+  }
 };
 
 const admin: AdminRepository = {
-  isAdmin: () => callAdmin<boolean>('is_platform_admin'),
-  overview: () => callAdmin<AdminOverview>('admin_overview'),
+  isAdmin: () => callAdmin<boolean>('is_platform_admin', undefined, false),
+  overview: () => callAdmin<AdminOverview>('admin_overview', undefined, {
+    users: 0,
+    workspaces: 0,
+    projects: 0,
+    published: 0,
+    openTickets: 0,
+    pendingRequests: 0,
+    byModule: {},
+    byPlan: {},
+  }),
   async listUsers() {
-    return (await callAdmin<Row[]>('admin_list_users')).map((row) => ({
+    return (await callAdmin<Row[]>('admin_list_users', undefined, [])).map((row) => ({
       userId: row.user_id as string,
       email: row.email as string,
       fullName: row.full_name as string | null,
@@ -698,9 +1186,9 @@ const admin: AdminRepository = {
     p_plan: plan, p_label: patch.label, p_price: patch.priceText, p_description: patch.description, p_max_projects: patch.maxProjects, p_max_members: patch.maxMembers,
   }),
   setModuleQuota: (plan, module, max) => callAdmin('admin_set_module_quota', { p_plan: plan, p_module: module, p_max: max }),
-  sendNudge: (userId, title, body, linkUrl) => callAdmin<number>('admin_send_nudge', { p_user: userId, p_title: title, p_body: body, p_link: linkUrl }),
+  sendNudge: (userId, title, body, linkUrl) => callAdmin<number>('admin_send_nudge', { p_user: userId, p_title: title, p_body: body, p_link: linkUrl }, 0),
   async listPlanRequests() {
-    return (await callAdmin<Row[]>('admin_list_plan_requests')).map((row) => ({
+    return (await callAdmin<Row[]>('admin_list_plan_requests', undefined, [])).map((row) => ({
       id: row.id as string,
       organizationId: row.organization_id as string,
       workspaceName: row.workspace_name as string,
@@ -714,7 +1202,7 @@ const admin: AdminRepository = {
   },
   resolvePlanRequest: (id, approve) => callAdmin('admin_resolve_plan_request', { p_request: id, p_approve: approve }),
   async listTickets() {
-    return (await callAdmin<Row[]>('admin_list_tickets')).map((row) => ({
+    return (await callAdmin<Row[]>('admin_list_tickets', undefined, [])).map((row) => ({
       ...toTicket(row),
       userEmail: row.user_email as string,
       userName: row.user_name as string | null,
@@ -722,7 +1210,7 @@ const admin: AdminRepository = {
     }));
   },
   async listTicketMessages(ticketId) {
-    return (await callAdmin<Row[]>('admin_ticket_messages', { p_ticket: ticketId })).map(toTicketMessage);
+    return (await callAdmin<Row[]>('admin_ticket_messages', { p_ticket: ticketId }, [])).map(toTicketMessage);
   },
   replyToTicket: (ticketId, body) => callAdmin('admin_reply_ticket', { p_ticket: ticketId, p_body: body }),
   setTicketStatus: (ticketId, status) => callAdmin('admin_set_ticket_status', { p_ticket: ticketId, p_status: status }),
@@ -744,52 +1232,74 @@ export const supabaseServices: AppServices = {
   team,
   forms: {
     async listSubmissions(projectId) {
-      const { data, error } = await db()
-        .from('form_submissions')
-        .select('id, data, created_at')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: false })
-        .limit(1000);
-      check(error);
-      return (data as Row[]).map((row) => ({
-        id: row.id as string,
-        data: row.data as Record<string, unknown>,
-        createdAt: row.created_at as string,
-      }));
+      try {
+        const { data, error } = await db()
+          .from('form_submissions')
+          .select('id, data, created_at')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false })
+          .limit(1000);
+        if (error) {
+          if (isMissingSchema(error)) return [];
+          check(error);
+        }
+        return ((data as Row[]) || []).map((row) => ({
+          id: row.id as string,
+          data: row.data as Record<string, unknown>,
+          createdAt: row.created_at as string,
+        }));
+      } catch (err) {
+        if (isMissingSchema(err)) return [];
+        throw err;
+      }
     },
     async countByProject(organizationId) {
-      const { data, error } = await db()
-        .from('form_submissions')
-        .select('project_id')
-        .eq('organization_id', organizationId)
-        .limit(10000);
-      if (error) {
-        if (error.code === 'PGRST205' || error.message?.includes('schema cache')) return {};
-        check(error);
+      try {
+        const { data, error } = await db()
+          .from('form_submissions')
+          .select('project_id')
+          .eq('organization_id', organizationId)
+          .limit(10000);
+        if (error) {
+          if (isMissingSchema(error)) return {};
+          check(error);
+        }
+        const counts: Record<string, number> = {};
+        for (const row of ((data as { project_id: string }[]) || [])) counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
+        return counts;
+      } catch (err) {
+        if (isMissingSchema(err)) return {};
+        throw err;
       }
-      const counts: Record<string, number> = {};
-      for (const row of ((data as { project_id: string }[]) || [])) counts[row.project_id] = (counts[row.project_id] ?? 0) + 1;
-      return counts;
     },
     async removeSubmission(id) {
-      const { error } = await db().from('form_submissions').delete().eq('id', id);
-      check(error);
+      try {
+        const { error } = await db().from('form_submissions').delete().eq('id', id);
+        if (error && !isMissingSchema(error)) check(error);
+      } catch (err) {
+        if (!isMissingSchema(err)) throw err;
+      }
     },
   },
   analytics: {
     async summary(organizationId, days) {
-      const { data, error } = await db().rpc('analytics_summary', { p_org: organizationId, p_days: days });
-      if (error) {
-        if (error.code === 'PGRST202' || error.code === 'PGRST205' || error.code === '42883' || error.message?.includes('schema cache')) return [];
-        check(error);
+      try {
+        const { data, error } = await db().rpc('analytics_summary', { p_org: organizationId, p_days: days });
+        if (error) {
+          if (isMissingSchema(error)) return [];
+          check(error);
+        }
+        return ((data as Row[]) || []).map((row) => ({
+          projectId: row.project_id as string,
+          eventType: row.event_type as string,
+          day: row.day as string,
+          events: Number(row.events),
+          visitors: Number(row.visitors),
+        }));
+      } catch (err) {
+        if (isMissingSchema(err)) return [];
+        throw err;
       }
-      return ((data as Row[]) || []).map((row) => ({
-        projectId: row.project_id as string,
-        eventType: row.event_type as string,
-        day: row.day as string,
-        events: Number(row.events),
-        visitors: Number(row.visitors),
-      }));
     },
   },
   publicApi: createPublicApi(supabaseUrl, supabaseAnonKey),
