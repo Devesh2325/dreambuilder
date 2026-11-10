@@ -43,8 +43,8 @@ a:not([draggable=true]),img:not([draggable=true]){-webkit-user-drag:none}
 .fp-hotspot{cursor:move;animation:none}
 .fp-embed .fp-root{min-height:0}
 .fp-embed>div{pointer-events:none}
-.fp-section:empty,.fp-container:empty,.fp-box:empty,.fp-grid:empty,.fp-row:empty,.fp-page:empty,.fp-marquee-track:empty,.fp-carousel:empty{min-height:88px;display:flex;align-items:center;justify-content:center;border:1.5px dashed rgba(99,102,241,.4);border-radius:8px;background:rgba(99,102,241,.04)}
-.fp-section:empty::after,.fp-container:empty::after,.fp-box:empty::after,.fp-grid:empty::after,.fp-row:empty::after,.fp-page:empty::after,.fp-marquee-track:empty::after,.fp-carousel:empty::after{content:'Empty: drag blocks here';font:500 13px system-ui,sans-serif;color:rgba(79,70,229,.8)}
+:where(.fp-section:empty,.fp-container:empty,.fp-box:empty,.fp-grid:empty,.fp-row:empty,.fp-page:empty,.fp-marquee-track:empty,.fp-carousel:empty){min-height:88px;display:flex;align-items:center;justify-content:center;border:1.5px dashed rgba(99,102,241,.4);border-radius:8px;background-color:rgba(99,102,241,.04)}
+:where(.fp-section:empty,.fp-container:empty,.fp-box:empty,.fp-grid:empty,.fp-row:empty,.fp-page:empty,.fp-marquee-track:empty,.fp-carousel:empty)::after{content:'Empty: drag blocks here';font:500 13px system-ui,sans-serif;color:rgba(79,70,229,.8)}
 `;
 
 interface Box {
