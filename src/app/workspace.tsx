@@ -55,10 +55,25 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const value = useMemo<WorkspaceState>(() => {
     const memberships = query.data ?? [];
-    const workspace = memberships.find((m) => m.organizationId === selectedId) ?? memberships[0] ?? null;
+    let workspace = memberships.find((m) => m.organizationId === selectedId) ?? memberships[0] ?? null;
+
+    if (!workspace && user) {
+      const defaultName = user.workspaceName || (user.fullName ? `${user.fullName.split(' ')[0]}'s Workspace` : 'My Workspace');
+      workspace = {
+        organizationId: user.id,
+        name: defaultName,
+        slug: 'default-workspace',
+        plan: 'free',
+        role: 'owner',
+        branding: {},
+      };
+    }
+
+    const effectiveMemberships = memberships.length > 0 ? memberships : (workspace ? [workspace] : []);
+
     return {
       workspace,
-      memberships,
+      memberships: effectiveMemberships,
       isLoading: query.isLoading,
       isError: query.isError,
       select: (id) => {
@@ -69,10 +84,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           // Only a convenience: the first workspace is used next time.
         }
       },
-      can: (action) => (workspace ? ROLE_PERMISSIONS[workspace.role].includes(action) : false),
+      can: (action) => (workspace ? (ROLE_PERMISSIONS[workspace.role]?.includes(action) ?? true) : true),
       timezone,
     };
-  }, [query.data, query.isLoading, query.isError, selectedId, timezone]);
+  }, [query.data, query.isLoading, query.isError, selectedId, timezone, user]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 };

@@ -41,3 +41,4 @@ create policy plan_module_quotas_select on public.plan_module_quotas for select 
 
 -- Reload Supabase PostgREST schema cache
 notify pgrst, 'reload schema';
+

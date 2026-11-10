@@ -21,6 +21,7 @@ function toAuthUser(user: User | null | undefined): AuthUser | null {
     id: user.id,
     email: user.email ?? '',
     fullName: (user.user_metadata?.full_name as string | undefined) ?? null,
+    workspaceName: (user.user_metadata?.workspace_name as string | undefined) ?? null,
   };
 }
 

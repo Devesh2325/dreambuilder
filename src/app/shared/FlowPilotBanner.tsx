@@ -111,7 +111,7 @@ const MODULE_COPY: Record<ProjectType, { text: string; steps: string[] }> = {
   },
 };
 
-export const ModuleEmptyBanner: React.FC<{ type: ProjectType; canCreate: boolean }> = ({ type, canCreate }) => {
+export const ModuleEmptyBanner: React.FC<{ type: ProjectType; canCreate?: boolean }> = ({ type, canCreate = true }) => {
   const module = MODULES[type];
   const copy = MODULE_COPY[type];
   const actions = useMemo<BannerAction[]>(() => [

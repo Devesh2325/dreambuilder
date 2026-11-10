@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Building2, Check, CircleHelp, Eye, FolderKanban, LifeBuoy, Loader2, Rocket, Send, Sparkles, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, Check, CircleHelp, Eye, FolderKanban, LifeBuoy, Rocket, Send, Sparkles, X } from 'lucide-react';
 import { MODULE_LIST, MODULES } from '../../core/modules';
 import { UsageBar, useCurrentPlan } from '../account/PlansPage';
 import { ROUTES } from '../routes';
@@ -81,114 +81,6 @@ const greeting = () => {
   if (hour < 12) return 'Good morning';
   if (hour < 18) return 'Good afternoon';
   return 'Good evening';
-};
-
-const NewUserWorkspaceOnboarding: React.FC<{ userFullName?: string }> = ({ userFullName }) => {
-  const services = useServices();
-  const queryClient = useQueryClient();
-  const defaultName = userFullName ? `${userFullName.split(' ')[0]}'s Workspace` : 'My Workspace';
-  const [name, setName] = useState(defaultName);
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSubmitting(true);
-    setErrorMsg(null);
-    try {
-      await services.workspaces.createWorkspace(name.trim());
-      await queryClient.invalidateQueries({ queryKey: ['memberships'] });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setErrorMsg(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="rounded-3xl p-8 bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white border border-indigo-800/60 shadow-2xl relative overflow-hidden">
-        <div aria-hidden="true" className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-        <div className="max-w-2xl space-y-4 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Welcome to FlowPilot</span>
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight">Let's set up your workspace</h2>
-          <p className="text-slate-300 text-sm leading-relaxed">
-            Your workspace brings together your websites, interactive tours, popups, and team. Give it a name to start building:
-          </p>
-
-          <form onSubmit={handleCreate} className="pt-2 max-w-md space-y-3">
-            <div>
-              <label htmlFor="ws-name-input" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                Workspace Name
-              </label>
-              <input
-                id="ws-name-input"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Acme Corp or My Studio"
-                required
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-              />
-            </div>
-
-            {errorMsg && (
-              <div role="alert" className="p-3 rounded-xl bg-rose-950/50 border border-rose-800/60 text-rose-200 text-xs space-y-1">
-                <p className="font-semibold">Notice</p>
-                <p>{errorMsg}</p>
-                {errorMsg.toLowerCase().includes('migrations') || errorMsg.toLowerCase().includes('schema') ? (
-                  <p className="text-[11px] text-rose-300 pt-1">
-                    Tip: Run <code>supabase/RUN_ALL_MIGRATIONS.sql</code> in your Supabase SQL editor to create the database tables.
-                  </p>
-                ) : null}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting || !name.trim()}
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm transition-colors shadow-lg shadow-indigo-600/30"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Creating workspace...</span>
-                </>
-              ) : (
-                <>
-                  <Building2 className="w-4 h-4" />
-                  <span>Create Workspace & Continue</span>
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {MODULE_LIST.slice(0, 4).map((mod) => (
-          <Link
-            key={mod.type}
-            to={ROUTES.templates}
-            className={`${cardClass} p-5 hover:border-indigo-400 hover:shadow-md transition-all group`}
-          >
-            <span className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${MODULE_COLORS[mod.type]}`}>
-              <Icon name={mod.icon} className="w-5 h-5" />
-            </span>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              {mod.plural}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{mod.description}</p>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
 };
 
 export const DashboardPage: React.FC = () => {
@@ -272,10 +164,6 @@ export const DashboardPage: React.FC = () => {
           </button>
         </div>
       </header>
-
-      {!organizationId && (
-        <NewUserWorkspaceOnboarding userFullName={user?.fullName || undefined} />
-      )}
 
       {list.isLoading && <DashboardSkeleton />}
       {list.isError && <ErrorNote message="We couldn't load your projects. Please refresh the page." />}

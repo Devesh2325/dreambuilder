@@ -18,7 +18,7 @@ interface CreateButtonProps {
 export const CreateButton: React.FC<CreateButtonProps> = ({ type, label, className = primaryButton, iconOnly }) => {
   const { can } = useWorkspace();
   const navigate = useNavigate();
-  if (!can('create:project')) return null;
+  if (can && !can('create:project')) return null;
   const text = label ?? (type ? `New ${moduleNoun(type)}` : 'Create new');
 
   return (
