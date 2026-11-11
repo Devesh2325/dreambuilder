@@ -305,11 +305,13 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
             )}
           </Step>
 
-          <Step number={4} title="Use your own domain">
-            <DomainSetup project={project} />
-          </Step>
+          {isSite && (
+            <Step number={4} title="Use your own domain">
+              <DomainSetup project={project} />
+            </Step>
+          )}
 
-          <Step number={5} title="In a mobile app">
+          <Step number={isSite ? 5 : 4} title="In a mobile app">
             <MobileSteps project={project} />
           </Step>
         </ol>

@@ -67,11 +67,14 @@ export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
   const [snapshot, setSnapshot] = useState<PublishedSnapshot | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [finishedReason, setFinishedReason] = useState<'closed' | 'completed' | null>(null);
+  const [replayKey, setReplayKey] = useState(0);
 
   useEffect(() => {
     let active = true;
     setState('loading');
     setErrorMessage(null);
+    setFinishedReason(null);
     (domain ? api.getPublishedSiteByDomain(domain) : api.getPublishedSite(slug))
       .then((result) => {
         if (!active) return;
@@ -102,8 +105,10 @@ export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
   }, [project]);
 
   const documents = useMemo(() => (snapshot?.documents ?? []).map((doc) => ({ ...doc, kind: doc.kind as DocumentKind })), [snapshot]);
-  const isSite = project ? MODULES[project.type].delivery === 'site' : false;
-  const page = pagesOf(documents).find((doc) => doc.slug === pagePath);
+  const delivery = project ? MODULES[project.type].delivery : 'inline';
+  const isSite = delivery === 'site';
+  const sitePages = pagesOf(documents);
+  const page = sitePages.find((doc) => doc.slug === pagePath) ?? (!pagePath ? sitePages[0] : undefined);
 
   useEffect(() => {
     if (!project) return;
@@ -128,7 +133,13 @@ export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
     return () => link.remove();
   }, [project]);
 
-  const host = useMemo<PlayerHost>(() => ({ targetDocument: document, submitForm, track }), [submitForm, track]);
+  const host = useMemo<PlayerHost>(() => ({
+    targetDocument: document,
+    standalone: true,
+    submitForm,
+    track,
+    onFinish: delivery === 'overlay' ? (reason) => setFinishedReason(reason) : undefined,
+  }), [submitForm, track, delivery]);
 
   if (state === 'loading') return <div role="status" aria-label="Loading" style={{ minHeight: '100vh', background: '#fff' }} />;
   if (state === 'error') {
@@ -139,7 +150,7 @@ export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
           <span style={{ display: 'block', maxWidth: 520, margin: '8px auto 0', fontSize: '0.9rem', color: '#64748b', lineHeight: 1.6 }}>
             The database publication function <code>get_published_site</code> is not in the schema cache yet.
             <br />
-            If you are the administrator, run <code>supabase/FIX_PUBLISHED_SITE_RPC.sql</code> in your Supabase SQL Editor.
+            If you are the administrator, run <code>supabase/RUN_ALL_MIGRATIONS.sql</code> (or <code>supabase/FIX_PUBLISHED_SITE_RPC.sql</code>) in your Supabase SQL Editor.
           </span>
         ) : (
           errorMessage || 'Please check your connection and try again.'
@@ -154,7 +165,7 @@ export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
     return (
       <SiteView
         documents={documents}
-        slug={pagePath}
+        slug={page.slug}
         theme={project.theme}
         variables={variables}
         ctx={{
@@ -176,13 +187,46 @@ export const PublicSitePage: React.FC<{ domain?: string }> = ({ domain }) => {
     );
   }
 
+  if (!documents[0]) return <Message title="Page not found" />;
+
+  if (delivery === 'overlay' && finishedReason) {
+    return (
+      <Message title={project.title}>
+        <span style={{ display: 'block', marginTop: 4, color: '#64748b' }}>
+          {finishedReason === 'completed' ? 'You completed this experience.' : 'This experience was dismissed.'}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setFinishedReason(null);
+            setReplayKey((k) => k + 1);
+          }}
+          style={{
+            marginTop: 20,
+            padding: '10px 20px',
+            borderRadius: 8,
+            border: 'none',
+            background: project.theme.primary || '#6366f1',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: '0.9375rem',
+            cursor: 'pointer',
+          }}
+        >
+          Replay
+        </button>
+      </Message>
+    );
+  }
+
   return (
-    <div style={MODULES[project.type].delivery === 'inline' ? { padding: 16, background: project.theme.background, minHeight: '100vh' } : { minHeight: '100vh', background: '#f1f5f9' }}>
+    <div style={delivery === 'inline' ? { padding: 16, background: project.theme.background, minHeight: '100vh' } : { minHeight: '100vh', background: '#f1f5f9' }}>
       <ExperiencePlayer
+        key={replayKey}
         type={project.type}
         content={documents[0].content}
         theme={project.theme}
-        variables={project.variables}
+        variables={variables}
         settings={project.settings}
         host={host}
       />

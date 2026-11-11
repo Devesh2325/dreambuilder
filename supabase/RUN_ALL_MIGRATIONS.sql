@@ -18,7 +18,7 @@
 -- Tables
 -- ---------------------------------------------------------------------------
 
-create table public.organizations (
+create table if not exists public.organizations (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 1 and 120),
   slug text not null unique check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
@@ -29,7 +29,7 @@ create table public.organizations (
   updated_at timestamptz not null default now()
 );
 
-create table public.user_profiles (
+create table if not exists public.user_profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   email text not null,
   full_name text check (char_length(full_name) <= 120),
@@ -38,7 +38,7 @@ create table public.user_profiles (
   updated_at timestamptz not null default now()
 );
 
-create table public.organization_members (
+create table if not exists public.organization_members (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations (id) on delete cascade,
   user_id uuid not null references public.user_profiles (id) on delete cascade,
@@ -48,7 +48,7 @@ create table public.organization_members (
   unique (organization_id, user_id)
 );
 
-create table public.projects (
+create table if not exists public.projects (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations (id) on delete cascade,
   type text not null check (type in (
@@ -72,7 +72,7 @@ create table public.projects (
   unique (id, organization_id)
 );
 
-create table public.documents (
+create table if not exists public.documents (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null,
   organization_id uuid not null,
@@ -94,7 +94,7 @@ create table public.documents (
   unique (project_id, slug)
 );
 
-create table public.project_versions (
+create table if not exists public.project_versions (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null,
   organization_id uuid not null,
@@ -108,7 +108,7 @@ create table public.project_versions (
   unique (project_id, version_number)
 );
 
-create table public.assets (
+create table if not exists public.assets (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations (id) on delete cascade,
   name text not null check (char_length(name) between 1 and 255),
@@ -120,20 +120,20 @@ create table public.assets (
   created_at timestamptz not null default now()
 );
 
-create index organization_members_user_idx on public.organization_members (user_id);
-create index projects_org_idx on public.projects (organization_id, updated_at desc);
-create index documents_project_idx on public.documents (project_id, position);
-create index documents_org_idx on public.documents (organization_id);
-create index project_versions_project_idx on public.project_versions (project_id, version_number desc);
-create index project_versions_org_idx on public.project_versions (organization_id);
-create index assets_org_idx on public.assets (organization_id, created_at desc);
+create index if not exists organization_members_user_idx on public.organization_members (user_id);
+create index if not exists projects_org_idx on public.projects (organization_id, updated_at desc);
+create index if not exists documents_project_idx on public.documents (project_id, position);
+create index if not exists documents_org_idx on public.documents (organization_id);
+create index if not exists project_versions_project_idx on public.project_versions (project_id, version_number desc);
+create index if not exists project_versions_org_idx on public.project_versions (organization_id);
+create index if not exists assets_org_idx on public.assets (organization_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
 -- Role helpers
 -- ---------------------------------------------------------------------------
 
 -- SECURITY DEFINER so policies on organization_members don't recurse into themselves.
-create function public.has_org_role(org uuid, allowed text[])
+create or replace function public.has_org_role(org uuid, allowed text[])
 returns boolean
 language sql stable security definer set search_path = ''
 as $$
@@ -145,14 +145,14 @@ as $$
   );
 $$;
 
-create function public.is_org_member(org uuid)
+create or replace function public.is_org_member(org uuid)
 returns boolean
 language sql stable security definer set search_path = ''
 as $$
   select public.has_org_role(org, array['owner', 'admin', 'editor', 'viewer']);
 $$;
 
-create function public.shares_org_with(other_user uuid)
+create or replace function public.shares_org_with(other_user uuid)
 returns boolean
 language sql stable security definer set search_path = ''
 as $$
@@ -168,7 +168,7 @@ $$;
 -- Triggers
 -- ---------------------------------------------------------------------------
 
-create function public.touch_updated_at()
+create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql set search_path = ''
 as $$
@@ -178,16 +178,20 @@ begin
 end;
 $$;
 
+drop trigger if exists organizations_touch on public.organizations;
 create trigger organizations_touch before update on public.organizations
   for each row execute function public.touch_updated_at();
+drop trigger if exists user_profiles_touch on public.user_profiles;
 create trigger user_profiles_touch before update on public.user_profiles
   for each row execute function public.touch_updated_at();
+drop trigger if exists organization_members_touch on public.organization_members;
 create trigger organization_members_touch before update on public.organization_members
   for each row execute function public.touch_updated_at();
+drop trigger if exists projects_touch on public.projects;
 create trigger projects_touch before update on public.projects
   for each row execute function public.touch_updated_at();
 
-create function public.bump_document_revision()
+create or replace function public.bump_document_revision()
 returns trigger
 language plpgsql set search_path = ''
 as $$
@@ -198,11 +202,12 @@ begin
 end;
 $$;
 
+drop trigger if exists documents_bump_revision on public.documents;
 create trigger documents_bump_revision before update on public.documents
   for each row execute function public.bump_document_revision();
 
 -- A workspace must always keep at least one owner.
-create function public.protect_last_owner()
+create or replace function public.protect_last_owner()
 returns trigger
 language plpgsql security definer set search_path = ''
 as $$
@@ -233,12 +238,13 @@ begin
 end;
 $$;
 
+drop trigger if exists organization_members_protect_owner on public.organization_members;
 create trigger organization_members_protect_owner
   before update or delete on public.organization_members
   for each row execute function public.protect_last_owner();
 
 -- Creates a workspace and makes the given user its owner.
-create function public.create_workspace_for_user(owner_id uuid, workspace_name text)
+create or replace function public.create_workspace_for_user(owner_id uuid, workspace_name text)
 returns uuid
 language plpgsql security definer set search_path = ''
 as $$
@@ -266,7 +272,7 @@ end;
 $$;
 
 -- Runs on signup. Metadata is user-supplied, so it is only used as display text.
-create function public.handle_new_user()
+create or replace function public.handle_new_user()
 returns trigger
 language plpgsql security definer set search_path = ''
 as $$
@@ -287,15 +293,23 @@ begin
 end;
 $$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+do $$
+begin
+  drop trigger if exists on_auth_user_created on auth.users;
+  create trigger on_auth_user_created
+    after insert on auth.users
+    for each row execute function public.handle_new_user();
+exception
+  when duplicate_object or insufficient_privilege then
+    raise notice 'Skipped auth trigger setup: %', sqlerrm;
+end;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- Client-callable functions
 -- ---------------------------------------------------------------------------
 
-create function public.create_organization(workspace_name text)
+create or replace function public.create_organization(workspace_name text)
 returns uuid
 language plpgsql security definer set search_path = ''
 as $$
@@ -310,7 +324,7 @@ $$;
 -- Creates a project and all its documents in one transaction, so the database
 -- generates one project id and the rows cannot disagree about it. Runs with the
 -- caller's rights: RLS decides whether they may write to this workspace.
-create function public.create_project_with_documents(
+create or replace function public.create_project_with_documents(
   org uuid,
   project_type text,
   project_title text,
@@ -424,23 +438,30 @@ alter table public.documents enable row level security;
 alter table public.project_versions enable row level security;
 alter table public.assets enable row level security;
 
+drop policy if exists organizations_select on public.organizations;
 create policy organizations_select on public.organizations for select to authenticated
   using (public.is_org_member(id));
+drop policy if exists organizations_update on public.organizations;
 create policy organizations_update on public.organizations for update to authenticated
   using (public.has_org_role(id, array['owner', 'admin']))
   with check (public.has_org_role(id, array['owner', 'admin']));
+drop policy if exists organizations_delete on public.organizations;
 create policy organizations_delete on public.organizations for delete to authenticated
   using (public.has_org_role(id, array['owner']));
 
+drop policy if exists user_profiles_select on public.user_profiles;
 create policy user_profiles_select on public.user_profiles for select to authenticated
   using (id = auth.uid() or public.shares_org_with(id));
+drop policy if exists user_profiles_update on public.user_profiles;
 create policy user_profiles_update on public.user_profiles for update to authenticated
   using (id = auth.uid())
   with check (id = auth.uid());
 
+drop policy if exists members_select on public.organization_members;
 create policy members_select on public.organization_members for select to authenticated
   using (public.is_org_member(organization_id));
 -- Admins manage non-owners. Only owners can grant or change the owner role.
+drop policy if exists members_update on public.organization_members;
 create policy members_update on public.organization_members for update to authenticated
   using (
     public.has_org_role(organization_id, array['owner'])
@@ -451,6 +472,7 @@ create policy members_update on public.organization_members for update to authen
     or (public.has_org_role(organization_id, array['admin']) and role <> 'owner')
   );
 -- Members may also leave on their own. The trigger protects the last owner.
+drop policy if exists members_delete on public.organization_members;
 create policy members_delete on public.organization_members for delete to authenticated
   using (
     user_id = auth.uid()
@@ -458,36 +480,49 @@ create policy members_delete on public.organization_members for delete to authen
     or (public.has_org_role(organization_id, array['admin']) and role <> 'owner')
   );
 
+drop policy if exists projects_select on public.projects;
 create policy projects_select on public.projects for select to authenticated
   using (public.is_org_member(organization_id));
+drop policy if exists projects_insert on public.projects;
 create policy projects_insert on public.projects for insert to authenticated
   with check (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists projects_update on public.projects;
 create policy projects_update on public.projects for update to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']))
   with check (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists projects_delete on public.projects;
 create policy projects_delete on public.projects for delete to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin']));
 
+drop policy if exists documents_select on public.documents;
 create policy documents_select on public.documents for select to authenticated
   using (public.is_org_member(organization_id));
+drop policy if exists documents_insert on public.documents;
 create policy documents_insert on public.documents for insert to authenticated
   with check (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists documents_update on public.documents;
 create policy documents_update on public.documents for update to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']))
   with check (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists documents_delete on public.documents;
 create policy documents_delete on public.documents for delete to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
 
+drop policy if exists project_versions_select on public.project_versions;
 create policy project_versions_select on public.project_versions for select to authenticated
   using (public.is_org_member(organization_id));
 
+drop policy if exists assets_select on public.assets;
 create policy assets_select on public.assets for select to authenticated
   using (public.is_org_member(organization_id));
+drop policy if exists assets_insert on public.assets;
 create policy assets_insert on public.assets for insert to authenticated
   with check (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists assets_update on public.assets;
 create policy assets_update on public.assets for update to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']))
   with check (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists assets_delete on public.assets;
 create policy assets_delete on public.assets for delete to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
 
@@ -505,7 +540,7 @@ values (
 on conflict (id) do nothing;
 
 -- Returns null instead of raising on a path whose first folder isn't a uuid.
-create function public.storage_path_org(object_name text)
+create or replace function public.storage_path_org(object_name text)
 returns uuid
 language plpgsql immutable set search_path = ''
 as $$
@@ -518,25 +553,37 @@ $$;
 
 grant execute on function public.storage_path_org(text) to authenticated;
 
-create policy assets_files_insert on storage.objects for insert to authenticated
-  with check (
-    bucket_id = 'assets'
-    and public.has_org_role(public.storage_path_org(name), array['owner', 'admin', 'editor'])
-  );
-create policy assets_files_update on storage.objects for update to authenticated
-  using (
-    bucket_id = 'assets'
-    and public.has_org_role(public.storage_path_org(name), array['owner', 'admin', 'editor'])
-  )
-  with check (
-    bucket_id = 'assets'
-    and public.has_org_role(public.storage_path_org(name), array['owner', 'admin', 'editor'])
-  );
-create policy assets_files_delete on storage.objects for delete to authenticated
-  using (
-    bucket_id = 'assets'
-    and public.has_org_role(public.storage_path_org(name), array['owner', 'admin', 'editor'])
-  );
+do $$
+begin
+  drop policy if exists assets_files_insert on storage.objects;
+  create policy assets_files_insert on storage.objects for insert to authenticated
+    with check (
+      bucket_id = 'assets'
+      and public.has_org_role(public.storage_path_org(name), array['owner', 'admin', 'editor'])
+    );
+
+  drop policy if exists assets_files_update on storage.objects;
+  create policy assets_files_update on storage.objects for update to authenticated
+    using (
+      bucket_id = 'assets'
+      and public.has_org_role(public.storage_path_org(name), array['owner', 'admin', 'editor'])
+    )
+    with check (
+      bucket_id = 'assets'
+      and public.has_org_role(public.storage_path_org(name), array['owner', 'admin', 'editor'])
+    );
+
+  drop policy if exists assets_files_delete on storage.objects;
+  create policy assets_files_delete on storage.objects for delete to authenticated
+    using (
+      bucket_id = 'assets'
+      and public.has_org_role(public.storage_path_org(name), array['owner', 'admin', 'editor'])
+    );
+exception
+  when insufficient_privilege then
+    raise notice 'Skipped storage.objects org policy setup: %', sqlerrm;
+end;
+$$;
 
 
 -- ========================================
@@ -545,11 +592,12 @@ create policy assets_files_delete on storage.objects for delete to authenticated
 
 -- Publishing: immutable versions, rollback, and the public read functions.
 
+alter table public.projects drop constraint if exists projects_published_version_fk;
 alter table public.projects
   add constraint projects_published_version_fk
   foreign key (published_version_id) references public.project_versions (id) on delete set null;
 
-create function public.slugify(input text)
+create or replace function public.slugify(input text)
 returns text
 language sql immutable set search_path = ''
 as $$
@@ -558,7 +606,7 @@ $$;
 
 -- Stores a full copy of the project and marks it live. Later edits to the drafts
 -- don't affect the live version until the next publish.
-create function public.publish_project(
+create or replace function public.publish_project(
   p_project uuid,
   p_summary text default null,
   p_slug text default null
@@ -635,7 +683,7 @@ begin
 end;
 $$;
 
-create function public.unpublish_project(p_project uuid)
+create or replace function public.unpublish_project(p_project uuid)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -652,7 +700,7 @@ $$;
 
 -- Replaces the drafts with a saved version. What is live doesn't change until the
 -- user publishes again, which lets them check the result first.
-create function public.restore_project_version(p_version uuid)
+create or replace function public.restore_project_version(p_version uuid)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -693,7 +741,7 @@ end;
 $$;
 
 -- Snapshot as visitors may see it. Webhook addresses are private.
-create function public.public_snapshot(version_id uuid)
+create or replace function public.public_snapshot(version_id uuid)
 returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -703,7 +751,7 @@ as $$
 $$;
 
 -- Only ever returns published versions, never drafts.
-create function public.get_published_site(p_slug text)
+create or replace function public.get_published_site(p_slug text)
 returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -712,7 +760,7 @@ as $$
   where p.slug = p_slug and p.status = 'published';
 $$;
 
-create function public.get_published_experience(p_project uuid)
+create or replace function public.get_published_experience(p_project uuid)
 returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -745,7 +793,7 @@ grant execute on function public.get_published_experience(uuid) to anon, authent
 -- Visitors have no login, so they only write through functions that require the
 -- project to be published and limit what can be stored.
 
-create table public.form_submissions (
+create table if not exists public.form_submissions (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null,
   organization_id uuid not null,
@@ -757,11 +805,11 @@ create table public.form_submissions (
   foreign key (project_id, organization_id)
     references public.projects (id, organization_id) on delete cascade
 );
-create index form_submissions_project_idx on public.form_submissions (project_id, created_at desc);
-create index form_submissions_org_idx on public.form_submissions (organization_id);
-create index form_submissions_rate_idx on public.form_submissions (project_id, source_hash, created_at desc);
+create index if not exists form_submissions_project_idx on public.form_submissions (project_id, created_at desc);
+create index if not exists form_submissions_org_idx on public.form_submissions (organization_id);
+create index if not exists form_submissions_rate_idx on public.form_submissions (project_id, source_hash, created_at desc);
 
-create table public.analytics_events (
+create table if not exists public.analytics_events (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null,
   organization_id uuid not null,
@@ -775,10 +823,10 @@ create table public.analytics_events (
   foreign key (project_id, organization_id)
     references public.projects (id, organization_id) on delete cascade
 );
-create index analytics_events_org_idx on public.analytics_events (organization_id, created_at desc);
-create index analytics_events_project_idx on public.analytics_events (project_id, created_at desc);
+create index if not exists analytics_events_org_idx on public.analytics_events (organization_id, created_at desc);
+create index if not exists analytics_events_project_idx on public.analytics_events (project_id, created_at desc);
 
-create table public.invitations (
+create table if not exists public.invitations (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations (id) on delete cascade,
   email text not null,
@@ -790,7 +838,7 @@ create table public.invitations (
   accepted_at timestamptz,
   created_at timestamptz not null default now()
 );
-create index invitations_org_idx on public.invitations (organization_id);
+create index if not exists invitations_org_idx on public.invitations (organization_id);
 
 revoke all on public.form_submissions, public.analytics_events, public.invitations
   from anon, authenticated;
@@ -804,14 +852,19 @@ grant select on public.analytics_events to authenticated;
 grant select (id, organization_id, email, role, expires_at, accepted_at, created_at) on public.invitations to authenticated;
 grant delete on public.invitations to authenticated;
 
+drop policy if exists form_submissions_select on public.form_submissions;
 create policy form_submissions_select on public.form_submissions for select to authenticated
   using (public.is_org_member(organization_id));
+drop policy if exists form_submissions_delete on public.form_submissions;
 create policy form_submissions_delete on public.form_submissions for delete to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists analytics_events_select on public.analytics_events;
 create policy analytics_events_select on public.analytics_events for select to authenticated
   using (public.is_org_member(organization_id));
+drop policy if exists invitations_select on public.invitations;
 create policy invitations_select on public.invitations for select to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin']));
+drop policy if exists invitations_delete on public.invitations;
 create policy invitations_delete on public.invitations for delete to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin']));
 
@@ -819,14 +872,14 @@ create policy invitations_delete on public.invitations for delete to authenticat
 -- Visitor functions
 -- ---------------------------------------------------------------------------
 
-create function public.published_project_org(p_project uuid)
+create or replace function public.published_project_org(p_project uuid)
 returns uuid
 language sql stable security definer set search_path = ''
 as $$
   select organization_id from public.projects where id = p_project and status = 'published';
 $$;
 
-create function public.request_source(p_project uuid, p_visitor text)
+create or replace function public.request_source(p_project uuid, p_visitor text)
 returns text
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -851,7 +904,7 @@ begin
 end;
 $$;
 
-create function public.submit_form(p_project uuid, p_data jsonb, p_visitor text default null)
+create or replace function public.submit_form(p_project uuid, p_data jsonb, p_visitor text default null)
 returns boolean
 language plpgsql security definer set search_path = ''
 as $$
@@ -886,7 +939,7 @@ begin
 end;
 $$;
 
-create function public.track_events(p_project uuid, p_events jsonb)
+create or replace function public.track_events(p_project uuid, p_events jsonb)
 returns integer
 language plpgsql security definer set search_path = ''
 as $$
@@ -922,7 +975,7 @@ end;
 $$;
 
 -- Runs as the caller, so RLS limits it to workspaces they belong to.
-create function public.analytics_summary(p_org uuid, p_days integer default 30)
+create or replace function public.analytics_summary(p_org uuid, p_days integer default 30)
 returns table (project_id uuid, event_type text, day date, events bigint, visitors bigint)
 language sql stable security invoker set search_path = ''
 as $$
@@ -943,7 +996,7 @@ $$;
 -- problem must never lose the submission, so errors are swallowed.
 -- ---------------------------------------------------------------------------
 
-create function public.deliver_form_webhook()
+create or replace function public.deliver_form_webhook()
 returns trigger
 language plpgsql security definer set search_path = ''
 as $$
@@ -973,6 +1026,7 @@ begin
 end;
 $$;
 
+drop trigger if exists form_submissions_webhook on public.form_submissions;
 create trigger form_submissions_webhook
   after insert on public.form_submissions
   for each row execute function public.deliver_form_webhook();
@@ -981,7 +1035,7 @@ create trigger form_submissions_webhook
 -- Plan limits. Keep in step with PLAN_LIMITS in src/types/auth.ts.
 -- ---------------------------------------------------------------------------
 
-create function public.plan_max_projects(plan text)
+create or replace function public.plan_max_projects(plan text)
 returns integer
 language sql immutable set search_path = ''
 as $$
@@ -991,7 +1045,7 @@ as $$
   end;
 $$;
 
-create function public.plan_max_members(plan text)
+create or replace function public.plan_max_members(plan text)
 returns integer
 language sql immutable set search_path = ''
 as $$
@@ -1001,7 +1055,7 @@ as $$
   end;
 $$;
 
-create function public.enforce_project_limit()
+create or replace function public.enforce_project_limit()
 returns trigger
 language plpgsql security definer set search_path = ''
 as $$
@@ -1018,6 +1072,7 @@ begin
 end;
 $$;
 
+drop trigger if exists projects_enforce_limit on public.projects;
 create trigger projects_enforce_limit
   before insert on public.projects
   for each row execute function public.enforce_project_limit();
@@ -1026,7 +1081,7 @@ create trigger projects_enforce_limit
 -- Invitations
 -- ---------------------------------------------------------------------------
 
-create function public.invitation_token_hash(token text)
+create or replace function public.invitation_token_hash(token text)
 returns text
 language sql immutable set search_path = ''
 as $$
@@ -1034,7 +1089,7 @@ as $$
 $$;
 
 -- Returns the secret token once. The app builds the invite link from it.
-create function public.create_invitation(p_org uuid, p_email text, p_role text)
+create or replace function public.create_invitation(p_org uuid, p_email text, p_role text)
 returns text
 language plpgsql security definer set search_path = ''
 as $$
@@ -1071,7 +1126,7 @@ end;
 $$;
 
 -- Requires the logged-in email to match, so a forwarded link is useless to others.
-create function public.accept_invitation(p_token text)
+create or replace function public.accept_invitation(p_token text)
 returns uuid
 language plpgsql security definer set search_path = ''
 as $$
@@ -1131,7 +1186,7 @@ grant execute on function public.track_events(uuid, jsonb) to anon, authenticate
 
 -- The team library: templates and sections a workspace saves for reuse.
 
-create table public.workspace_library (
+create table if not exists public.workspace_library (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations (id) on delete cascade,
   kind text not null check (kind in ('template', 'section')),
@@ -1144,8 +1199,9 @@ create table public.workspace_library (
   updated_at timestamptz not null default now()
 );
 
-create index workspace_library_org_idx on public.workspace_library (organization_id, kind, created_at desc);
+create index if not exists workspace_library_org_idx on public.workspace_library (organization_id, kind, created_at desc);
 
+drop trigger if exists workspace_library_touch on public.workspace_library;
 create trigger workspace_library_touch before update on public.workspace_library
   for each row execute function public.touch_updated_at();
 
@@ -1159,13 +1215,17 @@ grant select, delete on public.workspace_library to authenticated;
 grant insert (organization_id, kind, name, category, description, definition) on public.workspace_library to authenticated;
 grant update (name, category, description, definition) on public.workspace_library to authenticated;
 
+drop policy if exists workspace_library_select on public.workspace_library;
 create policy workspace_library_select on public.workspace_library for select to authenticated
   using (public.is_org_member(organization_id));
+drop policy if exists workspace_library_insert on public.workspace_library;
 create policy workspace_library_insert on public.workspace_library for insert to authenticated
   with check (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists workspace_library_update on public.workspace_library;
 create policy workspace_library_update on public.workspace_library for update to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']))
   with check (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
+drop policy if exists workspace_library_delete on public.workspace_library;
 create policy workspace_library_delete on public.workspace_library for delete to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
 
@@ -1207,14 +1267,14 @@ revoke execute on function public.public_snapshot(uuid) from public, anon, authe
 -- ---------------------------------------------------------------------------
 
 alter table public.user_profiles
-  add column timezone text check (timezone is null or char_length(timezone) <= 64),
-  add column job_title text check (job_title is null or char_length(job_title) <= 120),
-  add column last_active_at timestamptz;
+  add column if not exists timezone text check (timezone is null or char_length(timezone) <= 64),
+  add column if not exists job_title text check (job_title is null or char_length(job_title) <= 120),
+  add column if not exists last_active_at timestamptz;
 
 grant update (timezone, job_title) on public.user_profiles to authenticated;
 
 -- Written here rather than by clients, so nobody can claim to have been active.
-create function public.touch_last_active()
+create or replace function public.touch_last_active()
 returns void
 language sql security definer set search_path = ''
 as $$
@@ -1226,21 +1286,21 @@ $$;
 -- Super admins. There's no way to become one from the app: add a row with SQL.
 -- ---------------------------------------------------------------------------
 
-create table public.platform_admins (
+create table if not exists public.platform_admins (
   user_id uuid primary key references public.user_profiles (id) on delete cascade,
   created_at timestamptz not null default now()
 );
 revoke all on public.platform_admins from anon, authenticated;
 alter table public.platform_admins enable row level security;
 
-create function public.is_platform_admin()
+create or replace function public.is_platform_admin()
 returns boolean
 language sql stable security definer set search_path = ''
 as $$
   select exists (select 1 from public.platform_admins a where a.user_id = auth.uid());
 $$;
 
-create function public.require_platform_admin()
+create or replace function public.require_platform_admin()
 returns void
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -1255,7 +1315,7 @@ $$;
 -- Plans and quotas. Defaults match PLAN_LIMITS in src/types/auth.ts.
 -- ---------------------------------------------------------------------------
 
-create table public.plan_settings (
+create table if not exists public.plan_settings (
   plan text primary key check (plan in ('free', 'starter', 'pro', 'agency', 'enterprise')),
   label text not null check (char_length(label) between 1 and 60),
   price_text text not null default '' check (char_length(price_text) <= 60),
@@ -1271,10 +1331,11 @@ insert into public.plan_settings (plan, label, price_text, description, max_proj
   ('starter', 'Starter', 'Ask us', 'For one business, getting started.', 15, 3, 1),
   ('pro', 'Pro', 'Ask us', 'For growing teams.', 100, 10, 2),
   ('agency', 'Agency', 'Ask us', 'For agencies with many clients.', 500, 30, 3),
-  ('enterprise', 'Enterprise', 'Ask us', 'For large organizations.', 99999, 999, 4);
+  ('enterprise', 'Enterprise', 'Ask us', 'For large organizations.', 99999, 999, 4)
+on conflict (plan) do nothing;
 
 -- No row means this module only counts toward the plan's overall limit.
-create table public.plan_module_quotas (
+create table if not exists public.plan_module_quotas (
   plan text not null references public.plan_settings (plan) on delete cascade,
   module text not null check (module in ('website', 'page', 'tour', 'form', 'demo', 'banner', 'menu', 'faq')),
   max_projects integer not null check (max_projects >= 0),
@@ -1285,7 +1346,9 @@ revoke all on public.plan_settings, public.plan_module_quotas from anon, authent
 grant select on public.plan_settings, public.plan_module_quotas to authenticated;
 alter table public.plan_settings enable row level security;
 alter table public.plan_module_quotas enable row level security;
+drop policy if exists plan_settings_select on public.plan_settings;
 create policy plan_settings_select on public.plan_settings for select to authenticated using (true);
+drop policy if exists plan_module_quotas_select on public.plan_module_quotas;
 create policy plan_module_quotas_select on public.plan_module_quotas for select to authenticated using (true);
 
 create or replace function public.plan_max_projects(plan text)
@@ -1329,7 +1392,7 @@ $$;
 -- Asking for a different plan. There's no online payment, so a super admin decides.
 -- ---------------------------------------------------------------------------
 
-create table public.plan_requests (
+create table if not exists public.plan_requests (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations (id) on delete cascade,
   plan text not null references public.plan_settings (plan),
@@ -1338,14 +1401,16 @@ create table public.plan_requests (
   requested_by uuid default auth.uid() references public.user_profiles (id) on delete set null,
   created_at timestamptz not null default now()
 );
-create unique index plan_requests_one_pending on public.plan_requests (organization_id) where status = 'pending';
+create unique index if not exists plan_requests_one_pending on public.plan_requests (organization_id) where status = 'pending';
 
 revoke all on public.plan_requests from anon, authenticated;
 grant select on public.plan_requests to authenticated;
 grant insert (organization_id, plan, note) on public.plan_requests to authenticated;
 alter table public.plan_requests enable row level security;
+drop policy if exists plan_requests_select on public.plan_requests;
 create policy plan_requests_select on public.plan_requests for select to authenticated
   using (public.is_org_member(organization_id));
+drop policy if exists plan_requests_insert on public.plan_requests;
 create policy plan_requests_insert on public.plan_requests for insert to authenticated
   with check (public.has_org_role(organization_id, array['owner']));
 
@@ -1353,7 +1418,7 @@ create policy plan_requests_insert on public.plan_requests for insert to authent
 -- Nudges: messages from a super admin to a user.
 -- ---------------------------------------------------------------------------
 
-create table public.user_nudges (
+create table if not exists public.user_nudges (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.user_profiles (id) on delete cascade,
   title text not null check (char_length(title) between 1 and 120),
@@ -1363,13 +1428,15 @@ create table public.user_nudges (
   created_at timestamptz not null default now(),
   read_at timestamptz
 );
-create index user_nudges_user_idx on public.user_nudges (user_id, created_at desc);
+create index if not exists user_nudges_user_idx on public.user_nudges (user_id, created_at desc);
 
 revoke all on public.user_nudges from anon, authenticated;
 grant select on public.user_nudges to authenticated;
 grant update (read_at) on public.user_nudges to authenticated;
 alter table public.user_nudges enable row level security;
+drop policy if exists user_nudges_select on public.user_nudges;
 create policy user_nudges_select on public.user_nudges for select to authenticated using (user_id = auth.uid());
+drop policy if exists user_nudges_update on public.user_nudges;
 create policy user_nudges_update on public.user_nudges for update to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
@@ -1377,7 +1444,7 @@ create policy user_nudges_update on public.user_nudges for update to authenticat
 -- Customer support
 -- ---------------------------------------------------------------------------
 
-create table public.support_tickets (
+create table if not exists public.support_tickets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references public.user_profiles (id) on delete cascade,
   organization_id uuid references public.organizations (id) on delete set null,
@@ -1386,9 +1453,9 @@ create table public.support_tickets (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create index support_tickets_user_idx on public.support_tickets (user_id, updated_at desc);
+create index if not exists support_tickets_user_idx on public.support_tickets (user_id, updated_at desc);
 
-create table public.support_messages (
+create table if not exists public.support_messages (
   id uuid primary key default gen_random_uuid(),
   ticket_id uuid not null references public.support_tickets (id) on delete cascade,
   author_id uuid default auth.uid() references public.user_profiles (id) on delete set null,
@@ -1397,7 +1464,7 @@ create table public.support_messages (
   body text not null check (char_length(body) between 1 and 5000),
   created_at timestamptz not null default now()
 );
-create index support_messages_ticket_idx on public.support_messages (ticket_id, created_at);
+create index if not exists support_messages_ticket_idx on public.support_messages (ticket_id, created_at);
 
 revoke all on public.support_tickets, public.support_messages from anon, authenticated;
 grant select on public.support_tickets, public.support_messages to authenticated;
@@ -1406,16 +1473,20 @@ grant insert (ticket_id, body) on public.support_messages to authenticated;
 alter table public.support_tickets enable row level security;
 alter table public.support_messages enable row level security;
 
+drop policy if exists support_tickets_select on public.support_tickets;
 create policy support_tickets_select on public.support_tickets for select to authenticated using (user_id = auth.uid());
+drop policy if exists support_tickets_insert on public.support_tickets;
 create policy support_tickets_insert on public.support_tickets for insert to authenticated
   with check (user_id = auth.uid() and (organization_id is null or public.is_org_member(organization_id)));
 
+drop policy if exists support_messages_select on public.support_messages;
 create policy support_messages_select on public.support_messages for select to authenticated
   using (exists (select 1 from public.support_tickets t where t.id = ticket_id and t.user_id = auth.uid()));
+drop policy if exists support_messages_insert on public.support_messages;
 create policy support_messages_insert on public.support_messages for insert to authenticated
   with check (exists (select 1 from public.support_tickets t where t.id = ticket_id and t.user_id = auth.uid() and t.status <> 'closed'));
 
-create function public.support_message_touch_ticket()
+create or replace function public.support_message_touch_ticket()
 returns trigger
 language plpgsql security definer set search_path = ''
 as $$
@@ -1427,6 +1498,7 @@ begin
 end;
 $$;
 
+drop trigger if exists support_messages_touch_ticket on public.support_messages;
 create trigger support_messages_touch_ticket
   after insert on public.support_messages
   for each row execute function public.support_message_touch_ticket();
@@ -1435,7 +1507,7 @@ create trigger support_messages_touch_ticket
 -- What a super admin can do. Every function checks for itself.
 -- ---------------------------------------------------------------------------
 
-create function public.admin_overview()
+create or replace function public.admin_overview()
 returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -1454,7 +1526,7 @@ begin
 end;
 $$;
 
-create function public.admin_list_users()
+create or replace function public.admin_list_users()
 returns table (
   user_id uuid, email text, full_name text, created_at timestamptz, last_active_at timestamptz,
   workspace_id uuid, workspace_name text, plan text, project_count bigint
@@ -1478,7 +1550,7 @@ begin
 end;
 $$;
 
-create function public.admin_set_workspace_plan(p_org uuid, p_plan text)
+create or replace function public.admin_set_workspace_plan(p_org uuid, p_plan text)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -1491,7 +1563,7 @@ begin
 end;
 $$;
 
-create function public.admin_update_plan(p_plan text, p_label text, p_price text, p_description text, p_max_projects integer, p_max_members integer)
+create or replace function public.admin_update_plan(p_plan text, p_label text, p_price text, p_description text, p_max_projects integer, p_max_members integer)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -1504,7 +1576,7 @@ end;
 $$;
 
 -- A null quota removes the limit for that module.
-create function public.admin_set_module_quota(p_plan text, p_module text, p_max integer)
+create or replace function public.admin_set_module_quota(p_plan text, p_module text, p_max integer)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -1520,7 +1592,7 @@ end;
 $$;
 
 -- A null user means everyone. Returns how many people it reached.
-create function public.admin_send_nudge(p_user uuid, p_title text, p_body text, p_link text)
+create or replace function public.admin_send_nudge(p_user uuid, p_title text, p_body text, p_link text)
 returns integer
 language plpgsql security definer set search_path = ''
 as $$
@@ -1537,7 +1609,7 @@ begin
 end;
 $$;
 
-create function public.admin_list_plan_requests()
+create or replace function public.admin_list_plan_requests()
 returns table (id uuid, organization_id uuid, workspace_name text, plan text, current_plan text, note text, status text, created_at timestamptz, requested_by_email text)
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -1552,7 +1624,7 @@ begin
 end;
 $$;
 
-create function public.admin_resolve_plan_request(p_request uuid, p_approve boolean)
+create or replace function public.admin_resolve_plan_request(p_request uuid, p_approve boolean)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -1571,7 +1643,7 @@ begin
 end;
 $$;
 
-create function public.admin_list_tickets()
+create or replace function public.admin_list_tickets()
 returns table (id uuid, subject text, status text, created_at timestamptz, updated_at timestamptz, user_email text, user_name text, workspace_name text)
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -1586,7 +1658,7 @@ begin
 end;
 $$;
 
-create function public.admin_ticket_messages(p_ticket uuid)
+create or replace function public.admin_ticket_messages(p_ticket uuid)
 returns table (id uuid, is_staff boolean, body text, created_at timestamptz)
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -1597,7 +1669,7 @@ begin
 end;
 $$;
 
-create function public.admin_reply_ticket(p_ticket uuid, p_body text)
+create or replace function public.admin_reply_ticket(p_ticket uuid, p_body text)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -1607,7 +1679,7 @@ begin
 end;
 $$;
 
-create function public.admin_set_ticket_status(p_ticket uuid, p_status text)
+create or replace function public.admin_set_ticket_status(p_ticket uuid, p_status text)
 returns void
 language plpgsql security definer set search_path = ''
 as $$
@@ -1663,7 +1735,7 @@ grant execute on function public.admin_set_ticket_status(uuid, text) to authenti
 -- domain is connected is decided only by the server: the `domains` Edge Function checks the
 -- DNS proof record and adds the domain to the hosting, using the service role.
 
-create table public.project_domains (
+create table if not exists public.project_domains (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects (id) on delete cascade,
   organization_id uuid not null references public.organizations (id) on delete cascade,
@@ -1679,7 +1751,7 @@ create table public.project_domains (
   last_checked_at timestamptz,
   created_at timestamptz not null default now()
 );
-create index project_domains_project_idx on public.project_domains (project_id);
+create index if not exists project_domains_project_idx on public.project_domains (project_id);
 
 revoke all on public.project_domains from anon, authenticated;
 grant select on public.project_domains to authenticated;
@@ -1687,10 +1759,12 @@ grant insert (project_id, organization_id, domain) on public.project_domains to 
 grant delete on public.project_domains to authenticated;
 alter table public.project_domains enable row level security;
 
+drop policy if exists project_domains_select on public.project_domains;
 create policy project_domains_select on public.project_domains for select to authenticated
   using (public.is_org_member(organization_id));
 
 -- Only sites have their own pages to show, and a project gets at most three domains.
+drop policy if exists project_domains_insert on public.project_domains;
 create policy project_domains_insert on public.project_domains for insert to authenticated
   with check (
     public.has_org_role(organization_id, array['owner', 'admin', 'editor'])
@@ -1701,11 +1775,12 @@ create policy project_domains_insert on public.project_domains for insert to aut
     and (select count(*) from public.project_domains d where d.project_id = project_domains.project_id) < 3
   );
 
+drop policy if exists project_domains_delete on public.project_domains;
 create policy project_domains_delete on public.project_domains for delete to authenticated
   using (public.has_org_role(organization_id, array['owner', 'admin', 'editor']));
 
 -- What a visitor sees at a connected domain: the same snapshot as /s/slug.
-create function public.get_published_site_by_domain(p_domain text)
+create or replace function public.get_published_site_by_domain(p_domain text)
 returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -1749,16 +1824,52 @@ values (
 )
 on conflict (id) do update set public = true;
 
-alter table storage.objects enable row level security;
+do $$
+begin
+  drop policy if exists "Assets are publicly viewable" on storage.objects;
+  create policy "Assets are publicly viewable" on storage.objects for select using (bucket_id = 'assets');
 
-drop policy if exists "Assets are publicly viewable" on storage.objects;
-create policy "Assets are publicly viewable" on storage.objects for select using (bucket_id = 'assets');
+  drop policy if exists "Authenticated users can upload assets" on storage.objects;
+  create policy "Authenticated users can upload assets" on storage.objects for insert to authenticated with check (bucket_id = 'assets');
 
-drop policy if exists "Authenticated users can upload assets" on storage.objects;
-create policy "Authenticated users can upload assets" on storage.objects for insert to authenticated with check (bucket_id = 'assets');
+  drop policy if exists "Authenticated users can delete assets" on storage.objects;
+  create policy "Authenticated users can delete assets" on storage.objects for delete to authenticated using (bucket_id = 'assets');
+exception
+  when insufficient_privilege then
+    raise notice 'Skipped storage.objects public policy setup: %', sqlerrm;
+end;
+$$;
 
-drop policy if exists "Authenticated users can delete assets" on storage.objects;
-create policy "Authenticated users can delete assets" on storage.objects for delete to authenticated using (bucket_id = 'assets');
+-- Backfill profiles & default workspaces for users who signed up before migrations ran
+do $$
+declare
+  u record;
+begin
+  for u in
+    select id, email, raw_user_meta_data
+    from auth.users
+  loop
+    insert into public.user_profiles (id, email, full_name)
+    values (
+      u.id,
+      coalesce(u.email, ''),
+      left(nullif(btrim(u.raw_user_meta_data ->> 'full_name'), ''), 120)
+    )
+    on conflict (id) do nothing;
+
+    if not exists (select 1 from public.organization_members m where m.user_id = u.id) then
+      perform public.create_workspace_for_user(
+        u.id,
+        coalesce(
+          u.raw_user_meta_data ->> 'workspace_name',
+          nullif(split_part(coalesce(u.email, ''), '@', 1), ''),
+          'My Workspace'
+        )
+      );
+    end if;
+  end loop;
+end;
+$$;
 
 -- Ensure PostgREST cache has latest public functions
 grant execute on function public.public_snapshot(uuid) to anon, authenticated;

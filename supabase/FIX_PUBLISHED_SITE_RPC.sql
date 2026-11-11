@@ -59,15 +59,27 @@ as $$
 $$;
 
 -- 5. Public site lookup by custom domain
+create table if not exists public.project_domains (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  organization_id uuid not null references public.organizations (id) on delete cascade,
+  domain text not null unique,
+  verification_token text not null default replace(gen_random_uuid()::text, '-', ''),
+  status text not null default 'pending' check (status in ('pending', 'active', 'failed')),
+  last_error text,
+  last_checked_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 create or replace function public.get_published_site_by_domain(p_domain text)
 returns jsonb
 language sql stable security definer set search_path = ''
 as $$
   select public.public_snapshot(p.published_version_id)
-  from public.domains d
+  from public.project_domains d
   join public.projects p on p.id = d.project_id
   where d.domain = lower(trim(p_domain))
-    and d.verified_at is not null
+    and d.status = 'active'
     and p.status = 'published';
 $$;
 
@@ -182,3 +194,4 @@ grant execute on function public.unpublish_project(uuid) to authenticated;
 
 -- 10. Reload PostgREST schema cache immediately
 notify pgrst, 'reload schema';
+

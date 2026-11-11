@@ -1,5 +1,46 @@
 import { PublicApi, PublishedSnapshot } from './services';
 
+const FALLBACK_KEYS = ['flowpilot_db_fallback', 'flowpilot_fallback_db_v1', 'flowpilot_local_storage_db_v1'];
+
+const isMissingRpc = (err: unknown): boolean => {
+  const msg = err instanceof Error ? err.message.toLowerCase() : '';
+  return msg.includes('schema cache') || msg.includes('could not find the function') || msg.includes('pgrst202');
+};
+
+interface FallbackStore {
+  projects?: (PublishedSnapshot['project'] & { status?: string })[];
+  documents?: (PublishedSnapshot['documents'][number] & { projectId: string })[];
+  versions?: { projectId: string; versionNumber: number; snapshot?: PublishedSnapshot }[];
+}
+
+const readFallbackStore = (): FallbackStore | null => {
+  if (typeof window === 'undefined') return null;
+  for (const key of FALLBACK_KEYS) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw) as FallbackStore;
+    } catch {
+      // Ignore malformed storage entries
+    }
+  }
+  return null;
+};
+
+const findFallbackSnapshot = (
+  match: (project: PublishedSnapshot['project'] & { status?: string }) => boolean,
+): PublishedSnapshot | null => {
+  const parsed = readFallbackStore();
+  if (!parsed) return null;
+  const project = parsed.projects?.find((p) => p.status === 'published' && match(p));
+  if (!project) return null;
+  const latestVersion = parsed.versions
+    ?.filter((v) => v.projectId === project.id)
+    ?.sort((a, b) => b.versionNumber - a.versionNumber)?.[0];
+  if (latestVersion?.snapshot) return latestVersion.snapshot;
+  const docs = parsed.documents?.filter((d) => d.projectId === project.id) ?? [];
+  return { project, documents: docs };
+};
+
 /**
  * Calls Supabase's REST endpoint with fetch rather than supabase-js, so the embed
  * script that visitors download stays small. Used by public sites too.
@@ -24,25 +65,8 @@ export function createPublicApi(url: string, anonKey: string): PublicApi {
       try {
         return await rpc<PublishedSnapshot | null>('get_published_site', { p_slug: slug });
       } catch (err) {
-        if (typeof window !== 'undefined') {
-          try {
-            const raw = localStorage.getItem('flowpilot_fallback_db_v1') || localStorage.getItem('flowpilot_local_storage_db_v1');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              const project = parsed.projects?.find((p: { slug?: string; status?: string }) => p.slug === slug && p.status === 'published');
-              if (project) {
-                const latestVersion = parsed.versions
-                  ?.filter((v: { projectId: string }) => v.projectId === project.id)
-                  ?.sort((a: { versionNumber: number }, b: { versionNumber: number }) => b.versionNumber - a.versionNumber)?.[0];
-                if (latestVersion?.snapshot) return latestVersion.snapshot as PublishedSnapshot;
-                const docs = parsed.documents?.filter((d: { projectId: string }) => d.projectId === project.id) ?? [];
-                return { project, documents: docs } as PublishedSnapshot;
-              }
-            }
-          } catch {
-            // Ignore parse errors and fall through to rethrow
-          }
-        }
+        const snapshot = findFallbackSnapshot((p) => p.slug === slug);
+        if (snapshot) return snapshot;
         throw err;
       }
     },
@@ -51,33 +75,26 @@ export function createPublicApi(url: string, anonKey: string): PublicApi {
       try {
         return await rpc<PublishedSnapshot | null>('get_published_experience', { p_project: projectId });
       } catch (err) {
-        if (typeof window !== 'undefined') {
-          try {
-            const raw = localStorage.getItem('flowpilot_fallback_db_v1') || localStorage.getItem('flowpilot_local_storage_db_v1');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              const project = parsed.projects?.find((p: { id: string; status?: string }) => p.id === projectId && p.status === 'published');
-              if (project) {
-                const latestVersion = parsed.versions
-                  ?.filter((v: { projectId: string }) => v.projectId === project.id)
-                  ?.sort((a: { versionNumber: number }, b: { versionNumber: number }) => b.versionNumber - a.versionNumber)?.[0];
-                if (latestVersion?.snapshot) return latestVersion.snapshot as PublishedSnapshot;
-                const docs = parsed.documents?.filter((d: { projectId: string }) => d.projectId === project.id) ?? [];
-                return { project, documents: docs } as PublishedSnapshot;
-              }
-            }
-          } catch {
-            // Ignore parse errors and fall through to rethrow
-          }
-        }
+        const snapshot = findFallbackSnapshot((p) => p.id === projectId);
+        if (snapshot) return snapshot;
         throw err;
       }
     },
     submitForm: async (projectId, data, visitorId) => {
-      await rpc('submit_form', { p_project: projectId, p_data: data, p_visitor: visitorId ?? null });
+      try {
+        await rpc('submit_form', { p_project: projectId, p_data: data, p_visitor: visitorId ?? null });
+      } catch (err) {
+        if (isMissingRpc(err) && findFallbackSnapshot((p) => p.id === projectId)) return;
+        throw err;
+      }
     },
     trackEvents: async (projectId, events) => {
-      await rpc('track_events', { p_project: projectId, p_events: events });
+      try {
+        await rpc('track_events', { p_project: projectId, p_events: events });
+      } catch (err) {
+        if (isMissingRpc(err)) return;
+        throw err;
+      }
     },
   };
 }

@@ -115,6 +115,14 @@ describe('experience player', () => {
       expect(await screen.findByRole('heading', { name: 'Next one', hidden: true })).toBeTruthy();
       expect(track).toHaveBeenCalledWith('tour_step_skipped', { step: 1, reason: 'missing_target' });
     });
+
+    it('centers immediately in standalone mode even when target selector is missing', async () => {
+      const content = buildContent('n', [
+        el('TourStep', { props: { selector: '#missing-dom', fallback: 'skip' } }, [el('Heading', { props: { text: 'Standalone step' } })]),
+      ]);
+      playTour(content, { standalone: true });
+      expect(await screen.findByRole('heading', { name: 'Standalone step', hidden: true })).toBeTruthy();
+    });
   });
 
   describe('forms', () => {
@@ -172,6 +180,10 @@ describe('experience player', () => {
       expect(await screen.findByAltText('Three')).toBeTruthy();
       fireEvent.click(screen.getByRole('button', { name: 'End' }));
       expect(track).toHaveBeenCalledWith('demo_completed');
+      fireEvent.click(await screen.findByRole('button', { name: 'Get Started Free' }));
+      expect(await screen.findByAltText('One')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Go' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'End' }));
       fireEvent.click(await screen.findByRole('button', { name: 'Restart' }));
       expect(await screen.findByAltText('One')).toBeTruthy();
     });

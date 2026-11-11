@@ -19,6 +19,8 @@ export interface PlayerHost {
   navigate?: RenderContext['navigate'];
   /** Moves the tour to another page of the customer's site. */
   goToPath?: (path: string) => boolean;
+  /** True when played on a standalone share page (/s/:slug) without an underlying app DOM. */
+  standalone?: boolean;
 }
 
 export interface ExperiencePlayerProps {
@@ -121,8 +123,8 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
             ? previous
             : { top: box.top, left: box.left, width: box.width, height: box.height },
         );
-      } else if (!hasSelector || Date.now() - started > waitMs) {
-        if (hasSelector && step.props.fallback === 'skip') {
+      } else if (!hasSelector || host.standalone || Date.now() - started > waitMs) {
+        if (hasSelector && !host.standalone && step.props.fallback === 'skip') {
           host.track?.('tour_step_skipped', { step: index + 1, reason: 'missing_target' });
           // Going back from the second step onto a missing first step has nowhere to
           // go, so it turns around instead of leaving nothing on screen.
@@ -374,6 +376,7 @@ const DemoPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
                   onClick={() => {
                     if (host.goToPath) host.goToPath('/');
                     else if (host.onFinish) host.onFinish('completed');
+                    else goTo(0);
                   }}
                 >
                   Get Started Free

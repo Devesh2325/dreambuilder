@@ -14,26 +14,28 @@ values (
 on conflict (id) do update
 set public = true;
 
--- 2. Enable RLS on storage.objects
-alter table storage.objects enable row level security;
+-- 2. Storage policies (safe on hosted Supabase SQL Editor where RLS is already enabled on storage.objects)
+do $$
+begin
+  drop policy if exists "Assets are publicly viewable" on storage.objects;
+  create policy "Assets are publicly viewable"
+    on storage.objects for select
+    using (bucket_id = 'assets');
 
--- 3. Public access policy to view uploaded assets
-drop policy if exists "Assets are publicly viewable" on storage.objects;
-create policy "Assets are publicly viewable"
-  on storage.objects for select
-  using (bucket_id = 'assets');
+  drop policy if exists "Authenticated users can upload assets" on storage.objects;
+  create policy "Authenticated users can upload assets"
+    on storage.objects for insert
+    to authenticated
+    with check (bucket_id = 'assets');
 
--- 4. Authenticated users can upload assets to the bucket
-drop policy if exists "Authenticated users can upload assets" on storage.objects;
-create policy "Authenticated users can upload assets"
-  on storage.objects for insert
-  to authenticated
-  with check (bucket_id = 'assets');
-
--- 5. Authenticated users can delete assets
-drop policy if exists "Authenticated users can delete assets" on storage.objects;
-create policy "Authenticated users can delete assets"
-  on storage.objects for delete
-  to authenticated
-  using (bucket_id = 'assets');
+  drop policy if exists "Authenticated users can delete assets" on storage.objects;
+  create policy "Authenticated users can delete assets"
+    on storage.objects for delete
+    to authenticated
+    using (bucket_id = 'assets');
+exception
+  when insufficient_privilege then
+    raise notice 'Skipped storage.objects policy setup (insufficient privilege). Manage storage policies in Dashboard -> Storage -> Policies if needed.';
+end;
+$$;
 
