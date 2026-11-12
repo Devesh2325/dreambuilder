@@ -2,7 +2,7 @@ import { VariableDef } from '../core/variables';
 import { photo } from './assets';
 import { buildContent, button, el, El, heading, image, section, TemplateDefinition, TemplatePage, text } from './dsl';
 import { field, listVar, longVar, make, textVar, urlVar } from './experiences';
-import { THEME_CORAL, THEME_EMERALD, THEME_INDIGO, THEME_MIDNIGHT, THEME_MONO, THEME_TERRACOTTA } from './themes';
+import { THEME_CORAL, THEME_DARK_TEAL, THEME_EMERALD, THEME_INDIGO, THEME_MIDNIGHT, THEME_MONO, THEME_TERRACOTTA } from './themes';
 
 const onePage = (children: El[], seoTitle = '{{headline}}', seoDescription = '{{subheadline}}'): TemplatePage => ({
   kind: 'page',
@@ -425,4 +425,354 @@ const researchAnalyst = make('page', 'research-analyst', 'Research Analyst Showc
 
 ], '{{analyst.name}} — {{analyst.title}}', '{{analyst.tagline}}')], { titleVariable: 'analyst.name', category: 'Landing page' });
 
-export const PAGE_TEMPLATES: TemplateDefinition[] = [article, docsArticle, caseStudy, saasLanding, ebook, appDownload, thankYou, consultation, researchAnalyst];
+// ---- Financial Masterclass & Webinar landing page (inspired by Finuro) -------
+
+const financialWebinar = make('page', 'financial-webinar', 'Financial Masterclass & Webinar', 'A high-converting registration page for live market webinars, investment masterclasses, and SEBI-registered advisory workshops.', ['webinar', 'finance', 'masterclass', 'investing', 'landing'], THEME_DARK_TEAL, [
+  // Brand & Top bar
+  textVar('brand.name', 'Brand name', 'Shining Bulls', 'Brand'),
+  textVar('brand.tagline', 'Brand tagline', 'Shape the Future Side by Side', 'Brand'),
+  textVar('brand.address', 'Registered office address', 'Chidda Singh, Azad Nagar, Ahmera Road Market, Meerut, Uttar Pradesh, 250001', 'Brand'),
+  // Webinar Hero
+  textVar('webinar.badge', 'Opportunity badge', '✦ $500 Billion Opportunity Taking Shape Above Us', 'Hero'),
+  textVar('webinar.title', 'Main title', 'Understand How Rockets & Satellites Are Creating a New Investment Frontier', 'Hero'),
+  textVar('webinar.tagline', 'Supporting tagline', 'Designed for investors who want to understand the space economy from the ground up.', 'Hero'),
+  textVar('webinar.price', 'Ticket price', '₹499', 'Schedule'),
+  textVar('webinar.date', 'Webinar date', '14 NOV 2026', 'Schedule'),
+  textVar('webinar.time', 'Webinar time', '7:00 PM IST', 'Schedule'),
+  textVar('webinar.duration', 'Duration', '2 HOURS', 'Schedule'),
+  textVar('webinar.platform', 'Platform mode', 'LIVE ON ZOOM', 'Schedule'),
+  textVar('webinar.riskWarning', 'Risk notice', 'Investments in the securities market are subject to market risks. Read all related documents carefully before investing.', 'Hero'),
+  // CTA
+  textVar('cta.label', 'Primary button label', 'Register Now @ ₹499 ↗', 'Call to action'),
+  urlVar('cta.link', 'Primary button link', 'https://example.com/register', 'Call to action'),
+  // Hero Bullets
+  listVar('heroHighlights', 'Hero key highlights', [
+    { point: 'Learn how big the global space economy is and what is driving its growth.' },
+    { point: 'Map the space value chain, from launch vehicles to satellites and components.' },
+    { point: "Explore India's space opportunity and a framework to assess it with discipline." },
+  ], [{ key: 'point', label: 'Highlight', type: 'text', required: true }], 'Hero'),
+  // Segments
+  listVar('segments', 'Curriculum segments', [
+    { icon: '🚀', title: 'Launch Vehicles', description: 'Next-gen orbital and suborbital heavy-lift rocket technology and payload economics.' },
+    { icon: '🛰️', title: 'Satellites', description: 'Low Earth Orbit (LEO) constellations, miniaturization, and satellite manufacturing.' },
+    { icon: '📡', title: 'Satellite Communication', description: 'High-throughput broadband, direct-to-cell telecom, and global coverage networks.' },
+    { icon: '🌍', title: 'Earth Observation', description: 'Hyperspectral optical imaging, synthetic aperture radar (SAR), and climate analytics.' },
+    { icon: '⚙️', title: 'Space Components', description: 'Radiation-hardened semiconductors, advanced composite materials, and propulsion.' },
+    { icon: '🛡️', title: 'Defence & Aerospace', description: 'Strategic space commands, national sovereign security assets, and dual-use capabilities.' },
+  ], [
+    { key: 'icon', label: 'Icon', type: 'text', required: true },
+    { key: 'title', label: 'Segment name', type: 'text', required: true },
+    { key: 'description', label: 'Description', type: 'longtext', required: true },
+  ], 'Curriculum'),
+  // Why Attend takeaways
+  listVar('takeaways', 'Key takeaways', [
+    { title: 'Global Market Size', description: 'Understand the size, compound growth, and core drivers of the global space economy.' },
+    { title: 'End-to-End Value Chain', description: 'See how the space value chain fits together, from launch providers to downstream data.' },
+    { title: 'Value Creation Models', description: 'Learn how launch services, payload operators, and satellite constellations monetize.' },
+    { title: 'Component Manufacturing', description: 'Discover the role of specialized suppliers, precision machining, and recurring supply contracts.' },
+    { title: 'National Agency Ecosystem', description: "Understand the catalyst role of India's public space agency and enabling private policy." },
+    { title: 'Private Players & Themes', description: 'Track emerging private startups, tier-1 defense contractors, and key domestic themes.' },
+    { title: 'Opportunity Framework', description: 'Get a clear, battle-tested framework to identify competitive moats in emerging tech.' },
+    { title: 'Risk Management', description: 'Learn how to recognize capital intensity, regulatory bottlenecks, and manage portfolio risks.' },
+  ], [
+    { key: 'title', label: 'Title', type: 'text', required: true },
+    { key: 'description', label: 'Description', type: 'longtext', required: true },
+  ], 'Why Attend'),
+  // Target audience
+  listVar('targetAudience', 'Who is this for', [
+    { icon: '📈', title: 'Long-term Investors', description: 'Looking to understand emerging sectors deeply before deploying capital with high conviction.' },
+    { icon: '💼', title: 'Working Professionals', description: 'Who want a clear, time-efficient, structured view of next-generation technology economies.' },
+    { icon: '🚀', title: 'Market Enthusiasts', description: 'Curious how aerospace engineering and satellites translate into durable business models.' },
+  ], [
+    { key: 'icon', label: 'Icon', type: 'text', required: true },
+    { key: 'title', label: 'Audience type', type: 'text', required: true },
+    { key: 'description', label: 'Description', type: 'longtext', required: true },
+  ], 'Audience'),
+  // Sector attention pillars
+  listVar('sectorPillars', 'Sector pillars', [
+    { icon: '🏛️', title: 'From Government Missions to Private Enterprise', description: 'Space is no longer only the domain of national agencies. Private companies now build launchers, satellites, and components, opening the sector to a far wider ecosystem.' },
+    { icon: '🛰️', title: 'Satellites Power Everyday Life', description: 'Communication, navigation, weather forecasting, and mapping all depend on satellites, creating steady, recurring demand across the value chain.' },
+    { icon: '🔍', title: 'A Long-Term Theme That Rewards Research', description: 'Emerging industries carry real risks. A structured framework helps you separate durable, cash-flow-generative opportunities from short-term market hype.' },
+  ], [
+    { key: 'icon', label: 'Icon', type: 'text', required: true },
+    { key: 'title', label: 'Pillar title', type: 'text', required: true },
+    { key: 'description', label: 'Explanation', type: 'longtext', required: true },
+  ], 'Sector Analysis'),
+  textVar('conviction.banner', 'Conviction statement', 'Research. Not Rumours. Every idea is backed by deep analysis — no tips, no noise, just facts.', 'Mindset'),
+  textVar('decision.title', 'Decision title', 'The Decision Is Yours To Make...', 'Mindset'),
+  textVar('decision.subtitle', 'Decision subtitle', 'Ready to understand the next frontier of growth? Spend 2 HOURS learning how the space economy really works.', 'Mindset'),
+  textVar('decision.callout', 'Discipline callout', 'Emotionless. Smart Investing. We follow logic, not fear or greed — discipline & patience is our superpower in the market.', 'Mindset'),
+  // Inclusions
+  listVar('inclusions', "What's included in registration", [
+    { tag: 'INCLUDED 1', icon: '🎙️', title: 'Live Session with Expert', description: 'A 2 HOURS live walkthrough of the space economy with deep fundamental models and case studies.' },
+    { tag: 'INCLUDED 2', icon: '💬', title: 'Interactive Q&A Session', description: 'Bring your specific questions and get them answered live by the analyst at the end of the session.' },
+    { tag: 'INCLUDED 3', icon: '🤝', title: 'Exclusive Community Access', description: 'Stay connected with fellow attendees, access research summaries, and continue learning after the webinar.' },
+  ], [
+    { key: 'tag', label: 'Tag', type: 'text', required: true },
+    { key: 'icon', label: 'Icon', type: 'text', required: true },
+    { key: 'title', label: 'Title', type: 'text', required: true },
+    { key: 'description', label: 'Description', type: 'longtext', required: true },
+  ], 'Inclusions'),
+  // Speaker
+  textVar('speaker.name', 'Speaker name', 'Vikas Dimaniya', 'Speaker'),
+  textVar('speaker.title', 'Speaker title', 'CEO & Research Lead', 'Speaker'),
+  textVar('speaker.company', 'Speaker company', 'Shining Bulls', 'Speaker'),
+  { key: 'speaker.photo', label: 'Speaker photo', type: 'image', default: photo('office', 500, 500), group: 'Speaker' },
+  listVar('speakerPoints', 'Speaker credentials', [
+    { point: 'CEO, Shining Bulls' },
+    { point: '15+ years of institutional and retail market experience' },
+    { point: "Leads this masterclass on the global space economy, its value chain and India's opportunity" },
+    { point: 'Shares a practical framework for identifying opportunities and managing downside risks' },
+    { point: 'Answers your questions live in a dedicated interactive Q&A' },
+  ], [{ key: 'point', label: 'Point', type: 'text', required: true }], 'Speaker'),
+  // FAQ
+  textVar('faq.subtitle', 'FAQ intro', "We've tried our best to answer the common questions you might have. For anything else, message us on WhatsApp.", 'FAQ'),
+  listVar('faqs', 'Frequently asked questions', [
+    { question: 'When and where is the webinar, and how long will it be?', answer: 'The webinar is on Saturday, 14 November 2026 at 7:00 PM IST, live on Zoom. It runs for about 2 hours.' },
+    { question: 'Do I need prior knowledge of the space sector or investing?', answer: 'No. The session starts with the fundamentals of the space economy before moving on to the value chain and the investment framework.' },
+    { question: 'How will I receive the joining link?', answer: 'The joining link will be shared with you immediately via email and WhatsApp upon registration, ahead of the live session.' },
+    { question: 'What should I keep ready before the webinar starts?', answer: 'Join 10 minutes early with a stable internet connection, and keep a notebook handy for key points and questions during the Q&A.' },
+    { question: 'What does the ₹499 registration fee include?', answer: 'Your registration includes the 2-hour live walkthrough with the expert, interactive Q&A access, and exclusive community learning materials.' },
+    { question: 'Is this investment advice?', answer: 'No. This webinar is purely educational and does not recommend buying or selling any security. Always do your own research before investing.' },
+  ], [
+    { key: 'question', label: 'Question', type: 'text', required: true },
+    { key: 'answer', label: 'Answer', type: 'longtext', required: true },
+  ], 'FAQ'),
+  // Contact
+  textVar('contact.phone', 'WhatsApp / Support phone', '+91 9599927746', 'Contact'),
+  textVar('contact.email', 'Support email', 'support@shiningbulls.com', 'Contact'),
+  // Regulatory
+  textVar('sebi.regNo', 'SEBI registration number', 'INA000020271', 'Compliance'),
+  textVar('sebi.regType', 'Registration category', 'SEBI Registered Investment Adviser', 'Compliance'),
+  textVar('sebi.supervisoryBody', 'Recognised supervisory body', 'BSE (Enlistment No. 2273)', 'Compliance'),
+  longVar('footer.disclaimer', 'Statutory disclaimer', 'All information shared in this webinar is for educational purposes only and does not constitute investment advice or a recommendation to buy or sell any security. Participation is limited to individuals aged 18 and above. Investments in the securities market are subject to market risks; read all related documents carefully before investing. Past performance does not guarantee future results, and individual outcomes will vary. By registering, you accept sole responsibility for your investment decisions. Registration granted by SEBI, membership of BSE and certification from NISM in no way guarantee performance of the intermediary or provide any assurance of returns to investors.', 'Compliance'),
+  textVar('footer.copyright', 'Copyright line', '© 2026 Shining Bulls. All rights reserved.', 'Compliance'),
+], [onePage([
+  // ── 1. Top Notice / Tagline Bar ───────────────────────────────────────────
+  el('Section', { styles: { background: 'var(--fp-surface)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px', paddingBottom: '14px' } }, [
+    el('Container', { styles: { display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' } }, [
+      text('✦ {{brand.tagline}}', { fontWeight: 600, fontSize: '0.875rem', color: 'var(--fp-primary)' }),
+      button('{{cta.label}}', '{{cta.link}}', 'primary'),
+    ]),
+  ]),
+
+  // ── 2. Hero Section ───────────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { alignItems: 'center', textAlign: 'center', gap: '20px', maxWidth: '860px', marginLeft: 'auto', marginRight: 'auto' } }, [
+      el('Box', { styles: { display: 'inline-flex', background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.3)', borderRadius: '999px', padding: '6px 18px' } }, [
+        text('{{webinar.badge}}', { fontWeight: 600, fontSize: '0.875rem', color: 'var(--fp-primary)' }),
+      ]),
+      heading('{{webinar.title}}', 'h1', { fontSize: '2.5rem', lineHeight: '1.2' }),
+      el('Box', { styles: { gap: '10px', textAlign: 'left', maxWidth: '680px', width: '100%', marginTop: '8px' } }, [
+        el('Text', { repeat: { list: 'heroHighlights', as: 'hl' }, props: { text: '✔ {{hl.point}}' }, styles: { fontSize: '1.0625rem', lineHeight: '1.6' } }),
+      ]),
+      el('Grid', { styles: { gap: '16px', width: '100%', maxWidth: '740px', marginTop: '16px', background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '16px' } }, [
+        el('Box', { styles: { textAlign: 'center', gap: '4px' } }, [text('📅 Date', { fontSize: '0.75rem', color: 'var(--fp-muted)' }), heading('{{webinar.date}}', 'h4', { margin: '0' })]),
+        el('Box', { styles: { textAlign: 'center', gap: '4px' } }, [text('🕖 Time', { fontSize: '0.75rem', color: 'var(--fp-muted)' }), heading('{{webinar.time}}', 'h4', { margin: '0' })]),
+        el('Box', { styles: { textAlign: 'center', gap: '4px' } }, [text('⏳ Duration', { fontSize: '0.75rem', color: 'var(--fp-muted)' }), heading('{{webinar.duration}}', 'h4', { margin: '0' })]),
+        el('Box', { styles: { textAlign: 'center', gap: '4px' } }, [text('🎥 Mode', { fontSize: '0.75rem', color: 'var(--fp-muted)' }), heading('{{webinar.platform}}', 'h4', { margin: '0' })]),
+      ]),
+      el('Box', { styles: { alignItems: 'center', gap: '12px', marginTop: '16px' } }, [
+        button('{{cta.label}}', '{{cta.link}}'),
+        text('{{webinar.tagline}}', { fontSize: '0.875rem', color: 'var(--fp-muted)' }),
+        text('⚠️ {{webinar.riskWarning}}', { fontSize: '0.75rem', color: 'var(--fp-muted)', maxWidth: '660px', lineHeight: '1.5' }),
+      ]),
+    ]),
+  ], { paddingTop: '64px', paddingBottom: '64px' }),
+
+  // ── 3. Quick Action Strip ─────────────────────────────────────────────────
+  section([
+    el('Card', { styles: { display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', background: 'linear-gradient(90deg, var(--fp-surface), rgba(45,212,191,0.08))', border: '1px solid rgba(45,212,191,0.3)' } }, [
+      el('Box', { styles: { gap: '4px' } }, [
+        heading('{{webinar.price}} · Live Webinar Registration', 'h3', { margin: '0' }),
+        text('Live on {{webinar.date}} at {{webinar.time}} (Zoom)', { color: 'var(--fp-muted)', fontSize: '0.9375rem' }),
+      ]),
+      button('{{cta.label}}', '{{cta.link}}'),
+    ]),
+  ]),
+
+  // ── 4. Segments You'll Explore ────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('CURRICULUM BREAKDOWN', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading("Segments You'll Explore", 'h2'),
+      text('A comprehensive look across the entire technology and capital value chain.', { color: 'var(--fp-muted)' }),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'segments', as: 'seg' }, styles: { gap: '8px' } }, [
+        heading('{{seg.icon}} {{seg.title}}', 'h3'),
+        text('{{seg.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: '1.5' }),
+      ]),
+    ]),
+  ]),
+
+  // ── 5. Why Attend This Webinar? ───────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('ACTIONABLE INSIGHTS', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading('Why Attend This Webinar?', 'h2'),
+      text('Learn disciplined research principles and frameworks you can apply directly.', { color: 'var(--fp-muted)' }),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'takeaways', as: 'item' }, styles: { gap: '6px' } }, [
+        heading('✔ {{item.title}}', 'h4', { color: 'var(--fp-primary)', margin: '0' }),
+        text('{{item.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem' }),
+      ]),
+    ]),
+    el('Box', { styles: { alignItems: 'center', marginTop: '16px' } }, [
+      button('{{cta.label}}', '{{cta.link}}'),
+    ]),
+  ]),
+
+  // ── 6. Target Audience ────────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('FOR PRUDENT LEARNERS', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading('This Webinar Is For You If You Are...', 'h2'),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'targetAudience', as: 'aud' }, styles: { gap: '10px' } }, [
+        heading('{{aud.icon}} {{aud.title}}', 'h3'),
+        text('{{aud.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: '1.55' }),
+      ]),
+    ]),
+  ]),
+
+  // ── 7. Sector Attention & Conviction ──────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('MACRO LANDSCAPE', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading("Here's Why This Sector Is Getting Everyone's Attention", 'h2'),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'sectorPillars', as: 'pillar' }, styles: { gap: '10px' } }, [
+        heading('{{pillar.icon}} {{pillar.title}}', 'h3'),
+        text('{{pillar.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: '1.6' }),
+      ]),
+    ]),
+    el('Box', { styles: { background: 'rgba(45,212,191,0.08)', border: '1px solid rgba(45,212,191,0.3)', borderRadius: '12px', padding: '24px', textAlign: 'center', maxWidth: '780px', marginLeft: 'auto', marginRight: 'auto', marginTop: '16px' } }, [
+      heading('{{conviction.banner}}', 'h3', { margin: '0', color: 'var(--fp-primary)' }),
+    ]),
+  ]),
+
+  // ── 8. Inclusions ─────────────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('FULL ACCESS', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading("Here's Everything You Get for Just {{webinar.price}}", 'h2'),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'inclusions', as: 'inc' }, styles: { gap: '12px', borderTop: '3px solid var(--fp-primary)' } }, [
+        el('Box', { styles: { display: 'inline-flex', background: 'rgba(45,212,191,0.15)', borderRadius: '6px', padding: '4px 10px', alignSelf: 'flex-start' } }, [
+          text('{{inc.tag}}', { fontWeight: 700, fontSize: '0.75rem', color: 'var(--fp-primary)' }),
+        ]),
+        heading('{{inc.icon}} {{inc.title}}', 'h3'),
+        text('{{inc.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: '1.6' }),
+      ]),
+    ]),
+  ]),
+
+  // ── 9. Decision & Discipline Banner ───────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '16px', maxWidth: '760px', marginLeft: 'auto', marginRight: 'auto' } }, [
+      heading('{{decision.title}}', 'h2'),
+      text('{{decision.subtitle}}', { fontSize: '1.125rem', color: 'var(--fp-muted)' }),
+      el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.1)', padding: '24px' } }, [
+        text('{{decision.callout}}', { fontWeight: 600, fontSize: '1.0625rem', color: '#f1f5f9', lineHeight: '1.6' }),
+      ]),
+      button('{{cta.label}}', '{{cta.link}}'),
+    ]),
+  ], { background: 'linear-gradient(180deg, transparent, rgba(15,39,51,0.6))', paddingTop: '64px', paddingBottom: '64px' }),
+
+  // ── 10. Meet Your Speaker ─────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('EXPERT SPEAKER', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading('Meet Your Speaker', 'h2'),
+    ]),
+    el('Grid', { styles: { gap: '48px', alignItems: 'center' } }, [
+      image('{{speaker.photo}}', '{{speaker.name}}', { height: '360px', borderRadius: '16px', objectFit: 'cover' }, 'speaker.photo'),
+      el('Box', { styles: { gap: '16px' } }, [
+        heading('{{speaker.name}}', 'h2'),
+        text('{{speaker.title}} · {{speaker.company}}', { fontWeight: 600, color: 'var(--fp-primary)', fontSize: '1.125rem' }),
+        el('Box', { styles: { gap: '10px' } }, [
+          el('Text', { repeat: { list: 'speakerPoints', as: 'sp' }, props: { text: '✔ {{sp.point}}' }, styles: { fontSize: '0.9375rem', color: 'var(--fp-muted)', lineHeight: '1.5' } }),
+        ]),
+        button('{{cta.label}}', '{{cta.link}}'),
+      ]),
+    ]),
+  ]),
+
+  // ── 11. Urgency / Live Reservation Callout ────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '16px', maxWidth: '720px', marginLeft: 'auto', marginRight: 'auto' } }, [
+      heading('Join the Live Webinar at Just {{webinar.price}}', 'h2'),
+      text('📅 {{webinar.date}} · 🕖 {{webinar.time}} · 🎥 {{webinar.platform}}', { fontSize: '1.125rem', color: 'var(--fp-primary)', fontWeight: 600 }),
+      button('{{cta.label}}', '{{cta.link}}'),
+    ]),
+  ], { background: 'var(--fp-surface)', borderRadius: '16px', paddingTop: '48px', paddingBottom: '48px' }),
+
+  // ── 12. FAQ's & Support ───────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('COMMON QUESTIONS', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading("FAQ's", 'h2'),
+      text('{{faq.subtitle}}', { color: 'var(--fp-muted)' }),
+    ]),
+    el('Card', { styles: { display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: 'rgba(45,212,191,0.06)', border: '1px solid rgba(45,212,191,0.2)' } }, [
+      text('💬 Still have questions? WhatsApp: {{contact.phone}} | Email: {{contact.email}}', { fontWeight: 500, fontSize: '0.9375rem' }),
+      button('Chat on WhatsApp', 'https://wa.me/{{contact.phone}}', 'secondary'),
+    ]),
+    el('Box', { styles: { gap: '12px' } }, [
+      el('Accordion', { repeat: { list: 'faqs', as: 'faq' }, props: { question: '{{faq.question}}', answer: '{{faq.answer}}' } }),
+    ]),
+  ]),
+
+  // ── 13. Regulatory Details ────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('TRANSPARENCY & COMPLIANCE', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading('Regulatory Details', 'h2'),
+    ]),
+    el('Grid', { styles: { gap: '20px' } }, [
+      el('Card', { styles: { gap: '8px' } }, [
+        text('🏢 Brand Name', { fontWeight: 700, fontSize: '0.875rem' }),
+        text('{{brand.name}}', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+        text('📜 SEBI Registration', { fontWeight: 700, fontSize: '0.875rem', marginTop: '8px' }),
+        text('{{sebi.regType}}: {{sebi.regNo}}', { fontFamily: 'monospace', color: 'var(--fp-primary)', fontSize: '0.875rem' }),
+        text('🏛 Supervisory Body', { fontWeight: 700, fontSize: '0.875rem', marginTop: '8px' }),
+        text('{{sebi.supervisoryBody}}', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+      ]),
+      el('Card', { styles: { gap: '8px' } }, [
+        text('📍 Registered Address', { fontWeight: 700, fontSize: '0.875rem' }),
+        text('{{brand.address}}', { color: 'var(--fp-muted)', fontSize: '0.875rem', lineHeight: '1.6' }),
+        text('📞 Support & Contact', { fontWeight: 700, fontSize: '0.875rem', marginTop: '8px' }),
+        text('Phone: {{contact.phone}} | Email: {{contact.email}}', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+      ]),
+    ]),
+  ]),
+
+  // ── 14. Disclaimer & Footer ───────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '820px', marginLeft: 'auto', marginRight: 'auto' } }, [
+      text('DISCLAIMER: {{webinar.title}}', { fontWeight: 700, fontSize: '0.8125rem', letterSpacing: '0.05em' }),
+      text('{{footer.disclaimer}}', { fontSize: '0.75rem', color: 'var(--fp-muted)', lineHeight: '1.65' }),
+      el('Divider'),
+      text('{{footer.copyright}}', { fontSize: '0.75rem', color: 'var(--fp-muted)' }),
+    ]),
+  ], { background: 'var(--fp-surface)', paddingTop: '32px', paddingBottom: '32px' }),
+
+], '{{webinar.title}}', '{{webinar.tagline}}')], { titleVariable: 'webinar.title', category: 'Landing page' });
+
+export const PAGE_TEMPLATES: TemplateDefinition[] = [
+  article,
+  docsArticle,
+  caseStudy,
+  saasLanding,
+  ebook,
+  appDownload,
+  thankYou,
+  consultation,
+  researchAnalyst,
+  financialWebinar,
+];
