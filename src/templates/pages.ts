@@ -196,4 +196,233 @@ const consultation = make('page', 'consultation', 'Book a consultation', 'For pr
   el('Card', {}, [el('Form', { props: { submitText: 'Book my consultation', successMessage: '{{thanks}}' } }, [field('name', 'Name'), field('email', 'Email', 'email'), field('phone', 'Phone', 'tel', false)])]),
 ]), cards('reasons', 'reason')])])], { titleVariable: 'headline', category: 'Landing page' });
 
-export const PAGE_TEMPLATES: TemplateDefinition[] = [article, docsArticle, caseStudy, saasLanding, ebook, appDownload, thankYou, consultation];
+// ---- Research Analyst / Financial Advisor landing page ----------------------
+
+const researchAnalyst = make('page', 'research-analyst', 'Research Analyst Showcase', 'A professional landing page for a SEBI-registered research analyst or financial advisor.', ['finance', 'analyst', 'advisor', 'landing'], THEME_MIDNIGHT, [
+  // Hero
+  textVar('analyst.name', 'Analyst name', 'Arjun Sharma', 'Profile'),
+  textVar('analyst.title', 'Professional title', 'SEBI Registered Research Analyst', 'Profile'),
+  textVar('analyst.tagline', 'Tagline', 'Evidence-based research. Data-driven decisions.', 'Profile'),
+  { key: 'analyst.photo', label: 'Profile photo', type: 'image', default: photo('office', 400, 400), group: 'Profile' },
+  textVar('sebi.regNo', 'SEBI registration number', 'INH000000000', 'Credentials'),
+  // Hero CTAs
+  textVar('cta.primary', 'Primary button label', 'Book Free Consultation', 'Call to action'),
+  urlVar('cta.primaryLink', 'Primary button link', 'https://example.com/book', 'Call to action'),
+  textVar('cta.secondary', 'Secondary button label', 'View Plans', 'Call to action'),
+  urlVar('cta.secondaryLink', 'Secondary button link', '#plans', 'Call to action'),
+  // Trust bar
+  textVar('trust.stat1', 'Trust stat 1', '5+ Years', 'Trust bar'),
+  textVar('trust.stat1Label', 'Trust stat 1 label', 'Experience', 'Trust bar'),
+  textVar('trust.stat2', 'Trust stat 2', '1,200+', 'Trust bar'),
+  textVar('trust.stat2Label', 'Trust stat 2 label', 'Clients Served', 'Trust bar'),
+  textVar('trust.stat3', 'Trust stat 3', '94%', 'Trust bar'),
+  textVar('trust.stat3Label', 'Trust stat 3 label', 'Accuracy Rate', 'Trust bar'),
+  textVar('trust.stat4', 'Trust stat 4', 'SEBI Regulated', 'Trust bar'),
+  textVar('trust.stat4Label', 'Trust stat 4 label', 'Fully Compliant', 'Trust bar'),
+  // About
+  longVar('about.bio', 'Bio / About', 'With over 5 years of experience in equity research and portfolio management, I provide actionable, data-driven insights to help retail and HNI investors make confident decisions. My research is fully SEBI-compliant and transparently documented.', 'About'),
+  // Services
+  listVar('services', 'Services', [
+    { title: 'Equity Research Reports', description: 'In-depth fundamental analysis on hand-picked stocks across large, mid, and small cap segments.' },
+    { title: 'Model Portfolio', description: 'A curated portfolio updated monthly, designed to outperform benchmark indices over a 3–5 year horizon.' },
+    { title: 'Stock Recommendations', description: 'Short-term and positional trade ideas with clear entry, target, and stop-loss levels.' },
+  ], [
+    { key: 'title', label: 'Service name', type: 'text', required: true },
+    { key: 'description', label: 'Description', type: 'longtext', required: true },
+  ], 'Services'),
+  // Why choose
+  listVar('reasons', 'Why choose you', [
+    { title: '✅ SEBI Regulated', description: 'All research is published under SEBI registration, ensuring full regulatory compliance.' },
+    { title: '📊 Data-Driven', description: 'Every recommendation is backed by quantitative analysis and rigorous financial modelling.' },
+    { title: '🔎 Transparent', description: 'Track record of all past calls is published — both winning and losing trades.' },
+    { title: '📱 Direct Access', description: 'Clients get direct WhatsApp and email access to me, not a support team.' },
+  ], [
+    { key: 'title', label: 'Reason', type: 'text', required: true },
+    { key: 'description', label: 'Detail', type: 'longtext', required: true },
+  ], 'Why choose'),
+  // Plans
+  listVar('plans', 'Plans', [
+    { title: 'Free Insights', price: '₹0 / month', description: 'Weekly newsletter, 2 research reports per month, market commentary.' },
+    { title: 'Pro Investor', price: '₹999 / month', description: 'All Free benefits + full model portfolio, 10 stock picks/month, entry & exit alerts.' },
+    { title: 'Premium HNI', price: '₹2,999 / month', description: 'All Pro benefits + dedicated consultation call, custom portfolio review, priority support.' },
+  ], [
+    { key: 'title', label: 'Plan name', type: 'text', required: true },
+    { key: 'price', label: 'Price', type: 'text', required: true },
+    { key: 'description', label: 'What\'s included', type: 'longtext', required: true },
+  ], 'Plans'),
+  // Testimonials
+  listVar('testimonials', 'Testimonials', [
+    { title: 'Ravi Mehta', description: 'The model portfolio alone has given me 28% returns in 10 months. Highly recommended for anyone serious about investing.' },
+    { title: 'Priya Nair', description: 'Very transparent and responsive. I appreciate that the track record is published openly — that builds trust.' },
+    { title: 'Suresh Patel', description: 'Finally a research analyst who explains the "why" behind every call, not just buy/sell signals.' },
+  ], [
+    { key: 'title', label: 'Client name', type: 'text', required: true },
+    { key: 'description', label: 'Testimonial', type: 'longtext', required: true },
+  ], 'Testimonials'),
+  // Contact
+  textVar('contact.phone', 'Phone', '+91 98765 43210', 'Contact'),
+  textVar('contact.email', 'Email', 'hello@yourdomain.com', 'Contact'),
+  textVar('contact.formTitle', 'Contact form heading', 'Send a message', 'Contact'),
+  textVar('contact.thanks', 'Thank-you message', "Thanks! I'll get back to you within 24 hours.", 'Contact'),
+  // Footer
+  longVar('footer.disclaimer', 'SEBI disclaimer', 'Investment in securities market are subject to market risks. Read all the related documents carefully before investing. Registration granted by SEBI and certification from NISM in no way guarantee performance of the intermediary or provide any assurance of returns to investors.', 'Footer'),
+], [onePage([
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  section([
+    el('Grid', { styles: { gap: '48px', alignItems: 'center' } }, [
+      el('Box', { styles: { gap: '20px' } }, [
+        el('Box', { styles: { display: 'inline-flex', background: 'rgba(167,139,250,0.15)', borderRadius: '999px', paddingLeft: '14px', paddingRight: '14px', paddingTop: '6px', paddingBottom: '6px', alignSelf: 'flex-start' } }, [
+          text('🏛 {{analyst.title}}', { fontWeight: 600, fontSize: '0.875rem', color: '#a78bfa' }),
+        ]),
+        heading('{{analyst.name}}', 'h1'),
+        text('{{analyst.tagline}}', { fontSize: '1.25rem', color: 'var(--fp-muted)' }),
+        el('Row', { styles: { gap: '12px', flexWrap: 'wrap' } }, [
+          button('{{cta.primary}}', '{{cta.primaryLink}}'),
+          button('{{cta.secondary}}', '{{cta.secondaryLink}}', 'secondary'),
+        ]),
+        el('Box', { styles: { display: 'inline-flex', background: 'rgba(255,255,255,0.07)', borderRadius: '8px', padding: '10px 16px', alignSelf: 'flex-start' } }, [
+          text('SEBI Reg No: {{sebi.regNo}}', { fontFamily: 'monospace', fontSize: '0.8125rem', color: 'var(--fp-muted)' }),
+        ]),
+      ]),
+      image('{{analyst.photo}}', '{{analyst.name}}', { height: '380px', borderRadius: '16px', objectFit: 'cover' }, 'analyst.photo'),
+    ]),
+  ], { background: 'linear-gradient(135deg, #0f172a, #1e1b4b 60%, #312e81)', color: '#f1f5f9', paddingTop: '80px', paddingBottom: '80px' }),
+
+  // ── Trust bar ─────────────────────────────────────────────────────────────
+  section([
+    el('Grid', { styles: { gap: '0', borderTop: '1px solid var(--fp-surface)', borderBottom: '1px solid var(--fp-surface)' } }, [
+      el('Box', { styles: { textAlign: 'center', paddingTop: '24px', paddingBottom: '24px', gap: '4px' } }, [
+        heading('{{trust.stat1}}', 'h3', { color: 'var(--fp-primary)', margin: '0' }),
+        text('{{trust.stat1Label}}', { fontSize: '0.875rem', color: 'var(--fp-muted)' }),
+      ]),
+      el('Box', { styles: { textAlign: 'center', paddingTop: '24px', paddingBottom: '24px', gap: '4px' } }, [
+        heading('{{trust.stat2}}', 'h3', { color: 'var(--fp-primary)', margin: '0' }),
+        text('{{trust.stat2Label}}', { fontSize: '0.875rem', color: 'var(--fp-muted)' }),
+      ]),
+      el('Box', { styles: { textAlign: 'center', paddingTop: '24px', paddingBottom: '24px', gap: '4px' } }, [
+        heading('{{trust.stat3}}', 'h3', { color: 'var(--fp-primary)', margin: '0' }),
+        text('{{trust.stat3Label}}', { fontSize: '0.875rem', color: 'var(--fp-muted)' }),
+      ]),
+      el('Box', { styles: { textAlign: 'center', paddingTop: '24px', paddingBottom: '24px', gap: '4px' } }, [
+        heading('{{trust.stat4}}', 'h3', { color: 'var(--fp-primary)', margin: '0' }),
+        text('{{trust.stat4Label}}', { fontSize: '0.875rem', color: 'var(--fp-muted)' }),
+      ]),
+    ]),
+  ]),
+
+  // ── About ─────────────────────────────────────────────────────────────────
+  section([
+    el('Grid', { styles: { gap: '48px', alignItems: 'center' } }, [
+      el('Box', { styles: { gap: '16px' } }, [
+        text('ABOUT ME', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+        heading('Who I am & how I work', 'h2'),
+        text('{{about.bio}}', { fontSize: '1.0625rem', color: 'var(--fp-muted)', lineHeight: '1.75' }),
+        button('{{cta.primary}}', '{{cta.primaryLink}}'),
+      ]),
+      el('Box', { styles: { gap: '12px' } }, [
+        el('Card', {}, [
+          text('📜 SEBI Registration', { fontWeight: 700, fontSize: '0.875rem' }),
+          text('{{sebi.regNo}}', { fontFamily: 'monospace', color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+        ]),
+        el('Card', {}, [
+          text('📧 Email', { fontWeight: 700, fontSize: '0.875rem' }),
+          text('{{contact.email}}', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+        ]),
+        el('Card', {}, [
+          text('📞 Phone', { fontWeight: 700, fontSize: '0.875rem' }),
+          text('{{contact.phone}}', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+        ]),
+      ]),
+    ]),
+  ]),
+
+  // ── Services ──────────────────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('WHAT I OFFER', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading('Research & Advisory Services', 'h2'),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'services', as: 'svc' } }, [
+        heading('{{svc.title}}', 'h3'),
+        text('{{svc.description}}', { color: 'var(--fp-muted)' }),
+      ]),
+    ]),
+  ]),
+
+  // ── Why choose ────────────────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('WHY CHOOSE ME', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading('Research you can trust', 'h2'),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'reasons', as: 'reason' } }, [
+        heading('{{reason.title}}', 'h3'),
+        text('{{reason.description}}', { color: 'var(--fp-muted)' }),
+      ]),
+    ]),
+  ]),
+
+  // ── Plans ─────────────────────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('PLANS & PRICING', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading('Choose the plan that fits you', 'h2'),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'plans', as: 'plan' }, styles: { gap: '10px' } }, [
+        heading('{{plan.title}}', 'h3'),
+        heading('{{plan.price}}', 'h2', { color: 'var(--fp-primary)', margin: '0' }),
+        text('{{plan.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem' }),
+        button('{{cta.primary}}', '{{cta.primaryLink}}'),
+      ]),
+    ]),
+  ]),
+
+  // ── Testimonials ──────────────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', marginBottom: '8px' } }, [
+      text('CLIENT STORIES', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+      heading('What investors say', 'h2'),
+    ]),
+    el('Grid', {}, [
+      el('Card', { repeat: { list: 'testimonials', as: 'review' }, styles: { gap: '10px' } }, [
+        text('"{{review.description}}"', { fontSize: '1rem', color: 'var(--fp-muted)', fontStyle: 'italic' }),
+        text('— {{review.title}}', { fontWeight: 700, fontSize: '0.875rem' }),
+      ]),
+    ]),
+  ]),
+
+  // ── Contact ───────────────────────────────────────────────────────────────
+  section([
+    el('Grid', { styles: { gap: '48px', alignItems: 'flex-start' } }, [
+      el('Box', { styles: { gap: '16px' } }, [
+        text('GET IN TOUCH', { fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.12em', color: 'var(--fp-primary)' }),
+        heading('{{contact.formTitle}}', 'h2'),
+        text('📞 {{contact.phone}}', { fontSize: '1.0625rem' }),
+        text('📧 {{contact.email}}', { fontSize: '1.0625rem' }),
+        button('{{cta.primary}}', '{{cta.primaryLink}}'),
+      ]),
+      el('Card', {}, [
+        el('Form', { props: { submitText: '{{cta.primary}}', successMessage: '{{contact.thanks}}' } }, [
+          el('FormField', { props: { name: 'name', label: 'Your name', inputType: 'text', required: true } }),
+          el('FormField', { props: { name: 'email', label: 'Email address', inputType: 'email', required: true } }),
+          el('FormField', { props: { name: 'phone', label: 'Phone number', inputType: 'tel', required: false } }),
+          el('FormField', { props: { name: 'message', label: 'Your message', inputType: 'textarea', required: false } }),
+        ]),
+      ]),
+    ]),
+  ]),
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  section([
+    el('Box', { styles: { textAlign: 'center', gap: '8px', maxWidth: '760px', marginLeft: 'auto', marginRight: 'auto' } }, [
+      text('SEBI Reg No: {{sebi.regNo}} | {{analyst.name}} — {{analyst.title}}', { fontWeight: 600, fontSize: '0.875rem' }),
+      text('{{footer.disclaimer}}', { fontSize: '0.75rem', color: 'var(--fp-muted)', lineHeight: '1.6' }),
+    ]),
+  ], { background: 'var(--fp-surface)', paddingTop: '32px', paddingBottom: '32px' }),
+
+], '{{analyst.name}} — {{analyst.title}}', '{{analyst.tagline}}')], { titleVariable: 'analyst.name', category: 'Landing page' });
+
+export const PAGE_TEMPLATES: TemplateDefinition[] = [article, docsArticle, caseStudy, saasLanding, ebook, appDownload, thankYou, consultation, researchAnalyst];
