@@ -6,6 +6,30 @@ Add it once per project. To use several projects on a page, add one script tag f
 
 Each project's **Share and install** tab has these steps with your code filled in, including WordPress, Shopify, Webflow, Wix, Squarespace and Google Tag Manager. Websites and pages don't need the script, since they're hosted for you. To show one of your forms or demos in a website you built here, see [Use your projects inside a page](embedding).
 
+---
+
+## ⚡ One-Click: Copy as AI Prompt (Cursor, Claude, ChatGPT, Copilot)
+
+If you use an AI-assisted development workflow (Cursor, GitHub Copilot, Claude Code, ChatGPT, or v0):
+
+1. Open your project's **Publish Dialog** or the **Share & Install** page.
+2. Click the **Copy as AI Prompt** button.
+3. Paste the prompt directly into your AI editor or chat window.
+
+The AI assistant will automatically inspect your project structure (React, Next.js App Router, Vue, Svelte, or HTML), generate the appropriate component wrapper, ensure SSR safety (`strategy="afterInteractive"` or `useEffect` mounting), and position the element cleanly in your app.
+
+---
+
+## Direct Share (One Link)
+
+If you don't want to embed code into your site, every published project is immediately accessible as a standalone **One Link**:
+```text
+https://your-domain.com/s/your-slug
+```
+Share this link directly in emails, LinkedIn, Twitter/X, sales pitches, or customer support chats.
+
+---
+
 ## Plain HTML
 
 Paste before the closing `</body>` tag:

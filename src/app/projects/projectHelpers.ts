@@ -1,6 +1,8 @@
+import { MODULES, moduleNoun } from '../../core/modules';
 import { DEFAULT_TRIGGERS, ProjectSettings } from '../../core/schema';
 import { expandContent, RenderNode } from '../../core/variables';
 import { AppServices, DocumentRecord, ProjectRecord, SubmissionRecord } from '../../data/services';
+import { publicSitePath } from '../routes';
 
 export const embedSnippet = (origin: string, projectId: string, options?: { language?: string; device?: string }) => {
   const langAttr = options?.language && options.language !== 'en' ? ` data-language="${options.language}"` : '';
@@ -9,6 +11,67 @@ export const embedSnippet = (origin: string, projectId: string, options?: { lang
 };
 
 export const inlineSnippet = (projectId: string) => `<div data-flowpilot="${projectId}"></div>`;
+
+/**
+ * Builds a ready-to-paste AI Prompt for Cursor, ChatGPT, Claude, GitHub Copilot, or v0.
+ * Users can paste this prompt directly into their coding AI assistant to integrate the experience instantly.
+ */
+export function buildAiPrompt(project: ProjectRecord, liveUrl?: string | null): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.flowpilot.com';
+  const noun = moduleNoun(project.type);
+  const typeLabel = MODULES[project.type]?.label ?? project.type;
+  const isSite = MODULES[project.type]?.delivery === 'site';
+  const showsInline = MODULES[project.type]?.delivery === 'inline' || project.settings.position === 'inline';
+  const publicUrl = liveUrl || (project.slug ? `${origin}${publicSitePath(project.slug)}` : `${origin}/s/${project.id}`);
+
+  return `Integrate this FlowPilot ${noun} into my application.
+
+PROJECT CONTEXT:
+- Name: "${project.title}"
+- Project ID: "${project.id}"
+- Type: ${typeLabel} (${noun})
+- Public Share URL (One Link): ${publicUrl}
+
+HOW TO EMBED:
+
+${isSite ? `Option 1: Full-Page Responsive Iframe (Recommended for Websites & Pages)
+<iframe
+  src="${publicUrl}"
+  title="${project.title.replace(/"/g, '&quot;')}"
+  width="100%"
+  height="750px"
+  style="border:0;border-radius:12px;width:100%;max-width:100%;box-shadow:0 12px 36px rgba(0,0,0,0.12);"
+  allow="clipboard-write"
+  allowfullscreen
+></iframe>` : `Option 1: Plain HTML Script Tag
+Place before the closing </body> tag:
+<script src="${origin}/flowpilot.js" data-project-id="${project.id}" defer></script>
+${showsInline ? `And add the container where the ${noun} should appear:\n<div data-flowpilot="${project.id}"></div>` : ''}
+
+Option 2: React / Next.js Component
+- For Next.js (App Router or Pages Router):
+  import Script from 'next/script';
+  // In your layout or page:
+  <Script src="${origin}/flowpilot.js" data-project-id="${project.id}" strategy="afterInteractive" />
+  ${showsInline ? `// Where you want the ${noun} to render:\n  <div data-flowpilot="${project.id}" />` : ''}
+
+- For Plain React SPA:
+  Add <script src="${origin}/flowpilot.js" data-project-id="${project.id}" defer></script> into index.html
+  ${showsInline ? `And render <div data-flowpilot="${project.id}" /> in your JSX component.` : ''}
+
+Option 3: Responsive Iframe Embed
+<iframe
+  src="${publicUrl}"
+  title="${project.title.replace(/"/g, '&quot;')}"
+  width="100%"
+  height="600px"
+  style="border:0;border-radius:12px;width:100%;"
+  allowfullscreen
+></iframe>`}
+
+INSTRUCTIONS FOR AI ASSISTANT:
+Please inspect my current file/component and integrate this FlowPilot ${noun} directly using the best option above. Ensure responsive styling, proper cleanup on unmount, and clean layout presentation without hydration errors.`;
+}
 
 /**
  * Cells starting with = + - @ would run as formulas when opened in a spreadsheet.

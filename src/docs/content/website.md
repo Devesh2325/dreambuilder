@@ -1,37 +1,68 @@
 # Websites
 
-A website has several pages, with a shared header and footer, hosted at its own web address.
+A **Website** in FlowPilot is a complete, multi-page web presence featuring shared global headers, sticky navigation bars, responsive footers, and independent pages hosted at your custom address or custom domain.
 
-## Create one
+---
 
-Choose a website template, fill in your details, then **Create website**. It opens in the editor, where you can change everything under **Variables**.
+## Pre-Built Templates
 
-## Pages
+FlowPilot includes production-grade website templates designed for modern tech companies, SaaS tools, and agencies:
 
-In the editor's **Pages** tab you can add pages, rename them, change their address, and set the title and description search engines show. The navigation bar lists your pages automatically. To choose your own items, such as Home, About and Blog, select the navigation block and click **Choose items myself**. Each item can go to a page, a web address, or a new page created for it. **Menu position** puts the items on the left, center or right.
+- **Apidog / Developer Platform**: Dark-themed developer hub featuring live API request/response code mockups, API playground badges, feature grids, and CLI documentation.
+- **Modern SaaS & AI Startups**: Automated ticker marquees, animated hero headlines, interactive pricing tables with monthly/annual toggles, and customer testimonial carousels.
+- **FinTech & Financial Services**: Compliant disclosures, advisory track record cards, star rating blocks, and appointment consultation forms.
+- **Productivity & Collaboration**: Split-screen feature showcases, video product tours, and client logos.
 
-The header and footer are shared, so changing them on one page updates all pages.
+---
 
-## Publish
+## Pages & Navigation
 
-Click **Publish** and choose a web address. Your site goes live at `{{ORIGIN}}/s/your-address`.
+### 1. Multi-Page Architecture
+- In the **Pages** tab of the Studio, add and organize pages: `Home`, `Features`, `Pricing`, `Docs`, `About`, and `Contact`.
+- Each page maintains its own URL slug (e.g. `/features`, `/pricing`) and unique SEO meta tags.
+- The **Header** and **Footer** are synchronized globally—edits to your logo or footer links reflect across every page automatically.
 
-## Links between pages
+### 2. Navigation Bar Options
+- Automatically lists all published pages, or choose custom links (internal paths, external URLs, anchor jump links like `#pricing`).
+- Alignment options: Left, Center, or Right.
+- Mobile-responsive drawer that collapses on tablets and smartphones with smooth hamburger transitions.
 
-A link starting with `/` goes to a page in your site. For example, `/contact` opens your Contact page, and `#services` jumps to a section whose **Jump link name** is `services`. Select the section to set one. Most sections don't need it.
+---
 
-## Take payments and add your other projects
+## Animations, Effects & Rich Blocks
 
-Add a **Pay button** to sell something. See [Take payments](payments). To show a form, demo, banner or FAQ you've already made, see [Use your projects inside a page](embedding).
+### 1. Dynamic Text Animations
+In any Heading or Text block:
+- **Ticker / Marquee**: Create auto-scrolling logo bars or customer announcement ribbons.
+- **Word Cycle**: Dynamically cycle words within headlines (e.g., "Build *faster* / *smarter* / *better*").
+- **Typewriter Effect**: Simulated typing for code snippets and product taglines.
+- **Gradient Shimmer**: Eye-catching animated shimmer effect on high-priority headlines.
 
-## Your own domain
+### 2. Social Proof & Rating Blocks
+- Add the **Rating** block to display 5-star or 10-star review averages, customer satisfaction metrics, and verified buyer badges.
+- Customize star count, rating value, active/hover star colors, and review source labels (G2, Trustpilot, Google Reviews).
 
-Connect a domain you own, or find where to buy one, from **Share and install**. See [Your own domain](domains).
+### 3. Media Galleries & Carousels
+- Showcase product UI screenshots, team portraits, or customer success stories using the **Carousel** and **Media Gallery** blocks.
+- Supports swipe gestures on touch devices and keyboard arrow navigation.
 
-## Articles, docs and data
+---
 
-For articles and help pages, open **Add** and look under **Articles and docs**: avatars for authors, icons, lists, quotes, callouts for tips and warnings, code, tables and badges. To show products or posts from your own system, see [Show data from your API](data).
+## Publishing & Domain Setup
 
-## Search engines
+### 1. Instant CDN Hosting (One Link)
+Publishing instantly deploys your site to FlowPilot's globally distributed CDN at:
+```text
+https://your-domain.com/s/your-site-slug
+```
 
-Sites are rendered in the visitor's browser. Major search engines can read them, but pages may take longer to be indexed than server-rendered sites.
+### 2. Custom Domains & SSL
+Map your custom apex domain (`yourcompany.com`) or subdomain (`www.yourcompany.com`, `app.yourcompany.com`):
+- Open **Share and install** → **Use your own domain**.
+- Enter your domain and configure the DNS records (`CNAME` or `A`).
+- Free automated SSL certificates are issued and renewed automatically.
+
+### 3. Embed or Use AI Prompt
+Need to embed a website section or entire site into an existing portal?
+- Copy the **Responsive Iframe** code, or
+- Click **Copy as AI Prompt** to let your coding AI assistant (Cursor, Claude, ChatGPT) integrate the site directly into your codebase.

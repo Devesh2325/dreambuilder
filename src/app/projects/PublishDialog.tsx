@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, ExternalLink, Globe, Code } from 'lucide-react';
+import { Check, Code, Copy, ExternalLink, Globe, Sparkles } from 'lucide-react';
 import { MODULES, moduleNoun } from '../../core/modules';
 import { ProjectRecord } from '../../data/services';
 import { publicSitePath } from '../routes';
 import { useServices } from '../session';
 import { BusyLabel, ErrorNote, errorMessage, inputClass, primaryButton, secondaryButton } from '../shared/ui';
+import { buildAiPrompt } from './projectHelpers';
 
 const suggestSlug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
 
@@ -25,7 +26,8 @@ export const PublishDialog: React.FC<PublishDialogProps> = ({ project, beforePub
   const [isSuccess, setIsSuccess] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
-  const [embedTab, setEmbedTab] = useState<'iframe' | 'script'>('iframe');
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [embedTab, setEmbedTab] = useState<'iframe' | 'script' | 'prompt'>('iframe');
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -48,14 +50,18 @@ export const PublishDialog: React.FC<PublishDialogProps> = ({ project, beforePub
   const liveUrl = `${window.location.origin}${publicSitePath(slug)}`;
   const iframeSnippet = `<iframe src="${liveUrl}" width="100%" height="750px" style="border:0;border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,0.12);" allow="clipboard-write" allowfullscreen></iframe>`;
   const scriptSnippet = `<script src="${window.location.origin}/flowpilot.js" data-project-id="${project.id}"></script>`;
-  const activeCode = embedTab === 'iframe' ? iframeSnippet : scriptSnippet;
+  const aiPrompt = buildAiPrompt(project, liveUrl);
+  const activeCode = embedTab === 'iframe' ? iframeSnippet : embedTab === 'script' ? scriptSnippet : aiPrompt;
 
-  const copyText = async (text: string, isLink: boolean) => {
+  const copyText = async (text: string, isLink: boolean, isPrompt = false) => {
     try {
       await navigator.clipboard.writeText(text);
       if (isLink) {
         setCopiedLink(true);
         setTimeout(() => setCopiedLink(false), 2000);
+      } else if (isPrompt) {
+        setCopiedPrompt(true);
+        setTimeout(() => setCopiedPrompt(false), 2000);
       } else {
         setCopiedCode(true);
         setTimeout(() => setCopiedCode(false), 2000);
@@ -143,21 +149,45 @@ export const PublishDialog: React.FC<PublishDialogProps> = ({ project, beforePub
                 >
                   Script Tag
                 </button>
+                <button
+                  type="button"
+                  className={`px-2.5 py-1 rounded-md font-medium transition-colors flex items-center gap-1 ${embedTab === 'prompt' ? 'bg-gradient-to-r from-amber-500/20 to-indigo-500/20 text-amber-600 dark:text-amber-400 font-semibold shadow-sm' : 'text-slate-500'}`}
+                  onClick={() => setEmbedTab('prompt')}
+                >
+                  <Sparkles className="w-3 h-3 text-amber-500" /> AI Prompt
+                </button>
               </div>
             </div>
 
             <div className="relative">
-              <pre className="p-3 rounded-lg overflow-x-auto bg-slate-900 text-slate-100 text-xs font-mono leading-relaxed">
+              <pre className="p-3 rounded-lg overflow-x-auto max-h-48 bg-slate-900 text-slate-100 text-xs font-mono leading-relaxed whitespace-pre-wrap">
                 <code>{activeCode}</code>
               </pre>
               <button
                 type="button"
                 aria-label="Copy code snippet"
-                className="absolute top-2 right-2 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1 border border-slate-700"
-                onClick={() => copyText(activeCode, false)}
+                className="absolute top-2 right-2 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1 border border-slate-700 shadow"
+                onClick={() => copyText(activeCode, false, embedTab === 'prompt')}
               >
-                {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                {copiedCode ? 'Copied' : 'Copy'}
+                {(embedTab === 'prompt' ? copiedPrompt : copiedCode) ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {(embedTab === 'prompt' ? copiedPrompt : copiedCode) ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => copyText(aiPrompt, false, true)}
+                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-amber-500/10 hover:from-indigo-500/20 hover:via-purple-500/20 hover:to-amber-500/20 border border-indigo-200/60 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm group"
+              >
+                <Sparkles className="w-4 h-4 text-amber-500 group-hover:rotate-12 transition-transform" />
+                {copiedPrompt ? (
+                  <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                    <Check className="w-4 h-4" /> Copied AI Prompt to Clipboard! Paste into Cursor, ChatGPT or Claude
+                  </span>
+                ) : (
+                  <span>Copy as AI Prompt <span className="opacity-75 font-normal">(Cursor, Claude, ChatGPT, Copilot)</span></span>
+                )}
               </button>
             </div>
           </div>

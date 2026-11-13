@@ -313,9 +313,9 @@ function createApidogWebsite(config: ApidogIndustryConfig): TemplateDefinition {
           // Window Control Bar + Endpoint Bar
           el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)' } }, [
             el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
-              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' } }),
-              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b' } }),
-              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#10b981' } }),
+              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', flexShrink: 0 } }),
+              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 } }),
+              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', flexShrink: 0 } }),
               text('API Console & Live Playground', { fontSize: '0.8125rem', color: 'var(--fp-muted)', marginLeft: '12px' }),
             ]),
             el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [

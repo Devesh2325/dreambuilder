@@ -1,30 +1,47 @@
-# Forms
+# Forms & Surveys
 
-Forms collect answers, as a hosted link or inside your own page.
+The **Form** module allows you to create high-converting multi-step lead forms, client intake questionnaires, feedback surveys, and registration flows.
 
-## Share as a link
+---
 
-Publish it and share `{{ORIGIN}}/s/your-address`.
+## Form Fields & Components
 
-## Put it in your site
+### 1. Standard Input Fields
+- **Text & Email**: With built-in email formatting and syntax validation.
+- **Phone / Tel**: Supports international phone inputs and dial codes.
+- **Dropdown & Radio Groups**: Single-select choices with one option per line.
+- **Checkboxes**: Multi-select options and terms-of-service agreements.
+- **Textarea**: Multi-line long-form questions and open feedback.
 
-```html
-<div data-flowpilot="{{PROJECT_ID}}"></div>
-<script src="{{ORIGIN}}/flowpilot.js" data-project-id="{{PROJECT_ID}}" defer></script>
-```
+### 2. Rating Scale & Review Stars
+- Add the **Rating Scale** block to capture NPS (Net Promoter Score), customer satisfaction (CSAT), or product reviews.
+- **Scale Range**: Customize minimum rating (e.g. 1) and maximum rating (e.g. 5 or 10).
+- **Star Color**: Select brand colors (amber, gold, purple, emerald, rose) for active and hovered stars.
+- **Labels**: Add context labels for low and high scores (e.g. *"1 = Very Poor"*, *"5 = Outstanding"*).
 
-## Build the form
+### 3. Multi-Step Wizard Flow
+- Break long forms into manageable steps using **Form Step** blocks.
+- Visitors see a clean progress indicator showing current step number and completion percentage.
+- Each step is validated before allowing the user to proceed to the next step, preventing incomplete submissions.
 
-In the editor's **Add** tab, use **Form field** and **Rating scale**. For each field, set its label, type, and whether it's required.
+---
 
-**Field name** identifies the answer in responses, exports and webhooks. Keep it short and unchanged once you're collecting data.
+## Response Management & Webhooks
 
-For select and radio fields, put one option per line.
+### 1. View & Export Responses
+- Submissions are logged in real time under the project's **Responses** tab.
+- Click **Export CSV** to download all submissions with timestamps, field values, and user metadata.
 
-## Multi-step forms
+### 2. Webhooks & Integrations
+- Navigate to **Webhooks** in the project settings.
+- Add an HTTP POST webhook endpoint (e.g., Zapier, Make.com, n8n, Slack, or your custom API endpoint).
+- FlowPilot delivers a secure JSON payload with signature verification whenever a submission is received.
 
-Add **Form step** blocks inside the form and move fields into them. Visitors then see one step at a time with a progress bar, and each step must be valid before moving on.
+---
 
-## Responses
+## Sharing & Embedding
 
-Open the project to see responses and export them as CSV. To send them to your own system, see [form data and webhooks](webhooks).
+- **One Link**: Share `https://your-domain.com/s/your-form-slug` directly in emails or social bios.
+- **Responsive Iframe**: Embed in Webflow, WordPress, Squarespace, or Shopify.
+- **In-App Script**: Embed inline with `<div data-flowpilot="{{PROJECT_ID}}"></div>`.
+- **Copy as AI Prompt**: Copy the ready-made prompt for Cursor, Claude, or ChatGPT to implement form dialogs or modal triggers automatically.

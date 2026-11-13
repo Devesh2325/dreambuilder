@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Copy, ExternalLink } from 'lucide-react';
+import { Check, Copy, ExternalLink, Sparkles } from 'lucide-react';
 import { MODULES, moduleNoun } from '../../core/modules';
 import { ProjectRecord } from '../../data/services';
 import { publicSitePath, ROUTES } from '../routes';
@@ -8,7 +8,7 @@ import { cardClass, inputClass, primaryButton } from '../shared/ui';
 import { GLOBAL_LANGUAGES } from '../shared/GoogleTranslate';
 import { DomainSetup } from './DomainSetup';
 import { MobileSteps } from './MobileSteps';
-import { embedSnippet, inlineSnippet } from './projectHelpers';
+import { buildAiPrompt, embedSnippet, inlineSnippet } from './projectHelpers';
 import { SiteCheck } from './SiteCheck';
 
 export const CopyBlock: React.FC<{ label: string; code: string }> = ({ label, code }) => {
@@ -220,14 +220,15 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
   const showsInline = module.delivery === 'inline' || project.settings.position === 'inline';
   const isSite = module.delivery === 'site';
   const iframeCode = liveUrl ? `<iframe src="${liveUrl}" title="${project.title.replace(/"/g, '&quot;')}" width="100%" height="750px" style="border:0;border-radius:12px;width:100%;max-width:100%;box-shadow:0 12px 36px rgba(0,0,0,0.12);" allow="clipboard-write" allowfullscreen></iframe>` : '';
-  const [integrateTab, setIntegrateTab] = useState<'iframe' | 'script'>('iframe');
+  const aiPrompt = buildAiPrompt(project, liveUrl);
+  const [integrateTab, setIntegrateTab] = useState<'iframe' | 'script' | 'prompt'>('iframe');
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px] items-start">
       <section aria-labelledby="install-title" className={`${cardClass} p-6`}>
         <h2 id="install-title" className="text-lg font-semibold">Share and integrate your {noun}</h2>
         <p className="mt-1 mb-5 text-sm text-slate-500 dark:text-slate-400">
-          Share your direct One Link with anyone, or integrate it into your site and app using an iframe or script.
+          Share your direct One Link with anyone, or integrate it into your site and app using an iframe, script tag, or AI code prompt.
         </p>
 
         {!isPublished && <p role="note" className="mb-5 text-sm rounded-lg px-3 py-2 bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">Publish first. Your link and embed code won't show anything until then.</p>}
@@ -262,7 +263,7 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
           <Step number={3} title="Integrate in code (Embed & In-App)">
             <p className="font-medium text-slate-800 dark:text-slate-100">Choose how you want to integrate:</p>
             
-            <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+            <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
               <button
                 type="button"
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${integrateTab === 'iframe' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}
@@ -276,6 +277,13 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
                 onClick={() => setIntegrateTab('script')}
               >
                 In-App Script Tag (Frameworks & CMS)
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${integrateTab === 'prompt' ? 'bg-gradient-to-r from-amber-500 to-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}
+                onClick={() => setIntegrateTab('prompt')}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Copy as AI Prompt (Cursor / Claude / Copilot)
               </button>
             </div>
 
@@ -301,6 +309,21 @@ export const InstallGuide: React.FC<{ project: ProjectRecord; onPublish: () => v
                     <CopyBlock label="Placeholder element" code={inlineSnippet(project.id)} />
                   </div>
                 )}
+              </div>
+            )}
+
+            {integrateTab === 'prompt' && (
+              <div className="space-y-3 pt-2">
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-purple-500/10 border border-amber-300/40 dark:border-amber-500/30 text-xs">
+                  <div className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-100 mb-1">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    One-Click AI Code Assistant Integration
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300">
+                    Copy this prompt and paste it into <strong>Cursor</strong>, <strong>Claude</strong>, <strong>ChatGPT</strong>, <strong>GitHub Copilot</strong>, or <strong>v0</strong>. Your AI coding assistant will inspect your files and integrate this {noun} automatically!
+                  </p>
+                </div>
+                <CopyBlock label="AI Assistant Prompt (Paste directly into Cursor, ChatGPT, or Claude)" code={aiPrompt} />
               </div>
             )}
           </Step>

@@ -14,7 +14,19 @@ const withClass = (attrs: BlockRenderProps['attrs'], className: string) => ({
   className: `${className} ${attrs.className}`,
 });
 
-const container = (className: string): Block => ({ attrs, children }) => <div {...withClass(attrs, className)}>{children}</div>;
+const container = (className: string): Block => ({ attrs, children, node }) => {
+  const isDecorative = Boolean(
+    node?.styles?.borderRadius === '50%' ||
+    node?.styles?.borderRadius === '9999px' ||
+    (typeof node?.styles?.width === 'string' && parseFloat(node.styles.width) <= 48 && !node.styles.width.includes('%')) ||
+    (typeof node?.styles?.height === 'string' && parseFloat(node.styles.height) <= 48 && !node.styles.height.includes('%'))
+  );
+  return (
+    <div {...withClass(attrs, className)} data-empty-hint={isDecorative ? 'false' : undefined}>
+      {children}
+    </div>
+  );
+};
 
 const Section: Block = ({ node, attrs, children }) => {
   const anchor = asText(node.props.anchor);
