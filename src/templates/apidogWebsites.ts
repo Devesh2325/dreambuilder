@@ -474,8 +474,12 @@ function createApidogWebsite(config: ApidogIndustryConfig): TemplateDefinition {
               borderRadius: '16px',
               gap: '16px',
               textAlign: 'center',
+              hoverEffect: 'lift',
+              animation: 'fp-slide-up',
+              transition: 'all 0.25s ease',
             },
           }, [
+            el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '★ 4.9 Developer Rating' } }),
             heading('{{tier.tier}}', 'h3', { fontSize: '1.5rem', fontWeight: 700 }),
             heading('{{tier.price}}', 'h2', { fontSize: '2.5rem', fontWeight: 800, color: 'var(--fp-primary)' }),
             text('{{tier.description}}', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),

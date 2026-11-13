@@ -133,6 +133,8 @@ export interface ProjectSettings {
   targetDevice?: 'desktop' | 'tablet' | 'mobile';
   /** Target language selected on creation (e.g. en, hi, es, fr, de, ja). */
   targetLanguage?: string;
+  /** Admin template editing mode link. */
+  editingTemplateId?: string;
 }
 
 export type DocumentKind = 'page' | 'global' | 'experience';

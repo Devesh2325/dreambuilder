@@ -21,6 +21,9 @@ describe('Effects, Hover Effects & Animations', () => {
     expect(BASE_CSS).toContain('@keyframes fp-glow');
     expect(BASE_CSS).toContain('@keyframes fp-spin');
     expect(BASE_CSS).toContain('@keyframes fp-shimmer');
+    expect(BASE_CSS).toContain('@keyframes fp-ticker-text');
+    expect(BASE_CSS).toContain('@keyframes fp-text-shimmer');
+    expect(BASE_CSS).toContain('@keyframes fp-cursor-blink');
   });
 
   it('generates hover declarations and automatic smooth transition when hoverEffect is set', () => {
@@ -87,5 +90,41 @@ describe('Effects, Hover Effects & Animations', () => {
     expect(css).toContain('z-index:40;');
     expect(css).toContain('flex-shrink:0;');
     expect(css).toContain('flex-grow:1;');
+  });
+
+  it('registers Rating block in BLOCK_META and BLOCK_RENDERERS with custom colors and min/max', async () => {
+    const { BLOCK_META } = await import('../../renderer/blockMeta');
+    const { BLOCK_RENDERERS } = await import('../../renderer/blocks');
+
+    expect(BLOCK_META.Rating).toBeDefined();
+    expect(BLOCK_META.Rating.category).toBe('layout');
+    expect(BLOCK_META.Rating.defaultProps.value).toBe(5);
+    expect(BLOCK_META.Rating.defaultProps.max).toBe(5);
+    expect(BLOCK_META.Rating.defaultProps.min).toBe(1);
+    expect(BLOCK_META.Rating.defaultProps.color).toBe('#f59e0b');
+
+    // Fields should include value, max, min, color, emptyColor, icon, showText, text
+    const fieldKeys = BLOCK_META.Rating.fields.map((f) => f.key);
+    expect(fieldKeys).toContain('value');
+    expect(fieldKeys).toContain('max');
+    expect(fieldKeys).toContain('min');
+    expect(fieldKeys).toContain('color');
+    expect(fieldKeys).toContain('emptyColor');
+    expect(fieldKeys).toContain('icon');
+    expect(fieldKeys).toContain('showText');
+
+    expect(BLOCK_RENDERERS.Rating).toBeDefined();
+  });
+
+  it('supports auto-move text animation options on Heading and Text', async () => {
+    const { BLOCK_META } = await import('../../renderer/blockMeta');
+
+    const headingFields = BLOCK_META.Heading.fields.map((f) => f.key);
+    expect(headingFields).toContain('autoMove');
+    expect(headingFields).toContain('cycleWords');
+
+    const textFields = BLOCK_META.Text.fields.map((f) => f.key);
+    expect(textFields).toContain('autoMove');
+    expect(textFields).toContain('cycleWords');
   });
 });

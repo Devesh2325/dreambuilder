@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, CloudOff, Eye, LayoutTemplate, Loader2, Monitor, Redo2, Share2, Smartphone, Tablet, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Check, CloudOff, Eye, LayoutTemplate, Loader2, Monitor, Redo2, Share2, Smartphone, Sparkles, Tablet, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useDraftEmbedLoader } from '../app/projects/embedLoader';
 import { PublishDialog } from '../app/projects/PublishDialog';
 import { AppTour, useAppTour } from '../app/tours/AppTour';
@@ -12,6 +12,7 @@ import { GoogleTranslateSelector } from '../app/shared/GoogleTranslate';
 import { useWorkspace } from '../app/workspace';
 import { EmbedLoaderContext } from '../experience/EmbeddedProject';
 import { moduleNoun } from '../core/modules';
+import { projectVariableDefs, saveTemplateOverride, TemplatePage } from '../templates';
 import { Canvas } from './Canvas';
 import { LeftPanel } from './LeftPanel';
 import { useLiveSite } from './liveSite';
@@ -144,8 +145,48 @@ const Editor: React.FC = () => {
     buildingTemplate?: boolean;
     initialDevice?: 'desktop' | 'tablet' | 'mobile';
     initialLanguage?: string;
+    editingTemplateId?: string;
+    editingTemplateTitle?: string;
   } | null;
   const [welcome, setWelcome] = useState(() => (arrival?.justCreated ? 'created' : arrival?.buildingTemplate ? 'template' : null));
+
+  const editingTemplateId = arrival?.editingTemplateId ?? (draft?.settings as Record<string, unknown>)?.editingTemplateId as string | undefined;
+  const editingTemplateTitle = arrival?.editingTemplateTitle;
+  const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
+  const [templateUpdated, setTemplateUpdated] = useState(false);
+
+  const handleUpdateTemplate = async () => {
+    if (!editingTemplateId) return;
+    setIsUpdatingTemplate(true);
+    try {
+      await saveNow();
+      const state = useStudio.getState();
+      if (!state.draft) return;
+      const pages: TemplatePage[] = state.documents.map((doc) => ({
+        kind: doc.kind,
+        title: doc.title,
+        slug: doc.slug,
+        content: doc.content,
+        seo: doc.seo,
+      }));
+      const currentTheme = state.draft.theme;
+      const currentVariables = projectVariableDefs(editingTemplateId, state.draft.settings);
+
+      saveTemplateOverride(editingTemplateId, {
+        title: state.draft.title.replace(/^\[Template\]\s*/, ''),
+        pages,
+        themes: [{ name: 'Custom Theme', theme: currentTheme }],
+        variables: currentVariables,
+      });
+      setTemplateUpdated(true);
+      setTimeout(() => setTemplateUpdated(false), 3000);
+    } catch (err) {
+      console.error('Failed to update template:', err);
+      alert('Could not update template.');
+    } finally {
+      setIsUpdatingTemplate(false);
+    }
+  };
 
   useEffect(() => {
     const target = arrival?.initialDevice ?? draft?.settings.targetDevice;
@@ -188,6 +229,21 @@ const Editor: React.FC = () => {
           <BusyIcon busy={isLeaving}><ArrowLeft className="w-4 h-4" /></BusyIcon>
         </button>
         <h1 className="text-[15px] font-semibold truncate max-w-[240px]">{draft.title}</h1>
+        {editingTemplateId && (
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span className="hidden xl:inline">Template: {editingTemplateTitle || draft.title.replace(/^\[Template\]\s*/, '')}</span>
+            <button
+              type="button"
+              onClick={handleUpdateTemplate}
+              disabled={isUpdatingTemplate}
+              className="ml-1 px-2 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 font-bold text-xs shadow-sm transition-colors flex items-center gap-1"
+              title="Save all edits back to template registry"
+            >
+              {templateUpdated ? <><Check className="w-3.5 h-3.5" /> Updated!</> : isUpdatingTemplate ? 'Saving...' : 'Update Template'}
+            </button>
+          </div>
+        )}
         {readOnly ? <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">View only</span> : <SaveIndicator />}
         {!readOnly && <SaveButton />}
         </div>

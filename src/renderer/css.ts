@@ -339,6 +339,16 @@ export const BASE_CSS = `
 @keyframes fp-glow{0%,100%{box-shadow:0 0 6px color-mix(in srgb,var(--fp-primary) 35%,transparent)}50%{box-shadow:0 0 24px color-mix(in srgb,var(--fp-primary) 85%,transparent)}}
 @keyframes fp-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes fp-shimmer{0%{filter:brightness(1)}50%{filter:brightness(1.25)}100%{filter:brightness(1)}}
+@keyframes fp-ticker-text{0%{transform:translateX(0%)}100%{transform:translateX(-50%)}}
+@keyframes fp-text-shimmer{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes fp-cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
+:where(.fp-root) .fp-rating{display:inline-flex;align-items:center;gap:8px;font-family:inherit}
+:where(.fp-root) .fp-rating-icons{display:inline-flex;align-items:center;gap:3px;color:#f59e0b}
+:where(.fp-root) .fp-rating-star{display:inline-block;line-height:1;transition:transform .15s ease}
+:where(.fp-root) .fp-rating-text{font-size:.875rem;font-weight:600;color:var(--fp-text)}
+:where(.fp-root) .fp-text-ticker{display:flex;white-space:nowrap;overflow:hidden;width:100%}
+:where(.fp-root) .fp-text-ticker-track{display:inline-flex;animation:fp-ticker-text 20s linear infinite}
+:where(.fp-root) .fp-text-shimmer{background:linear-gradient(90deg,var(--fp-primary),#ec4899,var(--fp-primary));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:fp-text-shimmer 4s ease infinite}
 :where(.fp-root) .fp-demo-bar .fp-btn{padding:6px 14px;font-size:.875rem}
 :where(.fp-root) .fp-demo-dots{display:flex;gap:6px}
 :where(.fp-root) .fp-demo-dots span{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--fp-text) 18%,transparent)}

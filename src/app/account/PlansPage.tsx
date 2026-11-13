@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Clock, Crown, X } from 'lucide-react';
+import { Check, Clock, Crown, Star, X } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
 import { PlanInfo, PlanRequestRecord } from '../../data/services';
 import { useServices } from '../session';
@@ -8,6 +8,14 @@ import { formatDate } from '../shared/format';
 import { Icon } from '../shared/Icon';
 import { BusyLabel, cardClass, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton } from '../shared/ui';
 import { useWorkspace } from '../workspace';
+
+const PLAN_RATINGS: Record<string, { rating: string; count: string; highlight?: string }> = {
+  free: { rating: '4.7', count: '850+ users', highlight: 'Great starting point' },
+  starter: { rating: '4.8', count: '1.2k+ users', highlight: 'Fastest setup' },
+  pro: { rating: '4.9', count: '2.4k+ users', highlight: '⭐ Most Popular' },
+  team: { rating: '5.0', count: '940+ teams', highlight: 'Best for Collaboration' },
+  enterprise: { rating: '5.0', count: '200+ orgs', highlight: 'Dedicated SLA' },
+};
 
 /** Every plan's limits, as set by the super admin. */
 export function usePlans() {
@@ -119,12 +127,29 @@ export const PlansPage: React.FC = () => {
             const isCurrent = plan.plan === workspace?.plan;
             const quotas = MODULE_LIST.filter((module) => plan.moduleQuotas[module.type] !== undefined);
             return (
-              <li key={plan.plan} aria-label={`${plan.label} plan`} className={`${cardClass} p-5 flex flex-col ${isCurrent ? '!border-indigo-500 ring-1 ring-indigo-500' : ''}`}>
+              <li key={plan.plan} aria-label={`${plan.label} plan`} className={`${cardClass} p-5 flex flex-col hover:border-indigo-400 hover:shadow-lg transition-all duration-200 ${isCurrent ? '!border-indigo-500 ring-1 ring-indigo-500' : ''}`}>
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-bold">{plan.label}</h3>
                   {isCurrent && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full text-indigo-700 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-500/10">Your plan</span>}
                 </div>
-                <p className="mt-2 text-2xl font-extrabold tracking-tight">{plan.priceText}</p>
+                <div className="flex items-center gap-1.5 mt-2">
+                  <div className="flex items-center text-amber-500">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {PLAN_RATINGS[plan.plan]?.rating ?? '4.9'}/5
+                  </span>
+                </div>
+                {PLAN_RATINGS[plan.plan]?.highlight && (
+                  <span className="inline-block self-start text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 mt-1 mb-1">
+                    {PLAN_RATINGS[plan.plan]?.highlight}
+                  </span>
+                )}
+                <p className="mt-1 text-2xl font-extrabold tracking-tight">{plan.priceText}</p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 min-h-[40px]">{plan.description}</p>
                 <ul className="mt-4 space-y-2 text-sm flex-1">
                   <li className="flex gap-2"><Check className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" aria-hidden="true" />{limitText(plan.maxProjects)} projects</li>

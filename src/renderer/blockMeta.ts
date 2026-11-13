@@ -23,22 +23,82 @@ export const BLOCK_META: Record<string, BlockMeta> = {
   Card: { type: 'Card', label: 'Card', category: 'layout', icon: 'CreditCard', isContainer: true, defaultProps: {}, fields: [] },
   Grid: { type: 'Grid', label: 'Grid', category: 'layout', icon: 'LayoutGrid', isContainer: true, defaultProps: {}, fields: [] },
   Row: { type: 'Row', label: 'Row', category: 'layout', icon: 'Columns3', isContainer: true, defaultProps: {}, fields: [] },
+  Rating: {
+    type: 'Rating',
+    label: 'Rating',
+    category: 'layout',
+    icon: 'Star',
+    defaultProps: {
+      value: 5,
+      max: 5,
+      min: 1,
+      color: '#f59e0b',
+      emptyColor: '#cbd5e1',
+      size: 20,
+      icon: 'star',
+      showText: true,
+      text: '5.0',
+    },
+    fields: [
+      { key: 'value', label: 'Rating score (e.g. 5, 4.8)', type: 'number' },
+      { key: 'max', label: 'Maximum rating', type: 'number' },
+      { key: 'min', label: 'Minimum rating', type: 'number' },
+      { key: 'color', label: 'Star / active color', type: 'text' },
+      { key: 'emptyColor', label: 'Empty icon color', type: 'text' },
+      { key: 'size', label: 'Icon size (px)', type: 'number' },
+      {
+        key: 'icon', label: 'Icon shape', type: 'select',
+        options: [
+          { label: 'Star (★)', value: 'star' },
+          { label: 'Heart (♥)', value: 'heart' },
+          { label: 'Thumb up (👍)', value: 'thumb' },
+          { label: 'Circle (●)', value: 'circle' },
+        ],
+      },
+      { key: 'showText', label: 'Show score text beside stars', type: 'boolean' },
+      text('text', 'Score label (optional)', 'e.g. 4.9/5 or 5.0 · 1,200+ reviews'),
+    ],
+  },
 
   Heading: {
     type: 'Heading', label: 'Heading', category: 'content', icon: 'Heading',
-    defaultProps: { text: 'Your heading', level: 'h2' },
+    defaultProps: { text: 'Your heading', level: 'h2', autoMove: 'none' },
     fields: [
       text('text', 'Text'),
       {
         key: 'level', label: 'Level', type: 'select',
         options: ['h1', 'h2', 'h3', 'h4'].map((value) => ({ label: value.toUpperCase(), value })),
       },
+      {
+        key: 'autoMove', label: 'Auto-move text animation', type: 'select',
+        options: [
+          { label: 'None (static)', value: 'none' },
+          { label: 'Continuous ticker scroll (auto-moving)', value: 'ticker' },
+          { label: 'Rotating words (word cycler)', value: 'cycle' },
+          { label: 'Typewriter effect', value: 'typewriter' },
+          { label: 'Gradient shimmer loop', value: 'shimmer' },
+        ],
+      },
+      text('cycleWords', 'Words to cycle (for rotating words)', 'Separate with commas, e.g. Fast, Simple, Scalable'),
     ],
   },
   Text: {
     type: 'Text', label: 'Text', category: 'content', icon: 'Type',
-    defaultProps: { text: 'Write something helpful here.' },
-    fields: [longtext('text', 'Text')],
+    defaultProps: { text: 'Write something helpful here.', autoMove: 'none' },
+    fields: [
+      longtext('text', 'Text'),
+      {
+        key: 'autoMove', label: 'Auto-move text animation', type: 'select',
+        options: [
+          { label: 'None (static)', value: 'none' },
+          { label: 'Continuous ticker scroll (auto-moving)', value: 'ticker' },
+          { label: 'Rotating words (word cycler)', value: 'cycle' },
+          { label: 'Typewriter effect', value: 'typewriter' },
+          { label: 'Gradient shimmer loop', value: 'shimmer' },
+        ],
+      },
+      text('cycleWords', 'Words to cycle (for rotating words)', 'Separate with commas, e.g. Fast, Simple, Scalable'),
+    ],
   },
   Button: {
     type: 'Button', label: 'Button', category: 'content', icon: 'MousePointerClick',

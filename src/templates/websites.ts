@@ -98,21 +98,71 @@ const richFooter = (): TemplatePage => ({
   ]),
 });
 
+const gallerySection = (title = 'Media Gallery', subtitle = 'Explore our work and environment'): El =>
+  section([
+    sectionTitle(title, subtitle),
+    el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
+      el('Card', { styles: { overflow: 'hidden', padding: '0', hoverEffect: 'scale-up', transition: 'all 0.3s ease' } }, [
+        image('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&q=75&auto=format&fit=crop', 'Analytics Dashboard', { height: '240px', objectFit: 'cover' }),
+        el('Box', { styles: { padding: '16px', gap: '4px' } }, [
+          heading('Real-time Analytics', 'h4', { margin: '0' }),
+          text('Interactive telemetry and usage insights.', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+        ]),
+      ]),
+      el('Card', { styles: { overflow: 'hidden', padding: '0', hoverEffect: 'scale-up', transition: 'all 0.3s ease' } }, [
+        image('https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&q=75&auto=format&fit=crop', 'Modern Workspace', { height: '240px', objectFit: 'cover' }),
+        el('Box', { styles: { padding: '16px', gap: '4px' } }, [
+          heading('Unified Platform', 'h4', { margin: '0' }),
+          text('Collaborative cloud environment.', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+        ]),
+      ]),
+      el('Card', { styles: { overflow: 'hidden', padding: '0', hoverEffect: 'scale-up', transition: 'all 0.3s ease' } }, [
+        image('https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&q=75&auto=format&fit=crop', 'API Engine', { height: '240px', objectFit: 'cover' }),
+        el('Box', { styles: { padding: '16px', gap: '4px' } }, [
+          heading('Automated Workflows', 'h4', { margin: '0' }),
+          text('End-to-end integration testing and APIs.', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+        ]),
+      ]),
+    ]),
+  ], { backgroundColor: 'var(--fp-surface)' });
+
+const carouselSection = (title = 'Featured Highlights', subtitle = 'Swipe through our key milestones'): El =>
+  section([
+    sectionTitle(title, subtitle),
+    el('Carousel', { props: { interval: 4, showArrows: true }, styles: { maxWidth: '860px', marginLeft: 'auto', marginRight: 'auto', width: '100%' } }, [
+      el('Slide', { styles: { background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(45,212,191,0.1))', padding: '36px', borderRadius: '16px', textAlign: 'center', gap: '12px', alignItems: 'center' } }, [
+        el('Rating', { props: { value: 5, max: 5, color: '#f59e0b', showText: true, text: '5.0 ★ Client Satisfaction' } }),
+        heading('Enterprise-grade Reliability', 'h2', { color: 'var(--fp-primary)' }),
+        text('"FlowPilot reduced our deployment times by 70% and eliminated human setup errors across our 5 global teams."', { fontSize: '1.125rem', color: 'var(--fp-text)', maxWidth: '640px' }),
+        text('— VP of Engineering, Global SaaS', { fontWeight: 700, color: 'var(--fp-muted)' }),
+      ]),
+      el('Slide', { styles: { background: 'linear-gradient(135deg, rgba(167,139,250,0.1), rgba(244,63,94,0.1))', padding: '36px', borderRadius: '16px', textAlign: 'center', gap: '12px', alignItems: 'center' } }, [
+        el('Rating', { props: { value: 5, max: 5, color: '#f59e0b', showText: true, text: '5.0 ★ Top Rated' } }),
+        heading('Instant User Adoption', 'h2', { color: 'var(--fp-primary)' }),
+        text('"The interactive tours and onboarding flows tripled our product activation rate in the first 30 days."', { fontSize: '1.125rem', color: 'var(--fp-text)', maxWidth: '640px' }),
+        text('— Head of Growth, Fintech Scaleup', { fontWeight: 700, color: 'var(--fp-muted)' }),
+      ]),
+    ]),
+  ]);
+
 const testimonialsSection = (title = 'Loved by our clients', subtitle = 'Read how people achieve great results with us'): El =>
   section([
     sectionTitle(title, subtitle),
     el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
-      el('Card', {}, [
+      el('Card', { styles: { gap: '12px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
+        el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '5.0 Verified' } }),
         text('"The best experience we have ever had. Setup was fast and the results exceeded expectations."', { fontSize: '1rem', fontStyle: 'italic' }),
         text('Alex Morgan', { fontWeight: 700 }),
         text('Verified Client', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
       ]),
-      el('Card', {}, [
+      el('Card', { styles: { gap: '12px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
+        el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '5.0 Verified' } }),
         text('"Exceptional quality, attentive team, and intuitive tools that saved us countless hours every single week."', { fontSize: '1rem', fontStyle: 'italic' }),
         text('Sophia Patel', { fontWeight: 700 }),
         text('Operations Director', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
       ]),
-      el('Card', {}, [
+      el('Card', { styles: { gap: '12px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
+        el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '5.0 Verified' } }),
         text('"Completely transformed how we work. I cannot imagine running our operations without this solution."', { fontSize: '1rem', fontStyle: 'italic' }),
         text('David Kim', { fontWeight: 700 }),
         text('Founder & CEO', { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
@@ -124,19 +174,22 @@ const pricingSection = (title = 'Simple, transparent pricing', subtitle = 'Choos
   section([
     sectionTitle(title, subtitle),
     el('Grid', { styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px' }, responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } } }, [
-      el('Card', {}, [
+      el('Card', { styles: { gap: '12px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
+        el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '4.8 ★ Starter' } }),
         heading('Starter', 'h3'),
         heading('$29', 'h2', { color: 'var(--fp-primary)' }),
         text('Essential features to get up and running smoothly.', { color: 'var(--fp-muted)' }),
         button('Get started', '/contact', 'secondary'),
       ]),
-      el('Card', { styles: { border: '2px solid var(--fp-primary)' } }, [
+      el('Card', { styles: { gap: '12px', border: '2px solid var(--fp-primary)', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease', backdropFilter: 'blur(8px)' } }, [
+        el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '5.0 ★ Most Popular Choice' } }),
         heading('Professional', 'h3'),
         heading('$79', 'h2', { color: 'var(--fp-primary)' }),
         text('Advanced tools and priority assistance for growing businesses.', { color: 'var(--fp-muted)' }),
         button('Start free trial', '/contact', 'primary'),
       ]),
-      el('Card', {}, [
+      el('Card', { styles: { gap: '12px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
+        el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '5.0 ★ Enterprise SLA' } }),
         heading('Enterprise', 'h3'),
         heading('Custom', 'h2', { color: 'var(--fp-primary)' }),
         text('Dedicated support, custom integrations, and SLA guarantees.', { color: 'var(--fp-muted)' }),
@@ -148,7 +201,7 @@ const pricingSection = (title = 'Simple, transparent pricing', subtitle = 'Choos
 const faqSection = (title = 'Frequently asked questions', subtitle = 'Got questions? We have got answers.'): El =>
   section([
     sectionTitle(title, subtitle),
-    el('Box', { styles: { maxWidth: '720px', marginLeft: 'auto', marginRight: 'auto', width: '100%', gap: '8px' } }, [
+    el('Box', { styles: { maxWidth: '720px', marginLeft: 'auto', marginRight: 'auto', width: '100%', gap: '12px', animation: 'fp-slide-up' } }, [
       el('Accordion', { props: { question: 'How do I get started?', answer: 'Pick your plan, submit your details, and you will be fully onboarded within minutes.' } }),
       el('Accordion', { props: { question: 'Can I change or cancel my plan at any time?', answer: 'Yes, you can upgrade, downgrade, or cancel whenever you like without any hidden lock-in contracts.' } }),
       el('Accordion', { props: { question: 'Is support included with all plans?', answer: 'Yes! We provide dedicated email and live assistance to ensure you succeed from day one.' } }),
@@ -160,12 +213,15 @@ const splitHero = (ctaHref: string): El =>
   section(
     [
       el('Grid', { styles: { alignItems: 'center', gap: '48px' } }, [
-        el('Box', { styles: { gap: '20px', alignItems: 'flex-start' } }, [
-          heading('{{hero.headline}}', 'h1'),
+        el('Box', { styles: { gap: '20px', alignItems: 'flex-start', animation: 'fp-slide-up' } }, [
+          el('Box', { styles: { background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '999px', padding: '6px 16px', display: 'inline-flex' } }, [
+            el('Text', { props: { text: '✦ ALL-IN-ONE BUILDER · TRUSTED BY 10,000+ USERS', autoMove: 'shimmer' }, styles: { fontWeight: 600, fontSize: '0.8125rem', color: 'var(--fp-primary)' } }),
+          ]),
+          heading('{{hero.headline}}', 'h1', { animation: 'fp-slide-up' }),
           text('{{hero.subheadline}}', { fontSize: '1.125rem', color: 'var(--fp-muted)' }, 'hero.subheadline'),
-          button('{{hero.cta}}', ctaHref),
+          button('{{hero.cta}}', ctaHref, 'primary'),
         ]),
-        image('{{hero.image}}', '{{brand.name}}', { height: '420px' }, 'hero.image'),
+        image('{{hero.image}}', '{{brand.name}}', { height: '420px', borderRadius: '16px', hoverEffect: 'scale-up', transition: 'all 0.3s ease' }, 'hero.image'),
       ]),
     ],
   );
@@ -173,12 +229,15 @@ const splitHero = (ctaHref: string): El =>
 const centeredHero = (ctaHref: string): El =>
   section(
     [
-      el('Box', { styles: { alignItems: 'center', textAlign: 'center', gap: '20px', maxWidth: '760px', marginLeft: 'auto', marginRight: 'auto' } }, [
+      el('Box', { styles: { alignItems: 'center', textAlign: 'center', gap: '20px', maxWidth: '760px', marginLeft: 'auto', marginRight: 'auto', animation: 'fp-slide-up' } }, [
+        el('Box', { styles: { background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '999px', padding: '6px 16px', display: 'inline-flex' } }, [
+          el('Text', { props: { text: '✦ DISCOVER PREMIUM EXPERIENCES', autoMove: 'shimmer' }, styles: { fontWeight: 600, fontSize: '0.8125rem', color: 'var(--fp-primary)' } }),
+        ]),
         heading('{{hero.headline}}', 'h1'),
         text('{{hero.subheadline}}', { fontSize: '1.25rem', color: 'var(--fp-muted)' }, 'hero.subheadline'),
-        button('{{hero.cta}}', ctaHref),
+        button('{{hero.cta}}', ctaHref, 'primary'),
       ]),
-      image('{{hero.image}}', '{{brand.name}}', { height: '460px' }, 'hero.image'),
+      image('{{hero.image}}', '{{brand.name}}', { height: '460px', borderRadius: '16px', hoverEffect: 'scale-up', transition: 'all 0.3s ease' }, 'hero.image'),
     ],
   );
 
@@ -189,7 +248,7 @@ const sectionTitle = (title: string, subtitle?: string): El =>
   ]);
 
 const cardGrid = (listKey: string, as: string, children: El[]): El =>
-  el('Grid', {}, [el('Card', { repeat: { list: listKey, as } }, children)]);
+  el('Grid', {}, [el('Card', { repeat: { list: listKey, as }, styles: { hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, children)]);
 
 const ctaBanner = (title: string, label: string, href: string): El =>
   section(

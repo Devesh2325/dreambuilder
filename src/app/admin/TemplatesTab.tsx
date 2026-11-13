@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Check, Code, Copy, Download, Edit3, Eye, Layers, Palette, Plus, RotateCcw,
+  Check, Code, Copy, Download, Edit3, Eye, Layers, LayoutTemplate, Palette, Plus, RotateCcw,
   Search, Settings2, Sparkles, Trash2, Upload, X,
 } from 'lucide-react';
 import { MODULE_LIST, MODULES } from '../../core/modules';
@@ -8,11 +9,14 @@ import { DocContent, DocNode, DocumentKind, ProjectType, Theme } from '../../cor
 import { defaultValues, VariableDef } from '../../core/variables';
 import { ExperienceView } from '../../renderer/ExperienceView';
 import {
-  getCustomTemplates, getTemplateOverrides, removeCustomTemplate, removeTemplateOverride,
+  getCustomTemplates, getTemplateOverrides, projectFromTemplate, removeCustomTemplate, removeTemplateOverride,
   resetAllTemplateOverrides, saveCustomTemplate, saveTemplateOverride, subscribeToTemplateChanges,
   TEMPLATES, TemplateDefinition, TemplatePage, ThemePreset,
 } from '../../templates';
+import { ROUTES } from '../routes';
+import { useServices } from '../session';
 import { cardClass, EmptyState, inputClass, primaryButton, secondaryButton } from '../shared/ui';
+import { useWorkspace } from '../workspace';
 
 // ---- Preview Modal ----------------------------------------------------------
 
@@ -111,8 +115,9 @@ const TemplateEditModal: React.FC<{
   template: TemplateDefinition;
   isCustom?: boolean;
   onSave: (updated: TemplateDefinition) => void;
+  onOpenInEditor?: (template: TemplateDefinition) => void;
   onClose: () => void;
-}> = ({ template, isCustom, onSave, onClose }) => {
+}> = ({ template, isCustom, onSave, onOpenInEditor, onClose }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'theme' | 'variables' | 'pages'>('info');
 
   const initialTheme = template.themes[0]?.theme ?? {
@@ -201,6 +206,20 @@ const TemplateEditModal: React.FC<{
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenInEditor && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenInEditor(template);
+                }}
+                className={`${secondaryButton} !px-3 !py-2 text-xs flex items-center gap-1.5`}
+                title="Launch visual Studio canvas editor for this template"
+              >
+                <LayoutTemplate className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                Open in Studio Canvas
+              </button>
+            )}
             <button
               type="button"
               onClick={handleSave}
@@ -613,6 +632,11 @@ const TemplateEditModal: React.FC<{
 // ---- Main Templates Management Tab in Super Admin ---------------------------
 
 export const TemplatesManagementTab: React.FC = () => {
+  const { projects } = useServices();
+  const { workspace } = useWorkspace();
+  const navigate = useNavigate();
+  const [openingId, setOpeningId] = useState<string | null>(null);
+
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -622,6 +646,44 @@ export const TemplatesManagementTab: React.FC = () => {
 
   const [previewTemplate, setPreviewTemplate] = useState<TemplateDefinition | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<TemplateDefinition | null>(null);
+
+  const handleOpenInEditor = async (template: TemplateDefinition) => {
+    if (!workspace) {
+      alert('No workspace selected.');
+      return;
+    }
+    setOpeningId(template.id);
+    try {
+      const activeTheme = template.themes[0]?.theme ?? {
+        primary: '#4f46e5', secondary: '#0f172a', background: '#ffffff', surface: '#f8fafc',
+        text: '#0f172a', muted: '#64748b', radius: '8px', fontHeading: 'Inter', fontBody: 'Inter',
+      };
+      const initialValues = defaultValues(template.variables);
+      const newProj = projectFromTemplate(
+        template,
+        workspace.organizationId,
+        initialValues,
+        activeTheme,
+        `[Template] ${template.title}`,
+      );
+      newProj.settings = {
+        ...newProj.settings,
+        editingTemplateId: template.id,
+      };
+      const projectId = await projects.create(newProj);
+      navigate(ROUTES.studio(projectId), {
+        state: {
+          editingTemplateId: template.id,
+          editingTemplateTitle: template.title,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to open template in editor:', err);
+      alert('Could not launch editor for this template.');
+    } finally {
+      setOpeningId(null);
+    }
+  };
 
   // Sync with template store changes
   useEffect(() => {
@@ -906,14 +968,27 @@ export const TemplatesManagementTab: React.FC = () => {
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setEditingTemplate(template)}
-                    className={`${primaryButton} !px-3 !py-1.5 !text-xs`}
-                  >
-                    <Edit3 className="w-3.5 h-3.5 mr-1" />
-                    Edit Template
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenInEditor(template)}
+                      disabled={openingId === template.id}
+                      className={`${primaryButton} !px-2.5 !py-1.5 !text-xs flex items-center gap-1`}
+                      title="Open and visually update this template in Studio Canvas"
+                    >
+                      <LayoutTemplate className="w-3.5 h-3.5" />
+                      {openingId === template.id ? 'Opening...' : 'Open Editor'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingTemplate(template)}
+                      className={`${secondaryButton} !px-2.5 !py-1.5 !text-xs flex items-center gap-1`}
+                      title="Edit template settings, variables, and properties"
+                    >
+                      <Settings2 className="w-3.5 h-3.5" />
+                      Config
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -935,6 +1010,7 @@ export const TemplatesManagementTab: React.FC = () => {
           template={editingTemplate}
           isCustom={editingTemplate.id.startsWith('custom-')}
           onSave={handleSaveEdit}
+          onOpenInEditor={handleOpenInEditor}
           onClose={() => setEditingTemplate(null)}
         />
       )}

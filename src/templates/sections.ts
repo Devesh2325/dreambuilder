@@ -18,13 +18,18 @@ const titleBlock = (title: string, sub?: string): El =>
   el('Box', { styles: { ...center, ...narrow } }, [heading(title), ...(sub ? [text(sub, muted)] : [])]);
 
 const feature = (title: string, body: string): El =>
-  el('Card', {}, [heading(title, 'h3'), text(body, muted)]);
+  el('Card', { styles: { hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [heading(title, 'h3'), text(body, muted)]);
 
 const quote = (words: string, name: string): El =>
-  el('Card', {}, [text(`"${words}"`, { fontSize: '1.0625rem' }), text(name, { fontWeight: 700 })]);
+  el('Card', { styles: { hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease', gap: '10px' } }, [
+    el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '5.0 Rating' } }),
+    text(`"${words}"`, { fontSize: '1.0625rem' }),
+    text(name, { fontWeight: 700 }),
+  ]);
 
 const plan = (name: string, price: string, details: string, highlighted = false): El =>
-  el('Card', { styles: highlighted ? { border: '2px solid var(--fp-primary)' } : {} }, [
+  el('Card', { styles: { hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease', gap: '10px', ...(highlighted ? { border: '2px solid var(--fp-primary)' } : {}) } }, [
+    el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '★ 4.9 Plan Score' } }),
     heading(name, 'h3'),
     heading(price, 'h2', { color: 'var(--fp-primary)' }),
     text(details, muted),
@@ -32,7 +37,8 @@ const plan = (name: string, price: string, details: string, highlighted = false)
   ]);
 
 const payPlan = (name: string, price: string, details: string): El =>
-  el('Card', {}, [
+  el('Card', { styles: { hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease', gap: '10px' } }, [
+    el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '★ 5.0' } }),
     heading(name, 'h3'),
     text(details, muted),
     el('PaymentButton', { props: { text: 'Buy now', price, provider: 'stripe', url: '' } }),

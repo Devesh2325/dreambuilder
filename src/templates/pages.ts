@@ -20,10 +20,10 @@ const titleDescription: VariableDef[] = [
 ];
 
 const cards = (list: string, as: string): El =>
-  el('Grid', {}, [el('Card', { repeat: { list, as } }, [heading(`{{${as}.title}}`, 'h3'), text(`{{${as}.description}}`, { color: 'var(--fp-muted)' }, `${as}.description`)])]);
+  el('Grid', {}, [el('Card', { repeat: { list, as }, styles: { hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [heading(`{{${as}.title}}`, 'h3'), text(`{{${as}.description}}`, { color: 'var(--fp-muted)' }, `${as}.description`)])]);
 
 const gradientHero = (children: El[], background: string): El =>
-  section([el('Box', { styles: { alignItems: 'center', textAlign: 'center', gap: '20px', maxWidth: '780px', marginLeft: 'auto', marginRight: 'auto' } }, children)], { background, color: '#ffffff', paddingTop: '96px', paddingBottom: '96px' });
+  section([el('Box', { styles: { alignItems: 'center', textAlign: 'center', gap: '20px', maxWidth: '780px', marginLeft: 'auto', marginRight: 'auto', animation: 'fp-slide-up' } }, children)], { background, color: '#ffffff', paddingTop: '96px', paddingBottom: '96px' });
 
 const articleSections: VariableDef = listVar('sections', 'Sections', [
   { title: 'Why this matters', body: 'Start with the problem your reader has, and why it is worth solving now.' },
@@ -242,22 +242,24 @@ const researchAnalyst = make('page', 'research-analyst', 'Research Analyst Showc
   ], 'Why choose'),
   // Plans
   listVar('plans', 'Plans', [
-    { title: 'Free Insights', price: '₹0 / month', description: 'Weekly newsletter, 2 research reports per month, market commentary.' },
-    { title: 'Pro Investor', price: '₹999 / month', description: 'All Free benefits + full model portfolio, 10 stock picks/month, entry & exit alerts.' },
-    { title: 'Premium HNI', price: '₹2,999 / month', description: 'All Pro benefits + dedicated consultation call, custom portfolio review, priority support.' },
+    { title: 'Free Insights', price: '₹0 / month', description: 'Weekly newsletter, 2 research reports per month, market commentary.', rating: '4.8' },
+    { title: 'Pro Investor', price: '₹999 / month', description: 'All Free benefits + full model portfolio, 10 stock picks/month, entry & exit alerts.', rating: '4.9' },
+    { title: 'Premium HNI', price: '₹2,999 / month', description: 'All Pro benefits + dedicated consultation call, custom portfolio review, priority support.', rating: '5.0' },
   ], [
     { key: 'title', label: 'Plan name', type: 'text', required: true },
     { key: 'price', label: 'Price', type: 'text', required: true },
     { key: 'description', label: 'What\'s included', type: 'longtext', required: true },
+    { key: 'rating', label: 'Client rating (e.g. 4.9)', type: 'text', required: false },
   ], 'Plans'),
   // Testimonials
   listVar('testimonials', 'Testimonials', [
-    { title: 'Ravi Mehta', description: 'The model portfolio alone has given me 28% returns in 10 months. Highly recommended for anyone serious about investing.' },
-    { title: 'Priya Nair', description: 'Very transparent and responsive. I appreciate that the track record is published openly — that builds trust.' },
-    { title: 'Suresh Patel', description: 'Finally a research analyst who explains the "why" behind every call, not just buy/sell signals.' },
+    { title: 'Ravi Mehta', description: 'The model portfolio alone has given me 28% returns in 10 months. Highly recommended for anyone serious about investing.', rating: '5.0' },
+    { title: 'Priya Nair', description: 'Very transparent and responsive. I appreciate that the track record is published openly — that builds trust.', rating: '5.0' },
+    { title: 'Suresh Patel', description: 'Finally a research analyst who explains the "why" behind every call, not just buy/sell signals.', rating: '4.9' },
   ], [
     { key: 'title', label: 'Client name', type: 'text', required: true },
     { key: 'description', label: 'Testimonial', type: 'longtext', required: true },
+    { key: 'rating', label: 'Star rating', type: 'text', required: false },
   ], 'Testimonials'),
   // Contact
   textVar('contact.phone', 'Phone', '+91 98765 43210', 'Contact'),
@@ -371,7 +373,8 @@ const researchAnalyst = make('page', 'research-analyst', 'Research Analyst Showc
       heading('Choose the plan that fits you', 'h2'),
     ]),
     el('Grid', {}, [
-      el('Card', { repeat: { list: 'plans', as: 'plan' }, styles: { gap: '10px' } }, [
+      el('Card', { repeat: { list: 'plans', as: 'plan' }, styles: { gap: '14px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
+        el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '★ {{plan.rating}} / 5 Rating' } }),
         heading('{{plan.title}}', 'h3'),
         heading('{{plan.price}}', 'h2', { color: 'var(--fp-primary)', margin: '0' }),
         text('{{plan.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem' }),
@@ -387,7 +390,8 @@ const researchAnalyst = make('page', 'research-analyst', 'Research Analyst Showc
       heading('What investors say', 'h2'),
     ]),
     el('Grid', {}, [
-      el('Card', { repeat: { list: 'testimonials', as: 'review' }, styles: { gap: '10px' } }, [
+      el('Card', { repeat: { list: 'testimonials', as: 'review' }, styles: { gap: '12px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
+        el('Rating', { props: { value: 5, max: 5, min: 1, color: '#f59e0b', showText: true, text: '★ {{review.rating}} / 5' } }),
         text('"{{review.description}}"', { fontSize: '1rem', color: 'var(--fp-muted)', fontStyle: 'italic' }),
         text('— {{review.title}}', { fontWeight: 700, fontSize: '0.875rem' }),
       ]),
@@ -599,7 +603,7 @@ const financialWebinar = make('page', 'financial-webinar', 'Financial Masterclas
       text('A comprehensive look across the entire technology and capital value chain.', { color: 'var(--fp-muted)' }),
     ]),
     el('Grid', {}, [
-      el('Card', { repeat: { list: 'segments', as: 'seg' }, styles: { gap: '8px' } }, [
+      el('Card', { repeat: { list: 'segments', as: 'seg' }, styles: { gap: '8px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
         heading('{{seg.icon}} {{seg.title}}', 'h3'),
         text('{{seg.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: '1.5' }),
       ]),
@@ -614,7 +618,7 @@ const financialWebinar = make('page', 'financial-webinar', 'Financial Masterclas
       text('Learn disciplined research principles and frameworks you can apply directly.', { color: 'var(--fp-muted)' }),
     ]),
     el('Grid', {}, [
-      el('Card', { repeat: { list: 'takeaways', as: 'item' }, styles: { gap: '6px' } }, [
+      el('Card', { repeat: { list: 'takeaways', as: 'item' }, styles: { gap: '6px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
         heading('✔ {{item.title}}', 'h4', { color: 'var(--fp-primary)', margin: '0' }),
         text('{{item.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem' }),
       ]),
@@ -631,7 +635,7 @@ const financialWebinar = make('page', 'financial-webinar', 'Financial Masterclas
       heading('This Webinar Is For You If You Are...', 'h2'),
     ]),
     el('Grid', {}, [
-      el('Card', { repeat: { list: 'targetAudience', as: 'aud' }, styles: { gap: '10px' } }, [
+      el('Card', { repeat: { list: 'targetAudience', as: 'aud' }, styles: { gap: '10px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
         heading('{{aud.icon}} {{aud.title}}', 'h3'),
         text('{{aud.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: '1.55' }),
       ]),
@@ -645,7 +649,7 @@ const financialWebinar = make('page', 'financial-webinar', 'Financial Masterclas
       heading("Here's Why This Sector Is Getting Everyone's Attention", 'h2'),
     ]),
     el('Grid', {}, [
-      el('Card', { repeat: { list: 'sectorPillars', as: 'pillar' }, styles: { gap: '10px' } }, [
+      el('Card', { repeat: { list: 'sectorPillars', as: 'pillar' }, styles: { gap: '10px', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
         heading('{{pillar.icon}} {{pillar.title}}', 'h3'),
         text('{{pillar.description}}', { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: '1.6' }),
       ]),
@@ -662,7 +666,7 @@ const financialWebinar = make('page', 'financial-webinar', 'Financial Masterclas
       heading("Here's Everything You Get for Just {{webinar.price}}", 'h2'),
     ]),
     el('Grid', {}, [
-      el('Card', { repeat: { list: 'inclusions', as: 'inc' }, styles: { gap: '12px', borderTop: '3px solid var(--fp-primary)' } }, [
+      el('Card', { repeat: { list: 'inclusions', as: 'inc' }, styles: { gap: '12px', borderTop: '3px solid var(--fp-primary)', hoverEffect: 'lift', animation: 'fp-slide-up', transition: 'all 0.25s ease' } }, [
         el('Box', { styles: { display: 'inline-flex', background: 'rgba(45,212,191,0.15)', borderRadius: '6px', padding: '4px 10px', alignSelf: 'flex-start' } }, [
           text('{{inc.tag}}', { fontWeight: 700, fontSize: '0.75rem', color: 'var(--fp-primary)' }),
         ]),

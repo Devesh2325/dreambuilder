@@ -25,12 +25,197 @@ const Section: Block = ({ node, attrs, children }) => {
   );
 };
 
-const Heading: Block = ({ node, attrs }) => {
-  const level = ['h1', 'h2', 'h3', 'h4'].includes(asText(node.props.level)) ? asText(node.props.level) : 'h2';
-  return React.createElement(level, withClass(attrs, `fp-heading fp-${level}`), asText(node.props.text));
+const AnimatedTextContent: React.FC<{
+  text: string;
+  autoMove?: string;
+  cycleWords?: string;
+}> = ({ text, autoMove, cycleWords }) => {
+  const [wordIndex, setWordIndex] = useState(0);
+  const [typewriterPos, setTypewriterPos] = useState(text.length);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const words = cycleWords ? cycleWords.split(',').map((w) => w.trim()).filter(Boolean) : [];
+
+  useEffect(() => {
+    if (autoMove !== 'cycle' || words.length <= 1) return;
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % words.length);
+    }, 2400);
+    return () => clearInterval(interval);
+  }, [autoMove, words.length]);
+
+  useEffect(() => {
+    if (autoMove !== 'typewriter' || !text) return;
+    const speed = isDeleting ? 40 : 85;
+    const timeout = setTimeout(() => {
+      if (!isDeleting && typewriterPos < text.length) {
+        setTypewriterPos((p) => p + 1);
+      } else if (!isDeleting && typewriterPos === text.length) {
+        setTimeout(() => setIsDeleting(true), 2000);
+      } else if (isDeleting && typewriterPos > 0) {
+        setTypewriterPos((p) => p - 1);
+      } else if (isDeleting && typewriterPos === 0) {
+        setIsDeleting(false);
+      }
+    }, speed);
+    return () => clearTimeout(timeout);
+  }, [autoMove, text, typewriterPos, isDeleting]);
+
+  if (autoMove === 'ticker') {
+    return (
+      <span className="fp-text-ticker">
+        <span className="fp-text-ticker-track">
+          <span style={{ paddingRight: '48px' }}>{text}</span>
+          <span style={{ paddingRight: '48px' }}>{text}</span>
+          <span style={{ paddingRight: '48px' }}>{text}</span>
+          <span style={{ paddingRight: '48px' }}>{text}</span>
+        </span>
+      </span>
+    );
+  }
+
+  if (autoMove === 'cycle' && words.length > 0) {
+    return (
+      <span>
+        {text ? `${text} ` : ''}
+        <span style={{ display: 'inline-block', transition: 'all 0.3s ease', color: 'var(--fp-primary)' }}>
+          {words[wordIndex]}
+        </span>
+      </span>
+    );
+  }
+
+  if (autoMove === 'typewriter') {
+    return (
+      <span>
+        {text.slice(0, typewriterPos)}
+        <span style={{ animation: 'fp-cursor-blink 0.8s infinite', marginLeft: '2px', fontWeight: 300 }}>|</span>
+      </span>
+    );
+  }
+
+  if (autoMove === 'shimmer') {
+    return <span className="fp-text-shimmer">{text}</span>;
+  }
+
+  return <>{text}</>;
 };
 
-const Text: Block = ({ node, attrs }) => <p {...withClass(attrs, 'fp-text')}>{asText(node.props.text)}</p>;
+const Heading: Block = ({ node, attrs }) => {
+  const level = ['h1', 'h2', 'h3', 'h4'].includes(asText(node.props.level)) ? asText(node.props.level) : 'h2';
+  const autoMove = asText(node.props.autoMove);
+  const cycleWords = asText(node.props.cycleWords);
+  const textVal = asText(node.props.text);
+
+  return React.createElement(
+    level,
+    withClass(attrs, `fp-heading fp-${level}${autoMove === 'shimmer' ? ' fp-text-shimmer' : ''}`),
+    autoMove && autoMove !== 'none'
+      ? <AnimatedTextContent text={textVal} autoMove={autoMove} cycleWords={cycleWords} />
+      : textVal,
+  );
+};
+
+const Text: Block = ({ node, attrs }) => {
+  const autoMove = asText(node.props.autoMove);
+  const cycleWords = asText(node.props.cycleWords);
+  const textVal = asText(node.props.text);
+
+  return (
+    <p {...withClass(attrs, `fp-text${autoMove === 'shimmer' ? ' fp-text-shimmer' : ''}`)}>
+      {autoMove && autoMove !== 'none'
+        ? <AnimatedTextContent text={textVal} autoMove={autoMove} cycleWords={cycleWords} />
+        : textVal}
+    </p>
+  );
+};
+
+const Rating: Block = ({ node, attrs, ctx }) => {
+  const rawVal = Number(node.props.value);
+  const min = Number(node.props.min) || 0;
+  const max = Math.max(min + 1, Number(node.props.max) || 5);
+  const initialScore = Number.isFinite(rawVal) ? rawVal : max;
+  const [currentVal, setCurrentVal] = useState(initialScore);
+
+  useEffect(() => {
+    if (Number.isFinite(rawVal)) setCurrentVal(rawVal);
+  }, [rawVal]);
+
+  const activeColor = asText(node.props.color) || '#f59e0b';
+  const emptyColor = asText(node.props.emptyColor) || 'color-mix(in srgb, var(--fp-text) 20%, transparent)';
+  const size = Math.max(12, Number(node.props.size) || 20);
+  const shape = asText(node.props.icon) || 'star';
+  const showText = node.props.showText !== false;
+  const customText = asText(node.props.text);
+
+  const totalIcons = max - min;
+  const normalizedValue = Math.min(max, Math.max(min, currentVal));
+  const filledCount = normalizedValue - min;
+
+  const renderIcon = (index: number) => {
+    const starFill = Math.min(1, Math.max(0, filledCount - index));
+    const isHalf = starFill > 0 && starFill < 1;
+    const isFull = starFill >= 1;
+
+    let path = '';
+    if (shape === 'heart') {
+      path = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+    } else if (shape === 'thumb') {
+      path = 'M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z';
+    } else if (shape === 'circle') {
+      path = 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z';
+    } else {
+      path = 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z';
+    }
+
+    const starId = `fp-star-grad-${index}-${Math.round(starFill * 100)}`;
+
+    return (
+      <span
+        key={index}
+        className="fp-rating-star"
+        style={{ cursor: ctx.mode !== 'edit' ? 'pointer' : 'default', display: 'inline-flex' }}
+        onClick={() => {
+          if (ctx.mode !== 'edit') {
+            const nextVal = min + index + 1;
+            setCurrentVal(nextVal);
+            ctx.onAction?.(`rate:${nextVal}`);
+          }
+        }}
+        title={`${min + index + 1} / ${max}`}
+      >
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill={isFull ? activeColor : isHalf ? `url(#${starId})` : emptyColor}
+          style={{ transition: 'transform 0.15s ease' }}
+        >
+          {isHalf && (
+            <defs>
+              <linearGradient id={starId} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset={`${Math.round(starFill * 100)}%`} stopColor={activeColor} />
+                <stop offset={`${Math.round(starFill * 100)}%`} stopColor={emptyColor} />
+              </linearGradient>
+            </defs>
+          )}
+          <path d={path} />
+        </svg>
+      </span>
+    );
+  };
+
+  const displayText = customText || `${normalizedValue.toFixed(normalizedValue % 1 === 0 ? 0 : 1)} / ${max}`;
+
+  return (
+    <div {...withClass(attrs, 'fp-rating')}>
+      <div className="fp-rating-icons" style={{ color: activeColor }}>
+        {Array.from({ length: totalIcons }).map((_, i) => renderIcon(i))}
+      </div>
+      {showText && <span className="fp-rating-text">{displayText}</span>}
+    </div>
+  );
+};
 
 function handleLinkClick(event: React.MouseEvent, href: string, ctx: RenderContext) {
   if (ctx.mode === 'edit') {
@@ -753,6 +938,7 @@ export const BLOCK_RENDERERS: Record<string, Block> = {
   Card: container('fp-box fp-card'),
   Grid: container('fp-grid'),
   Row: container('fp-row'),
+  Rating,
   Heading,
   Text,
   Button,
