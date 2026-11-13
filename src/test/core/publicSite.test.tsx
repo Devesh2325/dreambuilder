@@ -127,14 +127,14 @@ describe('PublicSitePage across all 8 modules', () => {
       </MemoryRouter>,
     );
 
-    const skipBtn = await screen.findByRole('button', { name: 'Skip' });
+    const skipBtn = await screen.findByRole('button', { name: 'Skip', hidden: true });
     fireEvent.click(skipBtn);
 
     const replayBtn = await screen.findByRole('button', { name: 'Replay' });
     expect(replayBtn).toBeTruthy();
     fireEvent.click(replayBtn);
 
-    expect(await screen.findByRole('button', { name: 'Skip' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Skip', hidden: true })).toBeTruthy();
   });
 });
 

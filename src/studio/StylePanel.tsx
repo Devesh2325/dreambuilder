@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowRight, ChevronDown, Italic, Link2, Link2Off, Minus, Plus, RotateCcw, Strikethrough, Underline, X,
-  LucideIcon,
+  LucideIcon, MousePointer, Play,
 } from 'lucide-react';
 import { Device, DEVICES, DocNode } from '../core/schema';
 import { ImageInput } from '../app/shared/VariableForm';
@@ -281,6 +281,46 @@ const SHADOWS: Choice[] = [
   { value: '0 6px 16px -4px rgba(15,23,42,.2)', label: 'M' },
   { value: '0 16px 32px -10px rgba(15,23,42,.3)', label: 'L' },
   { value: '0 28px 56px -14px rgba(15,23,42,.42)', label: 'XL' },
+  { value: 'inset 0 2px 4px rgba(0,0,0,.15)', label: 'Inner' },
+  { value: '0 0 24px color-mix(in srgb,var(--fp-primary) 55%,transparent)', label: 'Glow' },
+];
+
+const HOVER_EFFECTS = [
+  { value: '', label: 'None' },
+  { value: 'lift', label: 'Lift Up (-4px)' },
+  { value: 'lift-high', label: 'Lift High (-8px)' },
+  { value: 'scale-up', label: 'Scale Up (+4%)' },
+  { value: 'scale-down', label: 'Press (-3%)' },
+  { value: 'glow', label: 'Glow Halo (Theme color)' },
+  { value: 'border-glow', label: 'Border Highlight' },
+  { value: 'brighten', label: 'Brighten (+15%)' },
+  { value: 'dim', label: 'Dim (80%)' },
+  { value: 'tilt', label: 'Tilt Right (+2°)' },
+  { value: 'tilt-left', label: 'Tilt Left (-2°)' },
+];
+
+const ANIMATION_TYPES = [
+  { value: '', label: 'None' },
+  { value: 'fp-fade-in', label: 'Fade In' },
+  { value: 'fp-slide-up', label: 'Slide Up' },
+  { value: 'fp-slide-down', label: 'Slide Down' },
+  { value: 'fp-slide-left', label: 'Slide In Left' },
+  { value: 'fp-slide-right', label: 'Slide In Right' },
+  { value: 'fp-zoom-in', label: 'Zoom / Pop In' },
+  { value: 'fp-bounce', label: 'Bounce' },
+  { value: 'fp-float', label: 'Float / Levitate (Loop)' },
+  { value: 'fp-pulse-subtle', label: 'Pulse (Loop)' },
+  { value: 'fp-glow', label: 'Glow Pulse (Loop)' },
+  { value: 'fp-spin', label: 'Spin 360° (Loop)' },
+  { value: 'fp-shimmer', label: 'Shimmer Wave (Loop)' },
+];
+
+const TRANSITION_PRESETS = [
+  { value: '', label: 'Default (250ms)' },
+  { value: 'all 0.15s ease', label: 'Fast (150ms)' },
+  { value: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)', label: 'Normal (250ms)' },
+  { value: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)', label: 'Smooth (400ms)' },
+  { value: 'all 0.6s ease', label: 'Slow (600ms)' },
 ];
 
 const backgroundImageUrl = (value: string) => value.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/)?.[1] ?? '';
@@ -297,10 +337,10 @@ const MEDIA_BLOCKS = ['Image', 'Video', 'Divider', 'Spacer'];
 
 /** What people change most often comes first, and depends on the kind of block. */
 const groupOrder = (type: string): string[] => {
-  if (TEXT_BLOCKS.includes(type)) return ['Typography', 'Fill', 'Spacing', 'Size', 'Border', 'Effects', 'Position', 'Layout'];
-  if (MEDIA_BLOCKS.includes(type)) return ['Size', 'Border', 'Spacing', 'Effects', 'Position'];
-  if (type === 'Section' || type === 'Container') return ['Spacing', 'Fill', 'Layout', 'Size', 'Border', 'Typography', 'Effects', 'Position'];
-  return ['Layout', 'Spacing', 'Fill', 'Size', 'Border', 'Typography', 'Effects', 'Position'];
+  if (TEXT_BLOCKS.includes(type)) return ['Typography', 'Fill', 'Spacing', 'Size', 'Border', 'Effects', 'Hover Effects', 'Animation', 'Position', 'Layout'];
+  if (MEDIA_BLOCKS.includes(type)) return ['Size', 'Border', 'Spacing', 'Effects', 'Hover Effects', 'Animation', 'Position'];
+  if (type === 'Section' || type === 'Container') return ['Spacing', 'Fill', 'Layout', 'Size', 'Border', 'Typography', 'Effects', 'Hover Effects', 'Animation', 'Position'];
+  return ['Layout', 'Spacing', 'Fill', 'Size', 'Border', 'Typography', 'Effects', 'Hover Effects', 'Animation', 'Position'];
 };
 const OPEN_BY_DEFAULT = 3;
 
@@ -360,8 +400,62 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
   const setBackground = (value: string) => updateStyles(node.id, { background: value, backgroundColor: '', backgroundImage: '', backgroundSize: '', backgroundPosition: '', backgroundRepeat: '' });
 
   const shadow = read('boxShadow');
-  const rotate = read('transform').match(/rotate\((-?[\d.]+)deg\)/)?.[1] ?? '';
+  const transform = read('transform');
+  const rotate = transform.match(/rotate\((-?[\d.]+)deg\)/)?.[1] ?? '';
+  const scale = transform.match(/scale\(([\d.]+)\)/)?.[1] ?? '';
   const blur = read('filter').match(/blur\((-?[\d.]+)px\)/)?.[1] ?? '';
+  const backdropBlur = read('backdropFilter').match(/blur\((-?[\d.]+)px\)/)?.[1] ?? '';
+
+  const setRotateAndScale = (newRotate: string, newScale: string) => {
+    const parts: string[] = [];
+    if (newRotate) parts.push(`rotate(${newRotate}deg)`);
+    if (newScale && newScale !== '1') parts.push(`scale(${newScale})`);
+    setKey('transform', parts.join(' '));
+  };
+
+  const anim = read('animation');
+  const animName = read('animationName') || anim.match(/(fp-[a-z-]+)/)?.[1] || '';
+  const animDuration = read('animationDuration') || anim.match(/(\d+(?:\.\d+)?s)/)?.[1] || '0.6s';
+  const animDelay = read('animationDelay') || anim.match(/\s(\d+(?:\.\d+)?s)\s/)?.[1] || '0s';
+  const animIteration = read('animationIterationCount') || (anim.includes('infinite') ? 'infinite' : 'once');
+
+  const applyAnimation = (name: string, duration = animDuration, delay = animDelay, iteration = animIteration) => {
+    if (!name) {
+      updateStyles(node.id, {
+        animation: '',
+        animationName: '',
+        animationDuration: '',
+        animationDelay: '',
+        animationIterationCount: '',
+      });
+      return;
+    }
+    const isLoop = ['fp-float', 'fp-pulse-subtle', 'fp-glow', 'fp-spin', 'fp-shimmer'].includes(name);
+    const effectiveIter = iteration || (isLoop ? 'infinite' : 'once');
+    const iterVal = effectiveIter === 'infinite' ? 'infinite' : '1 both';
+    const timing = isLoop ? 'ease-in-out' : 'cubic-bezier(0.16, 1, 0.3, 1)';
+    const fullAnim = `${name} ${duration || '0.6s'} ${timing} ${delay || '0s'} ${iterVal}`;
+    updateStyles(node.id, {
+      animation: fullAnim,
+      animationName: name,
+      animationDuration: duration || '0.6s',
+      animationDelay: delay || '0s',
+      animationIterationCount: effectiveIter,
+    });
+  };
+
+  const triggerAnimationPreview = () => {
+    try {
+      const frame = document.querySelector('iframe');
+      const el = frame?.contentDocument?.querySelector(`.fp-n-${node.id}`) as HTMLElement | null;
+      if (el) {
+        const current = el.style.animation;
+        el.style.animation = 'none';
+        void el.offsetHeight;
+        el.style.animation = current || anim;
+      }
+    } catch {}
+  };
 
   const isContainer = Boolean(BLOCK_META[node.type]?.isContainer);
   const isGrid = effective('display') === 'grid' || (node.type === 'Grid' && !effective('display'));
@@ -376,8 +470,10 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
   const typeKeys = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'textAlign', 'textTransform', 'textDecoration', 'color'];
   const fillKeys = ['background', 'backgroundColor', 'backgroundImage', 'backgroundSize', 'backgroundPosition', 'backgroundRepeat'];
   const borderKeys = ['border', 'borderWidth', 'borderStyle', 'borderColor', 'borderRadius', ...CORNERS.map((corner) => corner.key)];
-  const effectKeys = ['boxShadow', 'opacity', 'transform', 'filter'];
-  const positionKeys = ['position', 'top', 'right', 'bottom', 'left', 'zIndex', 'order', 'alignSelf', 'flexGrow'];
+  const effectKeys = ['boxShadow', 'opacity', 'transform', 'filter', 'backdropFilter'];
+  const hoverKeys = ['hoverEffect', 'hoverBackground', 'hoverColor', 'hoverBorderColor', 'hoverCursor', 'transition'];
+  const animationKeys = ['animation', 'animationName', 'animationDuration', 'animationDelay', 'animationIterationCount'];
+  const positionKeys = ['position', 'top', 'right', 'bottom', 'left', 'zIndex', 'order', 'alignSelf', 'flexGrow', 'flexShrink'];
 
   const groups: Record<string, { keys: string[]; canReset?: boolean; onReset?: () => void; body: React.ReactNode }> = {
     Layout: {
@@ -561,9 +657,131 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
             <input id={`style-${node.id}-opacity`} type="range" min={0} max={1} step={0.05} disabled={readOnly} className="w-full accent-indigo-600" value={effective('opacity') || 1} onChange={(event) => setKey('opacity', event.target.value === '1' ? '' : event.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <NumberField label="Rotate (degrees)" placeholder="0" disabled={readOnly} value={rotate} onChange={(value) => setKey('transform', value ? `rotate(${value}deg)` : '')} />
-            <NumberField label="Blur (pixels)" placeholder="0" disabled={readOnly} value={blur} onChange={(value) => setKey('filter', value ? `blur(${value}px)` : '')} />
+            <NumberField label="Rotate (deg)" placeholder="0" disabled={readOnly} value={rotate} onChange={(value) => setRotateAndScale(value, scale)} />
+            <NumberField label="Scale (e.g. 1.05)" placeholder="1" disabled={readOnly} value={scale} onChange={(value) => setRotateAndScale(rotate, value)} />
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <NumberField label="Blur (px)" placeholder="0" disabled={readOnly} value={blur} onChange={(value) => setKey('filter', value ? `blur(${value}px)` : '')} />
+            <NumberField label="Backdrop blur (px)" placeholder="0" disabled={readOnly} value={backdropBlur} onChange={(value) => setKey('backdropFilter', value ? `blur(${value}px)` : '')} />
+          </div>
+          {effective('backdropFilter') && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Backdrop blur gives a frosted glass effect. Best with a semi-transparent background.
+            </p>
+          )}
+        </>
+      ),
+    },
+    'Hover Effects': {
+      keys: hoverKeys,
+      canReset: true,
+      body: (
+        <>
+          <p className="text-[12px] text-slate-500 dark:text-slate-400">
+            Hover over this block on the canvas to see your hover effects live.
+          </p>
+          {select('Hover motion & effect', 'hoverEffect', HOVER_EFFECTS)}
+          {select('Transition timing', 'transition', TRANSITION_PRESETS)}
+          {segmented('Cursor on hover', 'hoverCursor', [
+            { value: '', label: 'Default' },
+            { value: 'pointer', label: 'Pointer (Hand)', icon: MousePointer },
+          ])}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Custom hover colors (optional)</p>
+            <ColorField label="Hover background" disabled={readOnly} theme={theme} clearable value={read('hoverBackground')} onChange={set('hoverBackground')} />
+            <ColorField label="Hover text color" disabled={readOnly} theme={theme} clearable value={read('hoverColor')} onChange={set('hoverColor')} />
+            <ColorField label="Hover border color" disabled={readOnly} theme={theme} clearable value={read('hoverBorderColor')} onChange={set('hoverBorderColor')} />
+          </div>
+        </>
+      ),
+    },
+    Animation: {
+      keys: animationKeys,
+      canReset: true,
+      body: (
+        <>
+          <div className="flex items-center justify-between">
+            <span className={smallLabel}>Entrance & loop animation</span>
+            {animName && (
+              <button
+                type="button"
+                onClick={triggerAnimationPreview}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                <Play className="w-3 h-3" /> Replay
+              </button>
+            )}
+          </div>
+          <SelectField
+            label=""
+            disabled={readOnly}
+            value={animName}
+            options={ANIMATION_TYPES}
+            onChange={(name) => applyAnimation(name)}
+          />
+
+          {animName && (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className={smallLabel}>Duration</p>
+                  <SelectField
+                    label=""
+                    disabled={readOnly}
+                    value={animDuration}
+                    options={[
+                      { value: '0.3s', label: '0.3s (Quick)' },
+                      { value: '0.6s', label: '0.6s (Normal)' },
+                      { value: '1s', label: '1.0s (Smooth)' },
+                      { value: '1.5s', label: '1.5s (Slow)' },
+                      { value: '2.5s', label: '2.5s (Gentle)' },
+                      { value: '4s', label: '4.0s (Ambient)' },
+                    ]}
+                    onChange={(dur) => applyAnimation(animName, dur, animDelay, animIteration)}
+                  />
+                </div>
+                <div>
+                  <p className={smallLabel}>Delay</p>
+                  <SelectField
+                    label=""
+                    disabled={readOnly}
+                    value={animDelay}
+                    options={[
+                      { value: '0s', label: '0s (Immediate)' },
+                      { value: '0.1s', label: '0.1s' },
+                      { value: '0.2s', label: '0.2s' },
+                      { value: '0.4s', label: '0.4s' },
+                      { value: '0.6s', label: '0.6s' },
+                      { value: '1s', label: '1.0s' },
+                    ]}
+                    onChange={(del) => applyAnimation(animName, animDuration, del, animIteration)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <p className={smallLabel}>Repeat mode</p>
+                <Segmented
+                  label=""
+                  disabled={readOnly}
+                  value={animIteration}
+                  choices={[
+                    { value: 'once', label: 'Once (Entrance)' },
+                    { value: 'infinite', label: 'Infinite (Loop)' },
+                  ]}
+                  onChange={(iter) => applyAnimation(animName, animDuration, animDelay, iter)}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={triggerAnimationPreview}
+                className="w-full h-8 flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors"
+              >
+                <Play className="w-3.5 h-3.5" /> Test animation in canvas
+              </button>
+            </>
+          )}
         </>
       ),
     },
@@ -572,17 +790,93 @@ export const StylePanel: React.FC<{ node: DocNode }> = ({ node }) => {
       canReset: true,
       body: (
         <>
-          {select('Position', 'position', [{ value: 'static', label: 'Normal' }, { value: 'relative', label: 'Relative' }, { value: 'absolute', label: 'Absolute' }, { value: 'fixed', label: 'Fixed' }, { value: 'sticky', label: 'Sticky' }])}
+          {select('Position', 'position', [
+            { value: 'static', label: 'Normal (static)' },
+            { value: 'relative', label: 'Relative' },
+            { value: 'absolute', label: 'Absolute (Pinned)' },
+            { value: 'fixed', label: 'Fixed (Screen)' },
+            { value: 'sticky', label: 'Sticky (Scrolls then sticks)' },
+          ])}
+
+          {effective('position') === 'sticky' && !effective('top') && (
+            <p className="text-[12px] rounded-lg px-2.5 py-1.5 bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
+              Sticky elements require a Top position to stick.{' '}
+              {!readOnly && (
+                <button type="button" className="font-semibold underline" onClick={() => setKey('top', '0')}>
+                  Set Top: 0
+                </button>
+              )}
+            </p>
+          )}
+
+          {(!effective('position') || effective('position') === 'static') && hasAny('top', 'right', 'bottom', 'left', 'zIndex') && (
+            <p className="text-[12px] rounded-lg px-2.5 py-1.5 bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+              Coordinates only apply when Position is not Normal.{' '}
+              {!readOnly && (
+                <button type="button" className="font-semibold underline" onClick={() => setKey('position', 'relative')}>
+                  Set to Relative
+                </button>
+              )}
+            </p>
+          )}
+
+          {(effective('position') === 'absolute' || effective('position') === 'fixed') && (
+            <div>
+              <p className={smallLabel}>Quick pin presets</p>
+              <div className="grid grid-cols-4 gap-1 text-[11px]">
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  className="h-7 rounded border border-slate-200 dark:border-slate-700 hover:border-indigo-400 font-medium"
+                  onClick={() => updateStyles(node.id, { top: '0', right: '0', bottom: '0', left: '0' })}
+                >
+                  Full cover
+                </button>
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  className="h-7 rounded border border-slate-200 dark:border-slate-700 hover:border-indigo-400 font-medium"
+                  onClick={() => updateStyles(node.id, { top: '0', left: '0', right: '0', bottom: '' })}
+                >
+                  Pin top
+                </button>
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  className="h-7 rounded border border-slate-200 dark:border-slate-700 hover:border-indigo-400 font-medium"
+                  onClick={() => updateStyles(node.id, { bottom: '0', left: '0', right: '0', top: '' })}
+                >
+                  Pin bottom
+                </button>
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  className="h-7 rounded border border-slate-200 dark:border-slate-700 hover:border-indigo-400 font-medium"
+                  onClick={() => updateStyles(node.id, { top: '50%', left: '50%', right: '', bottom: '', transform: 'translate(-50%, -50%)' })}
+                >
+                  Center
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             {number('Top', 'top', 'auto')}
             {number('Right', 'right', 'auto')}
             {number('Bottom', 'bottom', 'auto')}
             {number('Left', 'left', 'auto')}
-            {number('Stack order', 'zIndex', 'auto')}
-            {number('Order', 'order', '0')}
-            {number('Grow', 'flexGrow', '0')}
-            {select('Align self', 'alignSelf', [{ value: 'flex-start', label: 'Start' }, { value: 'center', label: 'Center' }, { value: 'flex-end', label: 'End' }, { value: 'stretch', label: 'Stretch' }])}
+            {number('Stack order (z-index)', 'zIndex', 'auto')}
+            {number('Order (in flex/grid)', 'order', '0')}
+            {number('Flex grow', 'flexGrow', '0')}
+            {number('Flex shrink', 'flexShrink', '1')}
           </div>
+          {select('Align self', 'alignSelf', [
+            { value: 'auto', label: 'Auto' },
+            { value: 'flex-start', label: 'Start' },
+            { value: 'center', label: 'Center' },
+            { value: 'flex-end', label: 'End' },
+            { value: 'stretch', label: 'Stretch' },
+          ])}
         </>
       ),
     },

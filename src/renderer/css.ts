@@ -4,7 +4,7 @@ import { RenderNode } from '../core/variables';
 export const TABLET_MAX = 991;
 export const MOBILE_MAX = 640;
 
-const UNITLESS = new Set(['opacity', 'zIndex', 'fontWeight', 'lineHeight', 'flexGrow', 'flexShrink', 'order', 'flex']);
+const UNITLESS = new Set(['opacity', 'zIndex', 'fontWeight', 'lineHeight', 'flexGrow', 'flexShrink', 'order', 'flex', 'animationIterationCount']);
 
 /**
  * Style values are user data placed inside a stylesheet. Anything able to end the
@@ -30,16 +30,95 @@ export function safeCssValue(value: string | number): string | null {
 function declarations(styles: Record<string, string | number> | undefined): string {
   if (!styles) return '';
   let css = '';
+  const hasHover = Boolean(
+    styles.hoverEffect || styles.hoverBackground || styles.hoverColor || styles.hoverBorderColor ||
+    styles.hoverTransform || styles.hoverShadow || styles.hoverOpacity
+  );
+  const transition = styles.transition || (hasHover ? 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)' : '');
+
   for (const [property, raw] of Object.entries(styles)) {
+    if (property.startsWith('hover') || property === 'transition') continue;
     if (!/^[a-zA-Z]+$/.test(property)) continue;
     const value = safeCssValue(raw);
     if (value === null) continue;
+
+    if (property === 'backdropFilter') {
+      const isPlainNumber = /^-?\d*\.?\d+$/.test(value) && Number(value) !== 0;
+      const withUnit = isPlainNumber ? `${value}px` : value;
+      css += `-webkit-backdrop-filter:${withUnit};backdrop-filter:${withUnit};`;
+      continue;
+    }
+
     const kebab = property.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
     // A plain number typed into a style field means pixels.
     const isPlainNumber = /^-?\d*\.?\d+$/.test(value) && Number(value) !== 0;
     const withUnit = isPlainNumber && !UNITLESS.has(property) ? `${value}px` : value;
     css += `${kebab}:${withUnit};`;
   }
+
+  if (transition) {
+    const safeTrans = safeCssValue(transition);
+    if (safeTrans) css += `transition:${safeTrans};`;
+  }
+  if (styles.hoverCursor === 'pointer') {
+    css += 'cursor:pointer;';
+  }
+
+  return css;
+}
+
+function hoverDeclarations(styles: Record<string, string | number> | undefined): string {
+  if (!styles) return '';
+  let css = '';
+  const effect = String(styles.hoverEffect ?? '');
+
+  if (effect === 'lift') {
+    css += 'transform:translateY(-4px);box-shadow:0 14px 28px -6px rgba(15,23,42,0.22);';
+  } else if (effect === 'lift-high') {
+    css += 'transform:translateY(-8px);box-shadow:0 24px 40px -8px rgba(15,23,42,0.3);';
+  } else if (effect === 'scale-up') {
+    css += 'transform:scale(1.04);';
+  } else if (effect === 'scale-down') {
+    css += 'transform:scale(0.97);';
+  } else if (effect === 'glow') {
+    css += 'box-shadow:0 0 24px color-mix(in srgb,var(--fp-primary) 65%,transparent);';
+  } else if (effect === 'border-glow') {
+    css += 'border-color:var(--fp-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--fp-primary) 40%,transparent);';
+  } else if (effect === 'brighten') {
+    css += 'filter:brightness(1.15);';
+  } else if (effect === 'dim') {
+    css += 'opacity:0.8;';
+  } else if (effect === 'tilt') {
+    css += 'transform:rotate(2deg) scale(1.02);';
+  } else if (effect === 'tilt-left') {
+    css += 'transform:rotate(-2deg) scale(1.02);';
+  }
+
+  if (styles.hoverBackground) {
+    const val = safeCssValue(styles.hoverBackground);
+    if (val) css += `background:${val};`;
+  }
+  if (styles.hoverColor) {
+    const val = safeCssValue(styles.hoverColor);
+    if (val) css += `color:${val};`;
+  }
+  if (styles.hoverBorderColor) {
+    const val = safeCssValue(styles.hoverBorderColor);
+    if (val) css += `border-color:${val};`;
+  }
+  if (styles.hoverTransform) {
+    const val = safeCssValue(styles.hoverTransform);
+    if (val) css += `transform:${val};`;
+  }
+  if (styles.hoverShadow) {
+    const val = safeCssValue(styles.hoverShadow);
+    if (val) css += `box-shadow:${val};`;
+  }
+  if (styles.hoverOpacity) {
+    const val = safeCssValue(styles.hoverOpacity);
+    if (val) css += `opacity:${val};`;
+  }
+
   return css;
 }
 
@@ -57,10 +136,19 @@ export function generateNodeCss(root: RenderNode | null): string {
     const selector = `.${nodeClass(node.key)}`;
     const main = declarations(node.styles);
     if (main) base += `${selector}{${main}}`;
+    const hoverMain = hoverDeclarations(node.styles);
+    if (hoverMain) base += `${selector}:hover{${hoverMain}}`;
+
     const forTablet = declarations(node.responsive?.tablet);
     if (forTablet) tablet += `${selector}{${forTablet}}`;
+    const hoverTablet = hoverDeclarations(node.responsive?.tablet);
+    if (hoverTablet) tablet += `${selector}:hover{${hoverTablet}}`;
+
     const forMobile = declarations(node.responsive?.mobile);
     if (forMobile) mobile += `${selector}{${forMobile}}`;
+    const hoverMobile = hoverDeclarations(node.responsive?.mobile);
+    if (hoverMobile) mobile += `${selector}:hover{${hoverMobile}}`;
+
     for (const device of node.hideOn ?? []) hidden[device] += `${selector}{display:none!important}`;
     node.children.forEach(visit);
   };
@@ -240,6 +328,17 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-demo-complete-card{background:var(--fp-surface);border:1px solid color-mix(in srgb,var(--fp-text) 12%,transparent);border-radius:calc(var(--fp-radius) + 4px);padding:36px 32px;max-width:440px;width:100%;text-align:center;box-shadow:0 24px 48px -12px rgba(15,23,42,.4)}
 :where(.fp-root) .fp-demo-complete-icon{font-size:3rem;margin-bottom:12px;line-height:1}
 @keyframes fp-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fp-slide-up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fp-slide-down{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fp-slide-left{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fp-slide-right{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fp-zoom-in{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes fp-bounce{0%,20%,50%,80%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}60%{transform:translateY(-6px)}}
+@keyframes fp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes fp-pulse-subtle{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.04);opacity:.92}}
+@keyframes fp-glow{0%,100%{box-shadow:0 0 6px color-mix(in srgb,var(--fp-primary) 35%,transparent)}50%{box-shadow:0 0 24px color-mix(in srgb,var(--fp-primary) 85%,transparent)}}
+@keyframes fp-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes fp-shimmer{0%{filter:brightness(1)}50%{filter:brightness(1.25)}100%{filter:brightness(1)}}
 :where(.fp-root) .fp-demo-bar .fp-btn{padding:6px 14px;font-size:.875rem}
 :where(.fp-root) .fp-demo-dots{display:flex;gap:6px}
 :where(.fp-root) .fp-demo-dots span{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb,var(--fp-text) 18%,transparent)}
