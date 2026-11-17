@@ -103,10 +103,11 @@ describe('loading states', () => {
     await fake.services.projects.create(blankProject('form', 'org-1', 'First'));
     await fake.services.projects.create(blankProject('form', 'org-1', 'Second'));
     fake.services.projects.remove = () => never();
-    window.confirm = () => true;
     open('/forms', fake);
     const first = await screen.findByRole('button', { name: 'Delete First' });
     fireEvent.click(first);
+    const confirmBtn = await screen.findByRole('button', { name: 'Delete permanently' });
+    fireEvent.click(confirmBtn);
     await waitFor(() => expect(first.querySelector('.animate-spin')).toBeTruthy());
     expect(screen.getByRole('button', { name: 'Delete Second' }).querySelector('.animate-spin')).toBeNull();
   });

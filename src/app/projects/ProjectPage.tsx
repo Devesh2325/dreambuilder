@@ -12,6 +12,7 @@ import { formatDate, formatDateTime } from '../shared/format';
 import { Icon } from '../shared/Icon';
 import { MODULE_COLORS } from '../shared/moduleColors';
 import { BusyIcon, BusyLabel, cardClass, dangerButton, EmptyState, ErrorNote, errorMessage, LoadingNote, primaryButton, ProjectSkeleton, secondaryButton } from '../shared/ui';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useWorkspace } from '../workspace';
 import { collectsResponses, MODULE_COLUMNS } from './moduleColumns';
 import { StatusBadge } from './ProjectsPage';
@@ -237,6 +238,8 @@ const SettingsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
   const queryClient = useQueryClient();
   const [name, setName] = useState(project.title);
   const [isSaved, setIsSaved] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isUnpublishOpen, setIsUnpublishOpen] = useState(false);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['project', project.id] });
@@ -283,9 +286,7 @@ const SettingsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
           {project.status === 'published' && (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-slate-500 dark:text-slate-400">Stop showing this to visitors, and keep it as a draft.</p>
-              <button type="button" className={secondaryButton} disabled={unpublish.isPending} onClick={() => {
-                if (window.confirm('Take this offline? Visitors will no longer be able to see it.')) unpublish.mutate();
-              }}>
+              <button type="button" className={secondaryButton} disabled={unpublish.isPending} onClick={() => setIsUnpublishOpen(true)}>
                 <BusyLabel busy={unpublish.isPending} busyText="Taking offline...">Take offline</BusyLabel>
               </button>
             </div>
@@ -293,9 +294,7 @@ const SettingsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
           {can('delete:project') && (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-slate-500 dark:text-slate-400">Delete this project, its versions and its responses.</p>
-              <button type="button" className={dangerButton} disabled={remove.isPending} onClick={() => {
-                if (window.confirm(`Delete "${project.title}" permanently? This also removes its versions and responses.`)) remove.mutate();
-              }}>
+              <button type="button" className={dangerButton} disabled={remove.isPending} onClick={() => setIsDeleteOpen(true)}>
                 <BusyIcon busy={remove.isPending}><Trash2 className="w-4 h-4" aria-hidden="true" /></BusyIcon>
                 {remove.isPending ? 'Deleting...' : 'Delete project'}
               </button>
@@ -303,6 +302,38 @@ const SettingsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
           )}
         </section>
       )}
+
+      <ConfirmDialog
+        isOpen={isUnpublishOpen}
+        title="Take project offline?"
+        itemName={project.title}
+        description="Visitors will no longer be able to see or access this site. It will be saved as a draft in your workspace."
+        confirmLabel="Take offline"
+        variant="warning"
+        isPending={unpublish.isPending}
+        onClose={() => setIsUnpublishOpen(false)}
+        onConfirm={() => {
+          unpublish.mutate(undefined, {
+            onSettled: () => setIsUnpublishOpen(false),
+          });
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        title="Delete project permanently?"
+        itemName={project.title}
+        description="This action cannot be undone. All pages, versions, analytics, and visitor responses associated with this project will be permanently removed."
+        confirmLabel="Delete permanently"
+        variant="danger"
+        isPending={remove.isPending}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={() => {
+          remove.mutate(undefined, {
+            onSettled: () => setIsDeleteOpen(false),
+          });
+        }}
+      />
     </div>
   );
 };

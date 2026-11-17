@@ -12,6 +12,7 @@ import { formatDate } from '../shared/format';
 import { Icon } from '../shared/Icon';
 import { MODULE_COLORS } from '../shared/moduleColors';
 import { BusyIcon, cardClass, ErrorNote, errorMessage, inputClass, PageHeader, StatTile, TableSkeleton } from '../shared/ui';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { CreateButton } from '../templates/CreateButton';
 import { useWorkspace } from '../workspace';
 import { collectsResponses, MODULE_COLUMNS, ProjectRow } from './moduleColumns';
@@ -61,6 +62,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
   const [sort, setSort] = useState<SortKey>('updatedAt');
   const [descending, setDescending] = useState(true);
   const [page, setPage] = useState(0);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null);
 
   const query = useQuery({
     queryKey: ['projects', organizationId],
@@ -208,9 +210,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
                                 title="Delete"
                                 disabled={remove.isPending}
                                 className={`${iconAction} hover:!text-rose-600`}
-                                onClick={() => {
-                                  if (window.confirm(`Delete "${project.title}" permanently? This also removes its versions and responses.`)) remove.mutate(project.id);
-                                }}
+                                onClick={() => setProjectToDelete(project)}
                               >
                                 <BusyIcon busy={remove.isPending && remove.variables === project.id}><Trash2 className="w-4 h-4" /></BusyIcon>
                               </button>
@@ -237,6 +237,24 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(projectToDelete)}
+        title="Delete project permanently?"
+        itemName={projectToDelete?.title}
+        description="This action cannot be undone. All pages, versions, analytics, and visitor responses associated with this project will be permanently removed."
+        confirmLabel="Delete permanently"
+        variant="danger"
+        isPending={remove.isPending}
+        onClose={() => setProjectToDelete(null)}
+        onConfirm={() => {
+          if (projectToDelete) {
+            remove.mutate(projectToDelete.id, {
+              onSettled: () => setProjectToDelete(null),
+            });
+          }
+        }}
+      />
     </>
   );
 };
