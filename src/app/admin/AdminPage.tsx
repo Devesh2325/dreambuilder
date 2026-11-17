@@ -12,6 +12,7 @@ import { formatDate, formatDateTime } from '../shared/format';
 import { Icon } from '../shared/Icon';
 import { BusyLabel, cardClass, EmptyState, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton, StatTile, TableSkeleton } from '../shared/ui';
 import { TemplatesManagementTab } from './TemplatesTab';
+import { WebsiteConfigTab } from './WebsiteConfigTab';
 
 const useRefresh = () => {
   const queryClient = useQueryClient();
@@ -459,10 +460,11 @@ const InboxTab: React.FC = () => {
 
 // ---- Page -------------------------------------------------------------------
 
-type AdminTab = 'overview' | 'users' | 'plans' | 'requests' | 'inbox' | 'templates';
+type AdminTab = 'overview' | 'website-config' | 'templates' | 'users' | 'plans' | 'requests' | 'inbox';
 
 const TABS: { id: AdminTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'website-config', label: 'Website configuration' },
   { id: 'templates', label: 'Template management' },
   { id: 'users', label: 'Users' },
   { id: 'plans', label: 'Plans and limits' },
@@ -498,6 +500,7 @@ export const AdminPage: React.FC = () => {
       </div>
       <div role="tabpanel">
         {tab === 'overview' && <OverviewTab />}
+        {tab === 'website-config' && <WebsiteConfigTab />}
         {tab === 'templates' && <TemplatesManagementTab />}
         {tab === 'users' && <UsersTab />}
         {tab === 'plans' && <PlansTab />}

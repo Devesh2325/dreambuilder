@@ -11,6 +11,8 @@ import { Icon } from '../shared/Icon';
 import { LiveThumbnail } from '../templates/LiveThumbnail';
 import { GoogleTranslateSelector } from '../shared/GoogleTranslate';
 import { ProductDemo } from './ProductDemo';
+import { WebsiteFooter } from '../shared/WebsiteFooter';
+import { useWebsiteConfig } from '../../data/websiteConfigStore';
 
 const SHOWCASE = ['website-restaurant', 'page-fintech-app', 'website-saas', 'page-travel-package', 'website-clinic', 'page-gym-offer'];
 const INDUSTRIES = ['Restaurants', 'Clinics', 'Real estate', 'Gyms', 'Schools', 'Law firms', 'Hotels', 'Software', 'Salons', 'Charities', 'Finance', 'Shops', 'Weddings', 'Consultants'];
@@ -58,13 +60,14 @@ const Logo: React.FC<{ light?: boolean }> = ({ light }) => (
 
 /** What people see before they have an account. Every claim here is something the product does. */
 export const LandingPage: React.FC = () => {
+  const config = useWebsiteConfig();
   useEffect(() => {
     const previous = document.title;
-    document.title = 'FlowPilot: build websites, pages, tours and forms without code';
+    document.title = `${config.company.name}: build websites, pages, tours and forms without code`;
     return () => {
       document.title = previous;
     };
-  }, []);
+  }, [config.company.name]);
   const templates = useMemo(() => SHOWCASE.flatMap((id) => getTemplate(id) ?? []), []);
   const hero = getTemplate('website-agency') ?? TEMPLATES[0];
 
@@ -292,8 +295,8 @@ export const LandingPage: React.FC = () => {
           <div className="max-w-3xl mx-auto">
             <h2 id="questions-title" className="text-3xl sm:text-4xl font-extrabold tracking-tight text-center">Common questions</h2>
             <div className="mt-10 divide-y divide-slate-200 border-y border-slate-200">
-              {FAQ.map((item) => (
-                <details key={item.question} className="group py-5">
+              {config.faqs.map((item) => (
+                <details key={item.id || item.question} className="group py-5">
                   <summary className="flex items-center justify-between gap-4 font-semibold cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                     {item.question}
                     <ChevronDown className="w-5 h-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180" aria-hidden="true" />
@@ -314,17 +317,7 @@ export const LandingPage: React.FC = () => {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-wrap items-center justify-between gap-4">
-          <Logo />
-          <nav aria-label="Footer" className="flex flex-wrap items-center gap-6 text-sm font-medium text-slate-600">
-            <Link to={ROUTES.docs} className="hover:text-slate-900">Docs</Link>
-            <Link to={ROUTES.login} className="hover:text-slate-900">Log in</Link>
-            <Link to={ROUTES.signUp} className="hover:text-slate-900">Create account</Link>
-          </nav>
-          <p className="flex items-center gap-1.5 text-sm text-slate-500"><Globe className="w-4 h-4" aria-hidden="true" />Build once. Publish anywhere you need it.</p>
-        </div>
-      </footer>
+      <WebsiteFooter />
     </div>
   );
 };

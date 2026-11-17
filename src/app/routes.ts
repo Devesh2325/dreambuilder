@@ -3,6 +3,7 @@ import { ProjectType } from '../core/schema';
 
 export const ROUTES = {
   home: '/',
+  landing: '/',
   login: '/login',
   signUp: '/signup',
   forgotPassword: '/forgot-password',

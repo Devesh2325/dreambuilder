@@ -70,6 +70,21 @@ Each step has its own layout, under **Content**:
 
 Add a **Video** block to any step, and paste a YouTube or Vimeo link, or a link to an MP4 file. Long steps scroll inside themselves.
 
+## Dark & Light Mode Compatibility
+
+Tours provide first-class support for both **Dark Mode** and **Light Mode**:
+- **Theme Presets**: Choose from built-in theme presets (such as *Indigo Light*, *Midnight Dark*, *Slate*, or *High-Contrast*) or set custom HEX codes in the **Theme** panel.
+- **Adaptive Scrim & Borders**: Tooltips, arrows, and focus outlines automatically adapt contrast so text is razor-sharp on both bright and dark host application backgrounds.
+- **No Manual CSS Needed**: FlowPilot manages background, surface, and text tokens automatically via CSS variables without requiring extra media queries from you.
+
+## Zero CSS Leakage & Complete DOM Isolation
+
+When you integrate FlowPilot on your site, it is guaranteed **not to break any host CSS or layout**:
+
+1. **Shadow DOM Encapsulation**: The tour player renders within a native browser **Shadow DOM** (`host.attachShadow({ mode: 'open' })`). Host styles, CSS resets (`* { margin: 0; }`), and third-party frameworks (Tailwind, Bootstrap, Bulma) cannot pierce the Shadow root to distort tour components.
+2. **Zero Style Bleed**: FlowPilot CSS rules are scoped strictly to `:where(.fp-root)` with 0 specificity. They will never alter, override, or pollute your app's global typography, links, buttons, or styles.
+3. **Zero Layout Shift (CLS 0)**: Elements on your page are highlighted using non-destructive viewport coordinate overlays. FlowPilot never injects wrapper `<div>`s around your buttons or modifies your DOM nodes' `position`, `margin`, or `padding`.
+
 ## Options
 
 With nothing selected, **Edit** also has options for the whole tour: progress such as "Step 1 of 5", how long it takes, a close button, closing by clicking outside, arrow keys and Esc, how dark the page goes, the space around a highlighted element, how long to wait for an element to appear, and a page to go to at the end.

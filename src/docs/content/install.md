@@ -8,6 +8,17 @@ Each project's **Share and install** tab has these steps with your code filled i
 
 ---
 
+## 🛡️ DOM & CSS Safety Guarantee: Zero Breakage on Your Host Site
+
+FlowPilot was engineered specifically so that integrating on your live production site **never breaks your layout, typography, or CSS**:
+
+1. **Native Shadow DOM Encapsulation**: The embed player injects into a private Shadow root (`attachShadow({ mode: 'open' })`). Your site's global styles, CSS resets (`* { box-sizing: border-box; }`, `button { font-family: inherit; }`), and frameworks (Tailwind, Bootstrap, Material UI, styled-components) are blocked from piercing into FlowPilot widgets.
+2. **Zero Outward Style Bleed**: FlowPilot CSS selectors use `:where(.fp-root)` with 0 specificity. FlowPilot styles cannot leak out into your site to override your buttons, navigation bars, links, or fonts.
+3. **Dual Dark & Light Mode Theme Compatibility**: FlowPilot natively supports both light mode and dark mode. You can choose a dark theme (like Midnight) or light theme in the Studio, and tooltips, borders, and modal dialogs render with high-contrast adaptive colors.
+4. **Zero Layout Shift (Cumulative Layout Shift = 0)**: FlowPilot overlays (tours, hotspots, banners, and tooltips) calculate element coordinates via non-destructive bounding boxes. It never wraps your elements in new DOM nodes or changes their `position` or `margin`.
+
+---
+
 ## ⚡ One-Click: Copy as AI Prompt (Cursor, Claude, ChatGPT, Copilot)
 
 If you use an AI-assisted development workflow (Cursor, GitHub Copilot, Claude Code, ChatGPT, or v0):

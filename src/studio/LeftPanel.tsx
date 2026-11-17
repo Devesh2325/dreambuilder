@@ -4,6 +4,7 @@ import { DocContent, GLOBAL_FOOTER_SLUG, GLOBAL_HEADER_SLUG, ProjectType } from 
 import { Icon } from '../app/shared/Icon';
 import { MODULES } from '../core/modules';
 import { BusyIcon, errorMessage } from '../app/shared/ui';
+import { ConfirmDialog } from '../app/shared/ConfirmDialog';
 import { pagesOf } from '../experience/SiteView';
 import { BLOCK_META, canContain } from '../renderer/blockMeta';
 import { ALL_THEMES } from '../templates/themes';
@@ -347,6 +348,7 @@ const PagesPanel: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [pageToDelete, setPageToDelete] = useState<{ id: string; title: string } | null>(null);
   const pages = pagesOf(documents);
   const active = documents.find((d) => d.id === activeId);
 
@@ -376,9 +378,7 @@ const PagesPanel: React.FC = () => {
             </button>
             {!readOnly && pages.length > 1 && page.slug !== '' && (
               <button type="button" aria-label={`Delete page ${page.title}`} disabled={busy !== null} className="p-1.5 text-slate-400 hover:text-rose-600"
-                onClick={() => {
-                  if (window.confirm(`Delete the page "${page.title}"? This can't be undone.`)) run(page.id, () => deletePage(page.id));
-                }}>
+                onClick={() => setPageToDelete({ id: page.id, title: page.title })}>
                 <BusyIcon busy={busy === page.id} className="w-3.5 h-3.5"><Trash2 className="w-3.5 h-3.5" /></BusyIcon>
               </button>
             )}
@@ -433,6 +433,23 @@ const PagesPanel: React.FC = () => {
         </section>
       )}
       {hasGlobals && <p className="text-[13px] text-slate-500 dark:text-slate-400">The header and footer are shared, so changing them updates every page.</p>}
+
+      <ConfirmDialog
+        isOpen={Boolean(pageToDelete)}
+        title="Delete page permanently?"
+        itemName={pageToDelete?.title}
+        description="All blocks, content, and settings on this page will be permanently removed. This cannot be undone."
+        confirmLabel="Delete page"
+        variant="danger"
+        isPending={busy === pageToDelete?.id}
+        onClose={() => setPageToDelete(null)}
+        onConfirm={async () => {
+          if (pageToDelete) {
+            await run(pageToDelete.id, () => deletePage(pageToDelete.id));
+            setPageToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -815,8 +815,54 @@ const DemoHotspot: Block = ({ node, attrs, ctx }) => {
     if (ctx.mode !== 'edit') ctx.onAction?.(goTo > 0 ? 'goto' : 'next', goTo - 1);
   };
   const place = { left: `${x}%`, top: `${y}%` };
+
+  const preset = String(node.props.highlightPreset || 'none');
+  const isHighlight = Boolean(node.props.highlightArea) || (preset !== 'none' && preset !== '');
+
+  let hLeft = x;
+  let hTop = y;
+  let hWidth = Number(node.props.highlightWidth) || 20;
+  let hHeight = Number(node.props.highlightHeight) || 8;
+
+  if (preset === 'menubar') {
+    hLeft = 2;
+    hTop = 2;
+    hWidth = 96;
+    hHeight = 7;
+  } else if (preset === 'profile') {
+    hLeft = 84;
+    hTop = 2;
+    hWidth = 14;
+    hHeight = 8;
+  } else if (preset === 'search') {
+    hLeft = 25;
+    hTop = 2;
+    hWidth = 50;
+    hHeight = 7;
+  } else if (preset === 'button') {
+    hLeft = Math.max(0, x - 8);
+    hTop = Math.max(0, y - 3);
+    hWidth = 16;
+    hHeight = 6;
+  } else {
+    hLeft = Math.max(0, x - hWidth / 2);
+    hTop = Math.max(0, y - hHeight / 2);
+  }
+
   return (
     <>
+      {isHighlight && (
+        <div
+          className="fp-hotspot-highlight"
+          style={{
+            left: `${hLeft}%`,
+            top: `${hTop}%`,
+            width: `${hWidth}%`,
+            height: `${hHeight}%`,
+          }}
+          aria-hidden="true"
+        />
+      )}
       <button
         type="button"
         {...withClass(attrs, 'fp-hotspot')}

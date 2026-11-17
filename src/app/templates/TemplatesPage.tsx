@@ -10,6 +10,7 @@ import { SECTION_LIBRARY } from '../../templates/sections';
 import { ROUTES } from '../routes';
 import { useServices } from '../session';
 import { BusyIcon, BusyLabel, cardClass, CardsSkeleton, EmptyState, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton } from '../shared/ui';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useWorkspace } from '../workspace';
 import { useTeamTemplates } from './CreatePage';
 import { LiveThumbnail } from './LiveThumbnail';
@@ -90,6 +91,8 @@ export const TemplatesPage: React.FC = () => {
     { id: 'sections', label: `Sections (${SECTION_LIBRARY.length + (sections.data?.length ?? 0)})` },
   ];
 
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
+
   const deleteButton = (id: string, name: string) => canEdit && (
     <button
       type="button"
@@ -97,9 +100,7 @@ export const TemplatesPage: React.FC = () => {
       title="Delete"
       disabled={remove.isPending}
       className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800"
-      onClick={() => {
-        if (window.confirm(`Delete "${name}" from the library? Projects already made from it won't change.`)) remove.mutate(id);
-      }}
+      onClick={() => setItemToDelete({ id, name })}
     >
       <BusyIcon busy={remove.isPending && remove.variables === id}><Trash2 className="w-4 h-4" /></BusyIcon>
     </button>
@@ -211,6 +212,24 @@ export const TemplatesPage: React.FC = () => {
           </section>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(itemToDelete)}
+        title="Delete template from library?"
+        itemName={itemToDelete?.name}
+        description="Projects already created from this template will not be changed. This template will no longer be available to team members."
+        confirmLabel="Delete from library"
+        variant="danger"
+        isPending={remove.isPending}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={() => {
+          if (itemToDelete) {
+            remove.mutate(itemToDelete.id, {
+              onSettled: () => setItemToDelete(null),
+            });
+          }
+        }}
+      />
     </>
   );
 };

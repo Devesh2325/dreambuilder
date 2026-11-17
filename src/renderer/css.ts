@@ -296,7 +296,10 @@ export const BASE_CSS = `
 :where(.fp-root) .fp-step[data-side=left]::after,:where(.fp-root) .fp-hotspot-tip[data-side=left]::after{right:-5px;top:var(--fp-along)}
 :where(.fp-root) .fp-screen{position:relative;width:min(100%,calc((100vh - 76px)*1.6));min-height:160px;margin-left:auto;margin-right:auto;border-radius:var(--fp-radius);background:var(--fp-surface)}
 :where(.fp-root) .fp-screen>img{width:100%;height:auto;border-radius:var(--fp-radius)}
-:where(.fp-root) .fp-hotspot{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;border:3px solid #fff;padding:0;background:var(--fp-primary);box-shadow:0 2px 10px rgba(15,23,42,.4);cursor:pointer;animation:fp-pulse 1.8s infinite;display:flex;align-items:center;justify-content:center;z-index:2}
+:where(.fp-root) .fp-hotspot-highlight{position:absolute;pointer-events:none;border-radius:10px;border:2px solid var(--fp-primary);box-shadow:0 0 0 9999px rgba(15,23,42,.45),0 0 20px color-mix(in srgb,var(--fp-primary) 70%,transparent);transition:all .2s ease;z-index:2;animation:fp-highlight-pulse 2.2s infinite}
+@keyframes fp-highlight-pulse{0%,100%{box-shadow:0 0 0 9999px rgba(15,23,42,.42),0 0 14px color-mix(in srgb,var(--fp-primary) 60%,transparent)}50%{box-shadow:0 0 0 9999px rgba(15,23,42,.54),0 0 24px color-mix(in srgb,var(--fp-primary) 95%,transparent)}}
+@media (prefers-reduced-motion:reduce){:where(.fp-root) .fp-hotspot-highlight{animation:none}}
+:where(.fp-root) .fp-hotspot{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;border:3px solid #fff;padding:0;background:var(--fp-primary);box-shadow:0 2px 10px rgba(15,23,42,.4);cursor:pointer;animation:fp-pulse 1.8s infinite;display:flex;align-items:center;justify-content:center;z-index:3}
 :where(.fp-root) .fp-hotspot::after{content:'';width:8px;height:8px;border-radius:50%;background:#fff}
 :where(.fp-root) .fp-hotspot[data-beacon=false]{opacity:0;animation:none}
 @keyframes fp-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--fp-primary) 65%,transparent),0 2px 10px rgba(15,23,42,.4)}70%{box-shadow:0 0 0 18px transparent,0 2px 10px rgba(15,23,42,.4)}100%{box-shadow:0 0 0 0 transparent,0 2px 10px rgba(15,23,42,.4)}}

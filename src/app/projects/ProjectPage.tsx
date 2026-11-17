@@ -111,6 +111,7 @@ const ResponsesTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
   const { forms } = useServices();
   const { can } = useWorkspace();
   const queryClient = useQueryClient();
+  const [responseToDelete, setResponseToDelete] = useState<string | null>(null);
   const query = useQuery({ queryKey: ['submissions', project.id], queryFn: () => forms.listSubmissions(project.id) });
   const remove = useMutation({
     mutationFn: (id: string) => forms.removeSubmission(id),
@@ -163,9 +164,7 @@ const ResponsesTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
                   {columns.map((column) => <td key={column} className="py-2 pr-4">{String(row.data[column] ?? '')}</td>)}
                   <td className="py-2 text-right">
                     {can('edit:project') && (
-                      <button type="button" aria-label="Delete response" disabled={remove.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
-                        if (window.confirm('Delete this response?')) remove.mutate(row.id);
-                      }}>
+                      <button type="button" aria-label="Delete response" disabled={remove.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => setResponseToDelete(row.id)}>
                         <BusyIcon busy={remove.isPending && remove.variables === row.id} className="w-3.5 h-3.5"><Trash2 className="w-3.5 h-3.5" /></BusyIcon>
                       </button>
                     )}
@@ -176,6 +175,23 @@ const ResponsesTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(responseToDelete)}
+        title="Delete response permanently?"
+        description="This response submission and all of its field values will be permanently removed."
+        confirmLabel="Delete response"
+        variant="danger"
+        isPending={remove.isPending}
+        onClose={() => setResponseToDelete(null)}
+        onConfirm={() => {
+          if (responseToDelete) {
+            remove.mutate(responseToDelete, {
+              onSettled: () => setResponseToDelete(null),
+            });
+          }
+        }}
+      />
     </section>
   );
 };
@@ -185,6 +201,7 @@ const VersionsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
   const { can } = useWorkspace();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [versionToRestore, setVersionToRestore] = useState<{ id: string; versionNumber: number } | null>(null);
   const query = useQuery({ queryKey: ['versions', project.id], queryFn: () => publishing.listVersions(project.id) });
   const restore = useMutation({
     mutationFn: (id: string) => publishing.restoreVersion(id),
@@ -216,9 +233,7 @@ const VersionsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
                 type="button"
                 disabled={restore.isPending}
                 className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 disabled:opacity-60"
-                onClick={() => {
-                  if (window.confirm(`Replace your current draft with version ${version.versionNumber}? What's live won't change until you publish.`)) restore.mutate(version.id);
-                }}
+                onClick={() => setVersionToRestore({ id: version.id, versionNumber: version.versionNumber })}
               >
                 <BusyIcon busy={restore.isPending && restore.variables === version.id} className="w-3 h-3"><RotateCcw className="w-3 h-3" aria-hidden="true" /></BusyIcon>
                 Restore
@@ -227,6 +242,23 @@ const VersionsTab: React.FC<{ project: ProjectRecord }> = ({ project }) => {
           </li>
         ))}
       </ul>
+
+      <ConfirmDialog
+        isOpen={Boolean(versionToRestore)}
+        title={versionToRestore ? `Restore Version ${versionToRestore.versionNumber}?` : 'Restore version?'}
+        description="This will replace your current editor draft with this published version. What is live on your public site will not change until you publish again."
+        confirmLabel="Restore to draft"
+        variant="warning"
+        isPending={restore.isPending}
+        onClose={() => setVersionToRestore(null)}
+        onConfirm={() => {
+          if (versionToRestore) {
+            restore.mutate(versionToRestore.id, {
+              onSettled: () => setVersionToRestore(null),
+            });
+          }
+        }}
+      />
     </section>
   );
 };

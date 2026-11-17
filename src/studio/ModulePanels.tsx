@@ -33,12 +33,15 @@ export const DemoPanel: React.FC = () => {
   const image = token ? String(draft.variables[token] ?? '') : raw;
   const tooltips = screen.children.map((id) => active.content.nodes[id]).filter((node) => node?.type === 'DemoHotspot');
 
+  const selectedId = useStudio((s) => s.selectedId);
+  const selectedNode = selectedId ? active.content.nodes[selectedId] : null;
+
   return (
     <section aria-label="This screen" className="space-y-3">
       <ol className="text-[13px] text-slate-600 dark:text-slate-300 space-y-1 list-decimal pl-4">
         <li>Add a screenshot of your app.</li>
         <li>Add a tooltip, and drag it to the right spot on the screen.</li>
-        <li>Choose which side its arrow points from.</li>
+        <li>Choose which side its arrow points from or highlight an area.</li>
       </ol>
       <h4 className="pt-1 text-sm font-semibold">{step?.label}</h4>
       <div>
@@ -60,11 +63,27 @@ export const DemoPanel: React.FC = () => {
         <ul className="space-y-1">
           {tooltips.map((tooltip, index) => {
             const words = String(tooltip.props.title || tooltip.props.tip || '');
+            const isSelected = selectedId === tooltip.id;
             return (
               <li key={tooltip.id}>
-                <button type="button" onClick={() => select(tooltip.id)} className="w-full flex items-center gap-2 h-9 px-2.5 text-[13px] text-left rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400">
-                  <CircleDot className="w-4 h-4 shrink-0 text-indigo-500" aria-hidden="true" />
-                  <span className="truncate">{WHOLE_TOKEN.test(words) ? `Tooltip ${index + 1}` : words || `Tooltip ${index + 1}`}</span>
+                <button
+                  type="button"
+                  onClick={() => select(tooltip.id)}
+                  className={`w-full flex items-center justify-between gap-2 h-9 px-2.5 text-[13px] text-left rounded-lg border transition-colors ${
+                    isSelected
+                      ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate min-w-0">
+                    <CircleDot className="w-4 h-4 shrink-0 text-indigo-500" aria-hidden="true" />
+                    <span className="truncate">{WHOLE_TOKEN.test(words) ? `Tooltip ${index + 1}` : words || `Tooltip ${index + 1}`}</span>
+                  </div>
+                  {Boolean(tooltip.props.highlightArea) && (
+                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">
+                      Spotlight
+                    </span>
+                  )}
                 </button>
               </li>
             );
@@ -73,7 +92,7 @@ export const DemoPanel: React.FC = () => {
         {!readOnly && (
           <button
             type="button"
-            className="mt-2 w-full h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg border border-dashed border-slate-300 dark:border-slate-600 text-indigo-600 dark:text-indigo-400 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
+            className="mt-2 w-full h-9 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-lg border border-dashed border-slate-300 dark:border-slate-600 text-indigo-600 dark:text-indigo-400 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
             onClick={() => addBlock('DemoHotspot', screen.id)}
           >
             <Plus className="w-4 h-4" aria-hidden="true" />
@@ -81,6 +100,51 @@ export const DemoPanel: React.FC = () => {
           </button>
         )}
       </div>
+
+      {selectedNode && selectedNode.type === 'DemoHotspot' && (
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className={`${labelClass}`}>Area Highlight & Spotlight</p>
+            <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">Dark & Light Ready</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Highlight a region (like Menu bar or Profile) with an illuminated focus border and darkened vignette.
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { id: 'menubar', label: '📌 Top Menu bar', x: 50, y: 12, placement: 'bottom' },
+              { id: 'profile', label: '👤 User Profile', x: 88, y: 14, placement: 'bottom' },
+              { id: 'search', label: '🔍 Search bar', x: 50, y: 12, placement: 'bottom' },
+              { id: 'button', label: '⚡ Action Button', x: 50, y: 50, placement: 'bottom' },
+              { id: 'custom', label: '🎯 Custom area', x: selectedNode.props.x ?? 50, y: selectedNode.props.y ?? 50, placement: 'bottom' },
+              { id: 'none', label: '⚪ Dot only', x: selectedNode.props.x ?? 50, y: selectedNode.props.y ?? 50, placement: selectedNode.props.placement ?? 'bottom' },
+            ].map((preset) => {
+              const activePreset = selectedNode.props.highlightPreset === preset.id || (!selectedNode.props.highlightPreset && preset.id === 'none');
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  disabled={readOnly}
+                  onClick={() => {
+                    updateProps(selectedNode.id, {
+                      highlightPreset: preset.id,
+                      highlightArea: preset.id !== 'none',
+                      ...(preset.id !== 'none' && preset.id !== 'custom' ? { x: preset.x, y: preset.y, placement: preset.placement } : {}),
+                    });
+                  }}
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-lg border text-left transition-colors cursor-pointer ${
+                    activePreset
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </section>
   );
 };

@@ -10,6 +10,7 @@ import { ROUTES } from '../routes';
 import { useServices, useSession } from '../session';
 import { FlowPilotBanner } from '../shared/FlowPilotBanner';
 import { BusyIcon, BusyLabel, cardClass, CardsSkeleton, dangerButton, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton } from '../shared/ui';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useWorkspace } from '../workspace';
 
 // ---- Assets -----------------------------------------------------------------
@@ -22,6 +23,7 @@ export const AssetsPage: React.FC = () => {
   const key = ['assets', organizationId];
   const query = useQuery({ queryKey: key, queryFn: () => assets.list(organizationId!), enabled: Boolean(organizationId) });
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [assetToDelete, setAssetToDelete] = useState<AssetRecord | null>(null);
 
   const upload = useMutation({
     mutationFn: async (files: File[]) => {
@@ -86,9 +88,7 @@ export const AssetsPage: React.FC = () => {
                   {copiedId === asset.id ? 'Copied' : 'Copy link'}
                 </button>
                 {can('edit:project') && (
-                  <button type="button" aria-label={`Delete ${asset.name}`} disabled={remove.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
-                    if (window.confirm(`Delete ${asset.name}? Published pages using it will show a broken image.`)) remove.mutate(asset);
-                  }}>
+                  <button type="button" aria-label={`Delete ${asset.name}`} disabled={remove.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => setAssetToDelete(asset)}>
                     <BusyIcon busy={remove.isPending && remove.variables?.id === asset.id} className="w-3.5 h-3.5"><Trash2 className="w-3.5 h-3.5" /></BusyIcon>
                   </button>
                 )}
@@ -97,6 +97,24 @@ export const AssetsPage: React.FC = () => {
           </li>
         ))}
       </ul>
+
+      <ConfirmDialog
+        isOpen={Boolean(assetToDelete)}
+        title="Delete asset permanently?"
+        itemName={assetToDelete?.name}
+        description="Published pages or projects using this asset will show a broken image. This cannot be undone."
+        confirmLabel="Delete asset"
+        variant="danger"
+        isPending={remove.isPending}
+        onClose={() => setAssetToDelete(null)}
+        onConfirm={() => {
+          if (assetToDelete) {
+            remove.mutate(assetToDelete, {
+              onSettled: () => setAssetToDelete(null),
+            });
+          }
+        }}
+      />
     </>
   );
 };
@@ -121,6 +139,7 @@ export const TeamPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('editor');
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<{ userId: string; email: string } | null>(null);
   const roles = ROLE_OPTIONS.filter((option) => isOwner || option.value !== 'owner');
 
   const refresh = () => {
@@ -201,9 +220,7 @@ export const TeamPage: React.FC = () => {
                   </select>
                 ) : <span className="capitalize text-slate-500 dark:text-slate-400">{member.role}</span>}
                 {editable && (
-                  <button type="button" aria-label={`Remove ${member.email}`} disabled={removeMember.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
-                    if (window.confirm(`Remove ${member.email} from this workspace?`)) removeMember.mutate(member.userId);
-                  }}>
+                  <button type="button" aria-label={`Remove ${member.email}`} disabled={removeMember.isPending} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => setMemberToRemove({ userId: member.userId, email: member.email })}>
                     <BusyIcon busy={removeMember.isPending && removeMember.variables === member.userId} className="w-3.5 h-3.5"><Trash2 className="w-3.5 h-3.5" /></BusyIcon>
                   </button>
                 )}
@@ -212,6 +229,24 @@ export const TeamPage: React.FC = () => {
           })}
         </ul>
       </section>
+
+      <ConfirmDialog
+        isOpen={Boolean(memberToRemove)}
+        title="Remove member from workspace?"
+        itemName={memberToRemove?.email}
+        description="This person will lose access to this workspace and all of its projects immediately."
+        confirmLabel="Remove member"
+        variant="danger"
+        isPending={removeMember.isPending}
+        onClose={() => setMemberToRemove(null)}
+        onConfirm={() => {
+          if (memberToRemove) {
+            removeMember.mutate(memberToRemove.userId, {
+              onSettled: () => setMemberToRemove(null),
+            });
+          }
+        }}
+      />
 
       {canManage && Boolean(invitations.data?.length) && (
         <section aria-labelledby="pending-title" className={`${cardClass} p-5`}>

@@ -15,6 +15,24 @@ const newPasswordField = z.string().min(8, 'Use at least 8 characters').max(72, 
 const AuthCard: React.FC<{ title: string; subtitle?: string; children: React.ReactNode }> = ({ title, subtitle, children }) => (
   <main className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 font-sans">
     <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-card p-8">
+      <div className="mb-6">
+        <Link
+          to={ROUTES.landing}
+          title="Return to FlowPilot homepage"
+          aria-label="FlowPilot Home"
+          className="inline-flex items-center gap-2.5 group focus:outline-none"
+        >
+          <span
+            aria-hidden="true"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-indigo-600 group-hover:bg-indigo-700 text-white text-base font-extrabold shadow-md shadow-indigo-600/30 transition-transform group-hover:scale-105"
+          >
+            F
+          </span>
+          <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+            FlowPilot
+          </span>
+        </Link>
+      </div>
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h1>
       {subtitle && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
       <div className="mt-6">{children}</div>
