@@ -15,11 +15,11 @@ interface CreateButtonProps {
   iconOnly?: boolean;
 }
 
-export const CreateButton: React.FC<CreateButtonProps> = ({ type, label, className = primaryButton, iconOnly }) => {
+export const CreateButton: React.FC<CreateButtonProps> = ({ type = 'page', label, className = primaryButton, iconOnly }) => {
   const { can } = useWorkspace();
   const navigate = useNavigate();
   if (can && !can('create:project')) return null;
-  const text = label ?? (type ? `New ${moduleNoun(type)}` : 'Create new');
+  const text = label ?? `New ${moduleNoun(type)}`;
 
   return (
     <button type="button" className={className} aria-label={iconOnly ? text : undefined} title={iconOnly ? text : undefined} onClick={() => navigate(ROUTES.create(type))}>
