@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronDown, Globe, Image as ImageIcon, Loader2, Sparkles, Upload, Wand2, X } from 'lucide-react';
+import { Check, Globe, Image as ImageIcon, Loader2, Sparkles, Upload, Wand2, X } from 'lucide-react';
 import { MODULE_LIST, moduleNoun } from '../../core/modules';
 import { ProjectType } from '../../core/schema';
 import { generateProjectWithAi, extractBrandFromUrl, AiInputMode } from '../../core/aiGenerator';
@@ -67,7 +67,7 @@ export const AiCreateModal: React.FC<AiCreateModalProps> = ({ initialType = 'web
   const navigate = useNavigate();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const [type, setType] = useState<ProjectType>(initialType);
+  const type = initialType;
   const [mode, setMode] = useState<AiInputMode>('prompt');
   const [prompt, setPrompt] = useState('');
   const [url, setUrl] = useState('');
@@ -197,61 +197,8 @@ export const AiCreateModal: React.FC<AiCreateModalProps> = ({ initialType = 'web
           Create {noun} with AI
         </h2>
         <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-lg">
-          Generate complete, publication-ready experiences from a prompt, an existing website link, or a mockup screenshot.
+          Generate a publication-ready {noun} from a prompt, an existing website link, or a mockup screenshot.
         </p>
-
-        {/* Module Switcher - Clean & Comprehensive */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-white/10">
-          <div className="flex gap-1.5 p-1 rounded-xl bg-white/10 backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => setType('website')}
-              className={`py-1 px-3 rounded-lg text-xs font-bold transition-all ${
-                type === 'website' ? 'bg-white text-indigo-950 shadow-md' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              🌐 Website
-            </button>
-            <button
-              type="button"
-              onClick={() => setType('page')}
-              className={`py-1 px-3 rounded-lg text-xs font-bold transition-all ${
-                type === 'page' ? 'bg-white text-indigo-950 shadow-md' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              📄 Landing Page
-            </button>
-            <button
-              type="button"
-              onClick={() => setType('tour')}
-              className={`py-1 px-3 rounded-lg text-xs font-bold transition-all ${
-                type === 'tour' ? 'bg-white text-indigo-950 shadow-md' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              🧭 Tour
-            </button>
-          </div>
-
-          {/* Module Selector Dropdown for all other types */}
-          <div className="relative">
-            <select
-              aria-label="More modules"
-              value={type}
-              onChange={(e) => setType(e.target.value as ProjectType)}
-              className="py-1 px-2.5 pr-6 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/20 text-white border border-white/20 appearance-none focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
-            >
-              <option value="website" className="text-slate-900">Module: Website</option>
-              <option value="page" className="text-slate-900">Module: Landing Page</option>
-              <option value="tour" className="text-slate-900">Module: Interactive Tour</option>
-              <option value="form" className="text-slate-900">Module: Lead Form</option>
-              <option value="demo" className="text-slate-900">Module: Product Demo</option>
-              <option value="banner" className="text-slate-900">Module: Banner</option>
-              <option value="menu" className="text-slate-900">Module: Nav Menu</option>
-              <option value="faq" className="text-slate-900">Module: FAQ Help</option>
-            </select>
-            <ChevronDown className="w-3 h-3 text-white/70 absolute right-2 top-2 pointer-events-none" />
-          </div>
-        </div>
       </div>
 
       {/* Body Content - Scrollable between pinned Header and Footer */}
