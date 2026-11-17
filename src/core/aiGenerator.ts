@@ -5,9 +5,6 @@ import { button, el, El, heading, image, section, text } from '../templates/dsl'
 import { THEME_INDIGO, THEME_MIDNIGHT, THEME_EMERALD, THEME_OCEAN, THEME_CORAL, THEME_MONO } from '../templates/themes';
 import { photo } from '../templates/assets';
 
-const styledButton = (label: string, href = '#', variant = 'primary', styles: DocNode['styles'] = {}) =>
-  el('Button', { props: { text: label, href, variant, action: 'link' }, styles });
-
 export type AiInputMode = 'prompt' | 'url' | 'image';
 
 export interface AiGenerationRequest {
@@ -44,6 +41,82 @@ export interface BrandIntelligence {
   archetype: string;
   suggestedTheme: 'indigo' | 'midnight' | 'emerald' | 'ocean' | 'coral' | 'mono';
 }
+
+const styledButton = (label: string, href = '#', variant = 'primary', styles: DocNode['styles'] = {}) =>
+  el('Button', { props: { text: label, href, variant, action: 'link' }, styles });
+
+// Custom Archetype Themes
+export const THEME_FINTECH_OBSIDIAN: Theme = {
+  primary: '#10b981',
+  secondary: '#eab308',
+  background: '#090d16',
+  surface: '#111827',
+  text: '#f9fafb',
+  muted: '#9ca3af',
+  radius: '10px',
+  fontHeading: 'Space Grotesk',
+  fontBody: 'Inter',
+};
+
+export const THEME_DEVTOOLS_CYBERPUNK: Theme = {
+  primary: '#8b5cf6',
+  secondary: '#06b6d4',
+  background: '#0b0f19',
+  surface: '#131b2e',
+  text: '#f8fafc',
+  muted: '#94a3b8',
+  radius: '12px',
+  fontHeading: 'Space Grotesk',
+  fontBody: 'Inter',
+};
+
+export const THEME_AI_VIOLET: Theme = {
+  primary: '#6366f1',
+  secondary: '#ec4899',
+  background: '#080c14',
+  surface: '#151928',
+  text: '#f8fafc',
+  muted: '#94a3b8',
+  radius: '14px',
+  fontHeading: 'Outfit',
+  fontBody: 'Inter',
+};
+
+export const THEME_PAYMENTS_ELECTRIC: Theme = {
+  primary: '#4f46e5',
+  secondary: '#06b6d4',
+  background: '#0b1120',
+  surface: '#161e31',
+  text: '#f8fafc',
+  muted: '#94a3b8',
+  radius: '12px',
+  fontHeading: 'Plus Jakarta Sans',
+  fontBody: 'Inter',
+};
+
+export const THEME_ECOMMERCE_CORAL: Theme = {
+  primary: '#7c3aed',
+  secondary: '#f97316',
+  background: '#0a0e1a',
+  surface: '#14192b',
+  text: '#f8fafc',
+  muted: '#94a3b8',
+  radius: '12px',
+  fontHeading: 'Plus Jakarta Sans',
+  fontBody: 'Inter',
+};
+
+export const THEME_HEALTHTECH_CYAN: Theme = {
+  primary: '#06b6d4',
+  secondary: '#10b981',
+  background: '#0b1320',
+  surface: '#121e33',
+  text: '#f8fafc',
+  muted: '#94a3b8',
+  radius: '12px',
+  fontHeading: 'Plus Jakarta Sans',
+  fontBody: 'Inter',
+};
 
 /** Utility to clean and extract rich brand intelligence from a URL */
 export function extractBrandFromUrl(rawUrl: string): BrandIntelligence {
@@ -128,6 +201,7 @@ interface ArchetypeContent {
   heroSubtitle: string;
   features: { title: string; desc: string; icon: string }[];
   deepFeatures: { title: string; desc: string; tag: string; icon: string }[];
+  stats: { value: string; label: string }[];
   ratingScore: number;
   ratingReviews: string;
   faq: { q: string; a: string }[];
@@ -149,12 +223,8 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
   const isDev = archetype === 'Developer Tools & API Platform' || /api|developer|code|cli|sdk|terminal|apidog|debug|backend/i.test(p);
   const isPay = archetype === 'Payments & Financial Infrastructure' || /pay|stripe|billing|invoice|checkout/i.test(p);
   const isAi = archetype === 'AI & Intelligent Automation' || /ai|agent|copilot|gpt|llm|automation/i.test(p);
-  const isCommerce = archetype === 'E-Commerce & Digital Store' || /shop|store|brand|cloth|retail/i.test(p);
-  const isHealth = archetype === 'Healthcare & Wellness' || /health|clinic|med|care|fit|wellness/i.test(p);
-  const isEdu = archetype === 'Education & Academy' || /edu|course|learn|academy|bootcamp/i.test(p);
-  const isAgency = archetype === 'Creative & Digital Agency' || /agency|design|studio|creative/i.test(p);
 
-  // 1. FinTech & Advisory
+  // 1. FinTech & Advisory (e.g. Finuro)
   if (isAdvisor) {
     return {
       companyName: brand,
@@ -162,7 +232,7 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
       heroHeadline: `Disciplined Market Research for Consistent Wealth Growth`,
       heroSubtitle: `Direct, research-backed equity calls, swing strategies, and portfolio advisory with full regulatory compliance and transparent audit track records.`,
       features: [
-        { title: 'High-Conviction Equity Setups', desc: 'In-depth fundamental and techno-funda setups vetted across sector cycles.', icon: 'TrendingUp' },
+        { title: 'High-Conviction Equity Calls', desc: 'In-depth fundamental and techno-funda setups vetted across sector cycles with 1:2.5+ R:R.', icon: 'TrendingUp' },
         { title: 'SEBI Compliant Disclosures', desc: 'Transparent trade risk parameters, target rationales, and complete regulatory disclosures.', icon: 'ShieldCheck' },
         { title: 'Real-Time Market Alerts', desc: 'Instant WhatsApp and Telegram push notifications for rapid execution and entry/exit updates.', icon: 'Bell' },
         { title: 'Weekly Macro & Sector Audits', desc: 'Deep-dive institutional commentary on Nifty, BankNifty, and high-beta breakout baskets.', icon: 'BarChart3' },
@@ -175,8 +245,14 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
         { title: 'SEBI Regulatory Transparency', desc: 'Every call logged in transparent publicly verifiable audit logs with zero post-facto edits.', tag: 'Compliance', icon: 'FileCheck' },
         { title: 'Direct Senior Analyst Desk', desc: 'Quarterly 1-on-1 portfolio review calls with registered research analysts.', tag: 'VIP Access', icon: 'Headphones' },
       ],
-      ratingScore: 4.9,
-      ratingReviews: '1,420+ Active Subscribers',
+      stats: [
+        { value: '₹2,500 Cr+', label: 'Portfolio Assets Advised' },
+        { value: '94.2%', label: 'Target Hit Rate' },
+        { value: '1:2.8', label: 'Average Risk-to-Reward' },
+        { value: '1,420+', label: 'Active Subscribers' },
+      ],
+      ratingScore: 4.92,
+      ratingReviews: '1,420+ Verified Subscribers',
       faq: [
         { q: 'What is your SEBI registration number?', a: `${brand} operates strictly under SEBI Research Analyst regulations. All research recommendations comply with statutory guidelines.` },
         { q: 'How are trade alerts delivered?', a: 'Trade alerts are dispatched in real-time through private Telegram VIP channels and WhatsApp broadcasting.' },
@@ -196,7 +272,7 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
     };
   }
 
-  // 2. Developer Tools & API Platforms (e.g. Apidog, Postman)
+  // 2. Developer Tools & API Platforms (e.g. Apidog)
   if (isDev) {
     return {
       companyName: brand,
@@ -217,13 +293,18 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
         { title: 'Enterprise SSO & RBAC', desc: 'Enforce SAML 2.0, Okta authentication, role-based access, and detailed audit trails.', tag: 'Security', icon: 'Lock' },
         { title: 'Private Cloud & VPC Agent', desc: 'Deploy lightweight agents to test staging APIs securely inside your private VPC.', tag: 'Deployment', icon: 'Cloud' },
       ],
+      stats: [
+        { value: '150M+', label: 'Monthly API Calls' },
+        { value: '35,000+', label: 'Developers & Teams' },
+        { value: '99.999%', label: 'Infrastructure Uptime' },
+        { value: '< 5ms', label: 'Local Mock Latency' },
+      ],
       ratingScore: 4.95,
-      ratingReviews: '35,000+ Developers & Teams',
+      ratingReviews: '35,000+ Developers Worldwide',
       faq: [
         { q: 'Can I import Postman and Swagger collections?', a: `Yes! ${brand} provides instant 1-click lossless import from Postman, Swagger 2.0, OpenAPI 3.0/3.1, and HAR files.` },
         { q: 'Is there an on-premise or self-hosted deployment?', a: 'Yes, enterprise plans support private cloud VPC and on-premise air-gapped deployments.' },
         { q: 'Does it support automated CI/CD runs?', a: 'Yes, use our native CLI or GitHub Actions runner to run tests in your continuous integration pipeline.' },
-        { q: 'How does mock server generation work?', a: 'Mock servers are generated instantly from your schema with realistic mock data rules.' },
       ],
       plans: [
         { name: 'Developer', price: '$0', period: '/forever', features: ['Up to 5 Projects', 'API Debugging & Mocks', 'Community Support'] },
@@ -259,12 +340,17 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
         { title: 'Developer SDKs in 8 Languages', desc: 'Drop-in client libraries for React, Vue, Node.js, Python, Ruby, Go, iOS, and Android.', tag: 'Developer First', icon: 'Code' },
         { title: 'PCI-DSS Level 1 Certified', desc: 'Tokenized client-side inputs keep sensitive cardholder data off your web servers entirely.', tag: 'Compliance', icon: 'Lock' },
       ],
+      stats: [
+        { value: '$500B+', label: 'Processed Annually' },
+        { value: '135+', label: 'Currencies Supported' },
+        { value: '99.999%', label: 'Infrastructure Uptime' },
+        { value: '100+', label: 'Local Payment Methods' },
+      ],
       ratingScore: 4.95,
       ratingReviews: '50,000+ Modern Businesses',
       faq: [
         { q: `How fast can I start accepting payments with ${brand}?`, a: 'You can go live in under 10 minutes with our pre-built hosted checkout or drop-in JavaScript SDK.' },
         { q: 'What are the transaction fees?', a: 'We offer competitive flat-rate pricing with volume discounts for businesses processing over $100k/month.' },
-        { q: 'Is customer card data stored securely?', a: 'Yes, card data is tokenized and stored in PCI-DSS Level 1 certified vaults.' },
       ],
       plans: [
         { name: 'Starter', price: '2.9% + 30¢', period: '/transaction', features: ['All Payment Methods', 'Hosted Checkout', 'Standard 2-Day Payouts'] },
@@ -279,47 +365,7 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
     };
   }
 
-  // 4. AI & Intelligent Automation
-  if (isAi) {
-    return {
-      companyName: brand,
-      tagline: 'Autonomous AI Agents & Enterprise Workflow Intelligence',
-      heroHeadline: `Supercharge Operations with Autonomous AI Intelligence`,
-      heroSubtitle: `Deploy specialized AI copilots that execute multi-step workflows, analyze complex unstructured data, and assist customers 24/7 with ${brand}.`,
-      features: [
-        { title: 'Multi-Agent Orchestration', desc: 'Coordinate autonomous AI agents that collaborate across tools, APIs, and databases.', icon: 'Bot' },
-        { title: 'Private Knowledge Retrieval', desc: 'Connect internal docs, databases, and spreadsheets with zero data leakage or training leaks.', icon: 'Database' },
-        { title: 'Real-Time Streaming Voice & Chat', desc: 'Deliver ultra-low latency voice and text interactions powered by next-gen foundation models.', icon: 'Mic' },
-        { title: 'Enterprise Guardrails & Evals', desc: 'Enforce deterministic brand tone, hallucination checks, and rigorous safety boundaries.', icon: 'ShieldCheck' },
-      ],
-      deepFeatures: [
-        { title: 'Autonomous Task Execution', desc: 'Agents trigger background workflows, database updates, and email dispatches automatically.', tag: 'Agents', icon: 'Cpu' },
-        { title: 'Hybrid Semantic Search', desc: 'Combines dense vector embeddings with BM25 keyword matching for 99.4% retrieval recall.', tag: 'RAG', icon: 'Search' },
-        { title: 'Granular Role-Based Access', desc: 'Isolate sensitive internal knowledge bases by user permissions and departments.', tag: 'Security', icon: 'Lock' },
-        { title: 'Model-Agnostic LLM Gateway', desc: 'Switch dynamically between Gemini, Claude, and local models to optimize latency and cost.', tag: 'Routing', icon: 'Layers' },
-        { title: 'Automated Evaluation Suite', desc: 'Benchmark agent accuracy continuously against curated test datasets before deployment.', tag: 'Evals', icon: 'CheckCircle' },
-        { title: 'Zero Data Retention Option', desc: 'Opt out of data logging entirely for HIPAA, SOC-2, and GDPR compliant environments.', tag: 'Privacy', icon: 'FileText' },
-      ],
-      ratingScore: 4.9,
-      ratingReviews: '20,000+ Automated Tasks Daily',
-      faq: [
-        { q: `Will my data be used to train external models?`, a: `No! ${brand} adheres to strict enterprise privacy: your proprietary data is never used for foundation model training.` },
-        { q: 'How do agents connect to our existing tools?', a: 'We provide pre-built integrations for Slack, Google Workspace, GitHub, Postgres, and REST APIs.' },
-      ],
-      plans: [
-        { name: 'Starter Agent', price: '$29', period: '/mo', features: ['5 Active Agents', '50,000 Tokens/mo', 'Slack & Webchat Embeds'] },
-        { name: 'Team Intelligence', price: '$99', period: '/mo', features: ['25 Active Agents', '500,000 Tokens/mo', 'Custom Vector Databases', 'Webhook Triggers'], popular: true },
-        { name: 'Enterprise Cluster', price: '$299', period: '/mo', features: ['Unlimited Agents', 'Dedicated GPU Inference', 'SOC-2 Type II & HIPAA', 'Dedicated AI Engineer'] },
-      ],
-      contactEmail: `ai@${domain}`,
-      contactPhone: '+1 (800) 555-0182',
-      contactAddress: '701 Tech Boulevard, Austin, TX',
-      isAdvisor: false,
-      isDev: false,
-    };
-  }
-
-  // 5. General SaaS / Tailored Universal Default
+  // 4. Universal / Modern SaaS Platform Default
   return {
     companyName: brand,
     tagline: `Intelligent Cloud Platform Engineered for ${brand}`,
@@ -339,12 +385,17 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
       { title: 'High-Converting Integrations', desc: 'Native Webhooks, REST API endpoints, and Zapier triggers for instant connectivity.', tag: 'Ecosystem', icon: 'Layers' },
       { title: 'Dedicated Customer Support', desc: '24/7 technical assistance and dedicated onboarding engineers for your team.', tag: 'Support', icon: 'Headphones' },
     ],
+    stats: [
+      { value: '99.99%', label: 'Uptime SLA' },
+      { value: '10,000+', label: 'Active Teams' },
+      { value: '4.9 / 5', label: 'User Satisfaction' },
+      { value: '< 50ms', label: 'Edge Response Time' },
+    ],
     ratingScore: 4.9,
     ratingReviews: '12,500+ Happy Customers',
     faq: [
       { q: `What makes ${brand} different from alternatives?`, a: `${brand} combines high performance, flexible customization, and built-in automation in a unified interface.` },
       { q: 'Can I cancel or change plans at any time?', a: 'Yes! Subscriptions can be modified or cancelled at any time from your account settings with zero penalties.' },
-      { q: 'Do you offer custom enterprise onboarding?', a: 'Yes, our solutions architects provide dedicated migration assistance and onboarding workshops.' },
     ],
     plans: [
       { name: 'Starter', price: '$19', period: '/mo', features: ['15 Active Projects', '25,000 Monthly Impressions', 'Custom Branding', 'Email Support'] },
@@ -360,17 +411,22 @@ function synthesizeBrandContent(brandName: string, domainName: string, archetype
 }
 
 /** Theme resolver */
-function resolveTheme(tone?: AiGenerationRequest['themeTone']): Theme {
-  switch (tone) {
-    case 'midnight': return THEME_MIDNIGHT.theme;
-    case 'emerald': return THEME_EMERALD.theme;
-    case 'ocean': return THEME_OCEAN.theme;
-    case 'coral': return THEME_CORAL.theme;
-    case 'mono': return THEME_MONO.theme;
-    case 'indigo':
-    default:
-      return THEME_INDIGO.theme;
-  }
+function resolveTheme(tone?: AiGenerationRequest['themeTone'], archetype?: string): Theme {
+  if (tone === 'midnight') return THEME_DEVTOOLS_CYBERPUNK;
+  if (tone === 'emerald') return THEME_FINTECH_OBSIDIAN;
+  if (tone === 'ocean') return THEME_HEALTHTECH_CYAN;
+  if (tone === 'coral') return THEME_ECOMMERCE_CORAL;
+  if (tone === 'mono') return THEME_MONO.theme;
+
+  // Match automatically based on archetype if no manual tone is chosen
+  if (archetype === 'FinTech & Wealth Advisory') return THEME_FINTECH_OBSIDIAN;
+  if (archetype === 'Developer Tools & API Platform') return THEME_DEVTOOLS_CYBERPUNK;
+  if (archetype === 'Payments & Financial Infrastructure') return THEME_PAYMENTS_ELECTRIC;
+  if (archetype === 'AI & Intelligent Automation') return THEME_AI_VIOLET;
+  if (archetype === 'Healthcare & Wellness') return THEME_HEALTHTECH_CYAN;
+  if (archetype === 'E-Commerce & Digital Store') return THEME_ECOMMERCE_CORAL;
+
+  return THEME_INDIGO.theme;
 }
 
 /** Converts an El tree into schema-valid DocContent */
@@ -401,9 +457,768 @@ export function synthesizeContent(prefix: string, elements: El[], rootStyles: Do
   return { rootId, nodes };
 }
 
+// -----------------------------------------------------------------------------
+// ARCHETYPE-SPECIFIC DESIGN BLUEPRINTS
+// -----------------------------------------------------------------------------
+
+/** Builds the authentic FinTech & Wealth Advisory home experience (e.g. Finuro) */
+function buildFintechHomeElements(data: ArchetypeContent, heroImageSrc: string): El[] {
+  return [
+    // 1. Hero with SEBI Accreditation & Live Market Call Badges
+    section([
+      el('Box', { styles: { textAlign: 'center', maxWidth: '840px', margin: '0 auto', gap: '20px' } }, [
+        el('Row', { styles: { justifyContent: 'center', gap: '8px', flexWrap: 'wrap' } }, [
+          el('Badge', { props: { text: '🟢 SEBI REGISTERED RESEARCH ADVISORY', tone: 'success' } }),
+          el('Badge', { props: { text: 'LIVE SWING CALLS', tone: 'primary' } }),
+          el('Badge', { props: { text: 'STRICT 1:2.5+ R:R', tone: 'neutral' } }),
+        ]),
+        heading(data.heroHeadline, 'h1', {
+          fontSize: '3.5rem',
+          fontWeight: 900,
+          lineHeight: 1.15,
+          letterSpacing: '-0.03em',
+          animation: 'shimmer 4s ease-in-out infinite alternate',
+        }),
+        text(data.heroSubtitle, {
+          color: 'var(--fp-muted)',
+          fontSize: '1.25rem',
+          lineHeight: 1.6,
+          maxWidth: '680px',
+          margin: '0 auto',
+        }),
+        el('Row', { styles: { gap: '16px', justifyContent: 'center', marginTop: '12px' } }, [
+          styledButton('Get Live Research Calls →', '/pricing', 'primary', { padding: '14px 32px', fontSize: '1rem', fontWeight: 700 }),
+          styledButton('View Verified Track Record', '/features', 'secondary', { padding: '14px 28px', fontSize: '1rem' }),
+        ]),
+        el('Row', { styles: { justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' } }, [
+          el('Rating', { props: { rating: data.ratingScore, maxRating: 5, starColor: '#10b981' } }),
+          text(`${data.ratingScore} / 5 (${data.ratingReviews})`, { color: 'var(--fp-muted)', fontSize: '0.875rem', fontWeight: 600 }),
+        ]),
+      ]),
+
+      // Live Market & Swing Trade Terminal Card
+      el('Box', {
+        styles: {
+          background: 'var(--fp-surface)',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          borderRadius: '20px',
+          padding: '24px',
+          marginTop: '44px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(16, 185, 129, 0.15)',
+        },
+      }, [
+        el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)' } }, [
+          el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
+            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', flexShrink: 0 } }),
+            text(`${data.companyName} Live Equity Scanner & Advisory Terminal`, { fontSize: '0.8125rem', fontWeight: 700, color: 'var(--fp-text)' }),
+          ]),
+          el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
+            el('Badge', { props: { text: 'NIFTY: BREAKOUT', tone: 'success' } }),
+            el('Badge', { props: { text: 'NSE / BSE ACCREDITED', tone: 'neutral' } }),
+          ]),
+        ]),
+
+        // 3 Live Trade Simulation Cards
+        el('Grid', {
+          styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', marginTop: '20px' },
+          responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+        }, [
+          el('Card', { styles: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '12px', padding: '16px', gap: '8px' } }, [
+            el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center' } }, [
+              heading('RELIANCE (Swing)', 'h4', { fontSize: '1rem', fontWeight: 700 }),
+              el('Badge', { props: { text: '+7.1% HIT', tone: 'success' } }),
+            ]),
+            text('Entry: ₹2,940 • Target: ₹3,150 • SL: ₹2,880', { fontSize: '0.8125rem', color: 'var(--fp-muted)' }),
+            text('High-conviction petrochemical breakout backed by institutional FII accumulation.', { fontSize: '0.75rem', color: '#9ca3af' }),
+          ]),
+          el('Card', { styles: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: '12px', padding: '16px', gap: '8px' } }, [
+            el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center' } }, [
+              heading('TATA MOTORS', 'h4', { fontSize: '1rem', fontWeight: 700 }),
+              el('Badge', { props: { text: '+8.2% BOOKED', tone: 'warning' } }),
+            ]),
+            text('Entry: ₹980 • Target: ₹1,060 • SL: ₹950', { fontSize: '0.8125rem', color: 'var(--fp-muted)' }),
+            text('Multi-quarter EV delivery momentum and technical resistance breakout.', { fontSize: '0.75rem', color: '#9ca3af' }),
+          ]),
+          el('Card', { styles: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '12px', padding: '16px', gap: '8px' } }, [
+            el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center' } }, [
+              heading('HDFC BANK', 'h4', { fontSize: '1rem', fontWeight: 700 }),
+              el('Badge', { props: { text: 'ACTIVE SETUP', tone: 'primary' } }),
+            ]),
+            text('Entry: ₹1,620 • Target: ₹1,740 • SL: ₹1,580', { fontSize: '0.8125rem', color: 'var(--fp-muted)' }),
+            text('BankNifty heavyweight reversal with tight 1:3.0 risk-reward parameters.', { fontSize: '0.75rem', color: '#9ca3af' }),
+          ]),
+        ]),
+      ]),
+    ], { paddingTop: '60px', paddingBottom: '40px' }),
+
+    // 2. Performance Stats Band
+    section([
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '24px', textAlign: 'center' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.stats.map((stat) =>
+          el('Box', { styles: { gap: '6px' } }, [
+            heading(stat.value, 'h2', { fontSize: '2.5rem', fontWeight: 900, color: '#10b981' }),
+            text(stat.label, { fontSize: '0.875rem', color: 'var(--fp-muted)', fontWeight: 600 }),
+          ])
+        ),
+      ]),
+    ], { backgroundColor: 'var(--fp-surface)', paddingTop: '36px', paddingBottom: '36px' }),
+
+    // 3. Trusted Market Partners Marquee
+    section([
+      el('Marquee', { props: { speed: 25 } }, [
+        el('Row', { styles: { gap: '48px', alignItems: 'center', padding: '8px 0' } }, [
+          text('NSE INDIA', { fontWeight: 800, fontSize: '1rem', color: 'var(--fp-muted)' }),
+          text('•', { color: '#10b981' }),
+          text('BSE SENSEX', { fontWeight: 800, fontSize: '1rem', color: 'var(--fp-muted)' }),
+          text('•', { color: '#10b981' }),
+          text('SEBI REGISTERED RESEARCH ANALYST', { fontWeight: 800, fontSize: '1rem', color: '#10b981' }),
+          text('•', { color: '#10b981' }),
+          text('ZERODHA CONNECT', { fontWeight: 800, fontSize: '1rem', color: 'var(--fp-muted)' }),
+          text('•', { color: '#10b981' }),
+          text('GROWW PARTNER', { fontWeight: 800, fontSize: '1rem', color: 'var(--fp-muted)' }),
+          text('•', { color: '#10b981' }),
+          text('UPSTOX API', { fontWeight: 800, fontSize: '1rem', color: 'var(--fp-muted)' }),
+          text('•', { color: '#10b981' }),
+          text('INSTITUTIONAL FII FLOWS', { fontWeight: 800, fontSize: '1rem', color: 'var(--fp-muted)' }),
+        ]),
+      ]),
+    ], { paddingTop: '16px', paddingBottom: '16px' }),
+
+    // 4. Before vs After Comparison Card
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'THE DISCIPLINE ADVANTAGE', tone: 'primary' } }),
+        heading('Why 90% of Retail Traders Lose Money', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+        text('See how disciplined research and pre-defined risk guardrails safeguard and compound your capital.', { color: 'var(--fp-muted)', fontSize: '1rem' }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' },
+        responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        el('Card', { styles: { background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '16px', padding: '28px', gap: '16px' } }, [
+          heading('❌ The Unregulated "Tip" Culture', 'h3', { fontSize: '1.25rem', fontWeight: 700, color: '#ef4444' }),
+          el('Box', { styles: { gap: '10px' } }, [
+            text('• Random WhatsApp & Telegram forward tips with no rationale', { fontSize: '0.875rem' }),
+            text('• Zero stop-loss discipline causing massive account drawdowns', { fontSize: '0.875rem' }),
+            text('• Emotional revenge trading and buying at peak market highs', { fontSize: '0.875rem' }),
+            text('• Unregistered operators with zero legal liability or transparency', { fontSize: '0.875rem' }),
+          ]),
+        ]),
+        el('Card', { styles: { background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '16px', padding: '28px', gap: '16px' } }, [
+          heading(`✅ The ${data.companyName} Research Methodology`, 'h3', { fontSize: '1.25rem', fontWeight: 700, color: '#10b981' }),
+          el('Box', { styles: { gap: '10px' } }, [
+            text('• Strict SEBI compliant research with detailed techno-funda rationale', { fontSize: '0.875rem' }),
+            text('• Pre-defined stop loss & target levels enforcing 1:2.5+ minimum R:R', { fontSize: '0.875rem' }),
+            text('• Clear position sizing rules to ensure long-term capital preservation', { fontSize: '0.875rem' }),
+            text('• 100% publicly verifiable trade logs with zero post-facto edits', { fontSize: '0.875rem' }),
+          ]),
+        ]),
+      ]),
+    ], { paddingTop: '40px', paddingBottom: '40px' }),
+
+    // 5. Strategy Pillars
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 48px auto' } }, [
+        el('Badge', { props: { text: 'ADVISORY OFFERINGS', tone: 'primary' } }),
+        heading('Disciplined Strategies for Every Investor', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+        text('Designed to maximize upside momentum while systematically controlling downside risk.', { color: 'var(--fp-muted)', fontSize: '1rem' }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' },
+        responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.features.map((feat) =>
+          el('Card', {
+            styles: {
+              background: 'var(--fp-surface)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              padding: '28px',
+              gap: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+            },
+          }, [
+            el('Box', { styles: { width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', marginBottom: '8px' } }, [
+              el('Icon', { props: { name: feat.icon || 'Sparkles' } }),
+            ]),
+            heading(feat.title, 'h3', { fontSize: '1.25rem', fontWeight: 700 }),
+            text(feat.desc, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
+          ])
+        ),
+      ]),
+    ], { id: 'features', paddingTop: '40px', paddingBottom: '40px' }),
+
+    // 6. Testimonials with 5-Star Ratings
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'INVESTOR TESTIMONIALS', tone: 'warning' } }),
+        heading('Trusted by Seasoned Traders & Families', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+        text(`Discover how clients compound capital with ${data.companyName}.`, { color: 'var(--fp-muted)', fontSize: '1rem' }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#10b981' } }),
+          text(`"The discipline and risk-reward ratio are unparalleled. For the first time in 4 years of trading, my portfolio is consistently green quarter after quarter."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'Rajesh Sharma', role: 'Full-Time Swing Trader (Mumbai)' } }),
+          ]),
+        ]),
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#10b981' } }),
+          text(`"Transparent entry and stop-loss levels. You don't have to glue your eyes to the screen all day. The WhatsApp alerts are instant."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'Pooja Iyer', role: 'HNI Investor (Bengaluru)' } }),
+          ]),
+        ]),
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#10b981' } }),
+          text(`"The macro and sectoral analysis is institutional caliber. Best investment decision for serious market participants."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'Anand Verma', role: 'Portfolio Manager' } }),
+          ]),
+        ]),
+      ]),
+    ], { id: 'testimonials', paddingTop: '40px', paddingBottom: '40px' }),
+
+    // 7. Transparent Subscription Tiers
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'ADVISORY MEMBERSHIPS', tone: 'primary' } }),
+        heading('Simple, SEBI-Compliant Plans', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+        text('Transparent pricing with zero hidden fees. Pick the horizon that fits your trading goals.', { color: 'var(--fp-muted)', fontSize: '1rem' }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px', alignItems: 'stretch' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.plans.map((plan) =>
+          el('Card', {
+            styles: {
+              background: plan.popular ? 'linear-gradient(180deg, rgba(16,185,129,0.15) 0%, var(--fp-surface) 100%)' : 'var(--fp-surface)',
+              border: plan.popular ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '20px',
+              padding: '32px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              position: 'relative',
+            },
+          }, [
+            ...(plan.popular
+              ? [
+                  el('Box', { styles: { position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#10b981', color: '#090d16', fontSize: '0.6875rem', fontWeight: 800, padding: '3px 12px', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' } }, [
+                    text('Most Recommended'),
+                  ]),
+                ]
+              : []),
+            heading(plan.name, 'h3', { fontSize: '1.25rem', fontWeight: 800 }),
+            el('Row', { styles: { alignItems: 'baseline', gap: '4px' } }, [
+              heading(plan.price, 'h2', { fontSize: '2.5rem', fontWeight: 900 }),
+              text(plan.period, { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+            ]),
+            el('Box', { styles: { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', flexGrow: 1 } }, [
+              ...plan.features.map((feat) =>
+                el('Row', { styles: { alignItems: 'center', gap: '8px', fontSize: '0.875rem' } }, [
+                  el('Box', { styles: { color: '#10b981', fontWeight: 800 } }, [text('✓')]),
+                  text(feat, { color: 'var(--fp-text)' }),
+                ])
+              ),
+            ]),
+            button(plan.popular ? 'Subscribe to Elite Plan' : 'Choose Plan', '/pricing', plan.popular ? 'primary' : 'secondary'),
+          ])
+        ),
+      ]),
+    ], { id: 'pricing', paddingTop: '40px', paddingBottom: '40px' }),
+
+    // 8. Regulatory FAQ
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'REGULATORY & COMPLIANCE FAQS', tone: 'neutral' } }),
+        heading('Frequently Asked Questions', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+        text(`Everything you need to know about ${data.companyName} advisory operations.`, { color: 'var(--fp-muted)', fontSize: '1rem' }),
+      ]),
+      el('Box', { styles: { maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' } }, [
+        ...data.faq.map((item) =>
+          el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px', gap: '8px' } }, [
+            heading(item.q, 'h4', { fontSize: '1.0625rem', fontWeight: 700 }),
+            text(item.a, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
+          ])
+        ),
+      ]),
+    ], { id: 'faq', paddingTop: '40px', paddingBottom: '60px' }),
+  ];
+}
+
+/** Builds the authentic Developer Platform home experience (e.g. Apidog) */
+function buildDevtoolsHomeElements(data: ArchetypeContent, heroImageSrc: string): El[] {
+  return [
+    // 1. Hero with API Tool Consolidation
+    section([
+      el('Box', { styles: { textAlign: 'center', maxWidth: '840px', margin: '0 auto', gap: '20px' } }, [
+        el('Row', { styles: { justifyContent: 'center', gap: '8px', flexWrap: 'wrap' } }, [
+          el('Badge', { props: { text: '⚡ UNIFIED API ENGINE v4.2', tone: 'primary' } }),
+          el('Badge', { props: { text: 'ZERO-CONFIG MOCKS', tone: 'neutral' } }),
+          el('Badge', { props: { text: 'GIT CI/CD SYNC', tone: 'success' } }),
+        ]),
+        heading(data.heroHeadline, 'h1', {
+          fontSize: '3.5rem',
+          fontWeight: 900,
+          lineHeight: 1.15,
+          letterSpacing: '-0.03em',
+          animation: 'shimmer 4s ease-in-out infinite alternate',
+        }),
+        text(data.heroSubtitle, {
+          color: 'var(--fp-muted)',
+          fontSize: '1.25rem',
+          lineHeight: 1.6,
+          maxWidth: '680px',
+          margin: '0 auto',
+        }),
+        el('Row', { styles: { gap: '16px', justifyContent: 'center', marginTop: '12px' } }, [
+          styledButton('Get Started Free →', '/pricing', 'primary', { padding: '14px 32px', fontSize: '1rem', fontWeight: 700 }),
+          styledButton('Explore Interactive Demo', '/features', 'secondary', { padding: '14px 28px', fontSize: '1rem' }),
+        ]),
+        el('Row', { styles: { justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' } }, [
+          el('Rating', { props: { rating: data.ratingScore, maxRating: 5, starColor: '#8b5cf6' } }),
+          text(`${data.ratingScore} / 5 (${data.ratingReviews})`, { color: 'var(--fp-muted)', fontSize: '0.875rem', fontWeight: 600 }),
+        ]),
+      ]),
+
+      // Interactive API Console Simulator
+      el('Box', {
+        styles: {
+          background: 'var(--fp-surface)',
+          border: '1px solid rgba(139, 92, 246, 0.25)',
+          borderRadius: '20px',
+          padding: '24px',
+          marginTop: '44px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(139, 92, 246, 0.15)',
+        },
+      }, [
+        el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)' } }, [
+          el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
+            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', flexShrink: 0 } }),
+            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 } }),
+            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', flexShrink: 0 } }),
+            text('API Console & Live Mock Sandbox', { fontSize: '0.8125rem', color: 'var(--fp-muted)', marginLeft: '12px' }),
+          ]),
+          el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
+            el('Badge', { props: { text: '200 OK', tone: 'success' } }),
+            el('Badge', { props: { text: '18ms', tone: 'neutral' } }),
+          ]),
+        ]),
+        el('Row', { styles: { alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.35)', padding: '10px 16px', borderRadius: '8px', marginTop: '16px' } }, [
+          el('Badge', { props: { text: 'POST', tone: 'primary' } }),
+          text(`https://api.${data.companyName.toLowerCase()}.dev/v1/workspaces/verify-schema`, { fontSize: '0.8125rem', color: 'var(--fp-text)', fontFamily: 'monospace' }),
+        ]),
+        image(heroImageSrc, 'API Platform Preview', {
+          width: '100%',
+          maxHeight: '400px',
+          objectFit: 'cover',
+          borderRadius: '12px',
+          marginTop: '16px',
+        }),
+      ]),
+    ], { paddingTop: '60px', paddingBottom: '40px' }),
+
+    // 2. Metrics Band
+    section([
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '24px', textAlign: 'center' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.stats.map((stat) =>
+          el('Box', { styles: { gap: '6px' } }, [
+            heading(stat.value, 'h2', { fontSize: '2.5rem', fontWeight: 900, color: '#8b5cf6' }),
+            text(stat.label, { fontSize: '0.875rem', color: 'var(--fp-muted)', fontWeight: 600 }),
+          ])
+        ),
+      ]),
+    ], { backgroundColor: 'var(--fp-surface)', paddingTop: '36px', paddingBottom: '36px' }),
+
+    // 3. Tool Fatigue Consolidation
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'STOP TOOL FATIGUE', tone: 'primary' } }),
+        heading('Replace 5 Fragile Tools with One Unified Hub', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+        text('No more copying and pasting JSON between Postman, Swagger, Mockoon, and Newman.', { color: 'var(--fp-muted)', fontSize: '1rem' }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' },
+        responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        el('Card', { styles: { background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '16px', padding: '28px', gap: '14px' } }, [
+          heading('❌ Legacy Disjointed Workflow', 'h3', { fontSize: '1.25rem', fontWeight: 700, color: '#ef4444' }),
+          text('• Postman for manual testing (out of sync with specs)', { fontSize: '0.875rem' }),
+          text('• Swagger UI for public documentation (hard to keep updated)', { fontSize: '0.875rem' }),
+          text('• Custom mock scripts that break whenever schemas change', { fontSize: '0.875rem' }),
+          text('• Newman CLI scripts failing silently in CI/CD runs', { fontSize: '0.875rem' }),
+        ]),
+        el('Card', { styles: { background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.35)', borderRadius: '16px', padding: '28px', gap: '14px' } }, [
+          heading(`✅ The ${data.companyName} Unified Platform`, 'h3', { fontSize: '1.25rem', fontWeight: 700, color: '#8b5cf6' }),
+          text('• Single Source of Truth: design, mock, debug, and test from 1 spec', { fontSize: '0.875rem' }),
+          text('• Zero-Config Mock Server automatically updates with schema diffs', { fontSize: '0.875rem' }),
+          text('• Native CI/CD runner with JUnit output and GitHub Actions', { fontSize: '0.875rem' }),
+          text('• 1-click lossless import from Postman, Swagger, and HAR', { fontSize: '0.875rem' }),
+        ]),
+      ]),
+    ], { paddingTop: '40px', paddingBottom: '40px' }),
+
+    // 4. Feature Pillars
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 48px auto' } }, [
+        el('Badge', { props: { text: 'DEVELOPER CAPABILITIES', tone: 'primary' } }),
+        heading('Everything Engineers Need to Ship APIs Fast', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+        text('From OpenAPI 3.1 visual design to automated regression pipelines.', { color: 'var(--fp-muted)', fontSize: '1rem' }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' },
+        responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.features.map((feat) =>
+          el('Card', {
+            styles: {
+              background: 'var(--fp-surface)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              padding: '28px',
+              gap: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+            },
+          }, [
+            el('Box', { styles: { width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(139,92,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5cf6', marginBottom: '8px' } }, [
+              el('Icon', { props: { name: feat.icon || 'Sparkles' } }),
+            ]),
+            heading(feat.title, 'h3', { fontSize: '1.25rem', fontWeight: 700 }),
+            text(feat.desc, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
+          ])
+        ),
+      ]),
+    ], { id: 'features', paddingTop: '40px', paddingBottom: '40px' }),
+
+    // 5. Testimonials
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'ENGINEERING TESTIMONIALS', tone: 'neutral' } }),
+        heading('Loved by Engineering Teams at Scale', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#8b5cf6' } }),
+          text(`"Replacing our clunky Postman workspaces with ${data.companyName} cut our API integration cycle in half."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'David Chen', role: 'Staff API Architect' } }),
+          ]),
+        ]),
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#8b5cf6' } }),
+          text(`"The smart mock servers alone saved our frontend team hundreds of hours waiting for backend staging deployments."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'Sarah Lin', role: 'VP Engineering' } }),
+          ]),
+        ]),
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#8b5cf6' } }),
+          text(`"Flawless Git synchronization and branch-aware schema previews. Easily the best API tool in modern engineering."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'Alexandre Roy', role: 'DevOps Lead' } }),
+          ]),
+        ]),
+      ]),
+    ], { id: 'testimonials', paddingTop: '40px', paddingBottom: '40px' }),
+
+    // 6. Pricing
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'DEVELOPER PLANS', tone: 'primary' } }),
+        heading('Fair, Transparent Pricing for Teams', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px', alignItems: 'stretch' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.plans.map((plan) =>
+          el('Card', {
+            styles: {
+              background: plan.popular ? 'linear-gradient(180deg, rgba(139,92,246,0.15) 0%, var(--fp-surface) 100%)' : 'var(--fp-surface)',
+              border: plan.popular ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '20px',
+              padding: '32px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              position: 'relative',
+            },
+          }, [
+            ...(plan.popular
+              ? [
+                  el('Box', { styles: { position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: '#8b5cf6', color: '#fff', fontSize: '0.6875rem', fontWeight: 800, padding: '3px 12px', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' } }, [
+                    text('Recommended'),
+                  ]),
+                ]
+              : []),
+            heading(plan.name, 'h3', { fontSize: '1.25rem', fontWeight: 800 }),
+            el('Row', { styles: { alignItems: 'baseline', gap: '4px' } }, [
+              heading(plan.price, 'h2', { fontSize: '2.5rem', fontWeight: 900 }),
+              text(plan.period, { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+            ]),
+            el('Box', { styles: { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', flexGrow: 1 } }, [
+              ...plan.features.map((feat) =>
+                el('Row', { styles: { alignItems: 'center', gap: '8px', fontSize: '0.875rem' } }, [
+                  el('Box', { styles: { color: '#8b5cf6', fontWeight: 800 } }, [text('✓')]),
+                  text(feat, { color: 'var(--fp-text)' }),
+                ])
+              ),
+            ]),
+            button(plan.popular ? 'Get Started Pro' : 'Choose Plan', '/pricing', plan.popular ? 'primary' : 'secondary'),
+          ])
+        ),
+      ]),
+    ], { id: 'pricing', paddingTop: '40px', paddingBottom: '40px' }),
+
+    // 7. FAQ
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        heading('Frequently Asked Questions', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+      ]),
+      el('Box', { styles: { maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' } }, [
+        ...data.faq.map((item) =>
+          el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px', gap: '8px' } }, [
+            heading(item.q, 'h4', { fontSize: '1.0625rem', fontWeight: 700 }),
+            text(item.a, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
+          ])
+        ),
+      ]),
+    ], { id: 'faq', paddingTop: '40px', paddingBottom: '60px' }),
+  ];
+}
+
+/** Builds universal rich SaaS home elements */
+function buildUniversalHomeElements(data: ArchetypeContent, heroImageSrc: string): El[] {
+  return [
+    section([
+      el('Box', { styles: { textAlign: 'center', maxWidth: '820px', margin: '0 auto', gap: '20px' } }, [
+        el('Box', { styles: { display: 'inline-flex', padding: '4px 14px', borderRadius: '9999px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 800, margin: '0 auto', letterSpacing: '0.05em' } }, [
+          text(`✨ INTRODUCING ${data.companyName.toUpperCase()}`),
+        ]),
+        heading(data.heroHeadline, 'h1', {
+          fontSize: '3.5rem',
+          fontWeight: 900,
+          lineHeight: 1.15,
+          letterSpacing: '-0.03em',
+          animation: 'shimmer 4s ease-in-out infinite alternate',
+        }),
+        text(data.heroSubtitle, {
+          color: 'var(--fp-muted)',
+          fontSize: '1.25rem',
+          lineHeight: 1.6,
+          maxWidth: '680px',
+          margin: '0 auto',
+        }),
+        el('Row', { styles: { gap: '16px', justifyContent: 'center', marginTop: '12px' } }, [
+          styledButton('Get Started for Free →', '/pricing', 'primary', { padding: '14px 32px', fontSize: '1rem', fontWeight: 700 }),
+          styledButton('Explore Features', '/features', 'secondary', { padding: '14px 28px', fontSize: '1rem' }),
+        ]),
+        el('Row', { styles: { justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' } }, [
+          el('Rating', { props: { rating: data.ratingScore, maxRating: 5, starColor: '#f59e0b' } }),
+          text(`${data.ratingScore} / 5 (${data.ratingReviews})`, { color: 'var(--fp-muted)', fontSize: '0.875rem', fontWeight: 600 }),
+        ]),
+      ]),
+
+      el('Box', {
+        styles: {
+          background: 'var(--fp-surface)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: '20px',
+          padding: '24px',
+          marginTop: '48px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15)',
+        },
+      }, [
+        el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)' } }, [
+          el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
+            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', flexShrink: 0 } }),
+            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 } }),
+            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', flexShrink: 0 } }),
+            text(`${data.companyName} Live Workspace & Analytics`, { fontSize: '0.8125rem', color: 'var(--fp-muted)', marginLeft: '12px' }),
+          ]),
+          el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
+            el('Badge', { props: { text: 'Active & Verified', tone: 'success' } }),
+            el('Badge', { props: { text: '99.99% Uptime', tone: 'neutral' } }),
+          ]),
+        ]),
+        image(heroImageSrc, `${data.companyName} Dashboard Preview`, {
+          width: '100%',
+          maxHeight: '440px',
+          objectFit: 'cover',
+          borderRadius: '12px',
+          marginTop: '16px',
+        }),
+      ]),
+    ], { paddingTop: '60px', paddingBottom: '40px' }),
+
+    // Metrics Band
+    section([
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '24px', textAlign: 'center' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.stats.map((stat) =>
+          el('Box', { styles: { gap: '6px' } }, [
+            heading(stat.value, 'h2', { fontSize: '2.5rem', fontWeight: 900, color: 'var(--fp-primary)' }),
+            text(stat.label, { fontSize: '0.875rem', color: 'var(--fp-muted)', fontWeight: 600 }),
+          ])
+        ),
+      ]),
+    ], { backgroundColor: 'var(--fp-surface)', paddingTop: '36px', paddingBottom: '36px' }),
+
+    // Features Section
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 48px auto' } }, [
+        el('Badge', { props: { text: 'CORE CAPABILITIES', tone: 'primary' } }),
+        heading('Engineered for High-Velocity Execution', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+        text(`Discover why thousands trust ${data.companyName} for critical operations.`, { color: 'var(--fp-muted)', fontSize: '1rem' }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' },
+        responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.features.map((feat) =>
+          el('Card', {
+            styles: {
+              background: 'var(--fp-surface)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              padding: '28px',
+              gap: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+            },
+          }, [
+            el('Box', { styles: { width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fp-primary)', marginBottom: '8px' } }, [
+              el('Icon', { props: { name: feat.icon || 'Sparkles' } }),
+            ]),
+            heading(feat.title, 'h3', { fontSize: '1.25rem', fontWeight: 700 }),
+            text(feat.desc, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
+          ])
+        ),
+      ]),
+    ], { id: 'features', paddingTop: '60px', paddingBottom: '40px' }),
+
+    // Testimonials
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'CLIENT TESTIMONIALS', tone: 'warning' } }),
+        heading('Loved by Fast-Growing Teams', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
+          text(`"The fastest way to launch new customer experiences. We 4x-ed our conversion rate within 2 weeks of deploying ${data.companyName}."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'Sarah Lin', role: 'Head of Growth' } }),
+          ]),
+        ]),
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
+          text(`"Completely replaced our previous clunky workflow. The AI synthesis and live analytics are an absolute game changer."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'Michael Vance', role: 'Head of Engineering' } }),
+          ]),
+        ]),
+        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
+          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
+          text(`"Incredible support, clean code embeds, and rock-solid performance under heavy multi-tenant production load."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
+          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
+            el('Avatar', { props: { name: 'Elena Rostova', role: 'Founder & CEO' } }),
+          ]),
+        ]),
+      ]),
+    ], { id: 'testimonials', paddingTop: '40px', paddingBottom: '40px' }),
+
+    // Pricing
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        el('Badge', { props: { text: 'TRANSPARENT PLANS', tone: 'primary' } }),
+        heading('Simple, Predictable Investment', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+      ]),
+      el('Grid', {
+        styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px', alignItems: 'stretch' },
+        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
+      }, [
+        ...data.plans.map((plan) =>
+          el('Card', {
+            styles: {
+              background: plan.popular ? 'linear-gradient(180deg, rgba(99,102,241,0.15) 0%, var(--fp-surface) 100%)' : 'var(--fp-surface)',
+              border: plan.popular ? '2px solid var(--fp-primary)' : '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '20px',
+              padding: '32px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              position: 'relative',
+            },
+          }, [
+            ...(plan.popular
+              ? [
+                  el('Box', { styles: { position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--fp-primary)', color: '#fff', fontSize: '0.6875rem', fontWeight: 800, padding: '3px 12px', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' } }, [
+                    text('Most Popular'),
+                  ]),
+                ]
+              : []),
+            heading(plan.name, 'h3', { fontSize: '1.25rem', fontWeight: 800 }),
+            el('Row', { styles: { alignItems: 'baseline', gap: '4px' } }, [
+              heading(plan.price, 'h2', { fontSize: '2.5rem', fontWeight: 900 }),
+              text(plan.period, { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
+            ]),
+            el('Box', { styles: { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', flexGrow: 1 } }, [
+              ...plan.features.map((feat) =>
+                el('Row', { styles: { alignItems: 'center', gap: '8px', fontSize: '0.875rem' } }, [
+                  el('Box', { styles: { color: '#10b981', fontWeight: 800 } }, [text('✓')]),
+                  text(feat, { color: 'var(--fp-text)' }),
+                ])
+              ),
+            ]),
+            button(plan.popular ? 'Get Started Pro' : 'Choose Plan', '/pricing', plan.popular ? 'primary' : 'secondary'),
+          ])
+        ),
+      ]),
+    ], { id: 'pricing', paddingTop: '40px', paddingBottom: '40px' }),
+
+    // FAQ
+    section([
+      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
+        heading('Frequently Asked Questions', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
+      ]),
+      el('Box', { styles: { maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' } }, [
+        ...data.faq.map((item) =>
+          el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px', gap: '8px' } }, [
+            heading(item.q, 'h4', { fontSize: '1.0625rem', fontWeight: 700 }),
+            text(item.a, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
+          ])
+        ),
+      ]),
+    ], { id: 'faq', paddingTop: '40px', paddingBottom: '60px' }),
+  ];
+}
+
 /**
  * Main AI Project Synthesizer
- * Generates production-ready Websites (multi-page with global header/footer), Pages, Tours, and Modules from Prompts, URLs, or Uploaded Images.
+ * Generates publication-ready Websites, Pages, and Interactive Tours with distinct, tailored blueprints.
  */
 export async function generateProjectWithAi(request: AiGenerationRequest, organizationId: string): Promise<GeneratedProjectPayload> {
   const mode = request.mode;
@@ -432,7 +1247,7 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
   }
 
   const data = synthesizeBrandContent(brandName, domainName, archetype, promptText);
-  const theme = resolveTheme(request.themeTone || suggestedThemeTone);
+  const theme = resolveTheme(request.themeTone || suggestedThemeTone, archetype);
   const isTour = request.type === 'tour';
   const isWebsite = request.type === 'website';
   const heroImageSrc = request.imageDataUrl || photo('dashboard', 1200, 750);
@@ -553,10 +1368,21 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
   }
 
   // ---------------------------------------------------------------------------
+  // Select Archetype Home Elements
+  // ---------------------------------------------------------------------------
+  let homeElements: El[];
+  if (archetype === 'FinTech & Wealth Advisory') {
+    homeElements = buildFintechHomeElements(data, heroImageSrc);
+  } else if (archetype === 'Developer Tools & API Platform') {
+    homeElements = buildDevtoolsHomeElements(data, heroImageSrc);
+  } else {
+    homeElements = buildUniversalHomeElements(data, heroImageSrc);
+  }
+
+  // ---------------------------------------------------------------------------
   // 2. MULTI-PAGE WEBSITE GENERATION
   // ---------------------------------------------------------------------------
   if (isWebsite) {
-    // A. Global Header
     const headerDoc = {
       kind: 'global' as DocumentKind,
       title: 'Header',
@@ -578,7 +1404,6 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
       ]),
     };
 
-    // B. Global Footer
     const footerDoc = {
       kind: 'global' as DocumentKind,
       title: 'Footer',
@@ -620,221 +1445,11 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
       ]),
     };
 
-    // C. Home Page Elements
-    const homeElements: El[] = [
-      // Hero Section
-      section([
-        el('Box', { styles: { textAlign: 'center', maxWidth: '820px', margin: '0 auto', gap: '20px' } }, [
-          el('Box', { styles: { display: 'inline-flex', padding: '4px 14px', borderRadius: '9999px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 800, margin: '0 auto', letterSpacing: '0.05em' } }, [
-            text(`✨ INTRODUCING ${data.companyName.toUpperCase()}`),
-          ]),
-          heading(data.heroHeadline, 'h1', {
-            fontSize: '3.5rem',
-            fontWeight: 900,
-            lineHeight: 1.15,
-            letterSpacing: '-0.03em',
-            animation: 'shimmer 4s ease-in-out infinite alternate',
-          }),
-          text(data.heroSubtitle, {
-            color: 'var(--fp-muted)',
-            fontSize: '1.25rem',
-            lineHeight: 1.6,
-            maxWidth: '680px',
-            margin: '0 auto',
-          }),
-          el('Row', { styles: { gap: '16px', justifyContent: 'center', marginTop: '12px' } }, [
-            styledButton('{{hero.cta_primary}}', '/pricing', 'primary', { padding: '14px 32px', fontSize: '1rem', fontWeight: 700 }),
-            styledButton('Explore Features →', '/features', 'secondary', { padding: '14px 28px', fontSize: '1rem' }),
-          ]),
-          el('Row', { styles: { justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' } }, [
-            el('Rating', { props: { rating: data.ratingScore, maxRating: 5, starColor: '#f59e0b' } }),
-            text(`${data.ratingScore} / 5 (${data.ratingReviews})`, { color: 'var(--fp-muted)', fontSize: '0.875rem', fontWeight: 600 }),
-          ]),
-        ]),
-        // Browser Mockup Showcase Card
-        el('Box', {
-          styles: {
-            background: 'var(--fp-surface)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '20px',
-            padding: '24px',
-            marginTop: '48px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15)',
-          },
-        }, [
-          el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)' } }, [
-            el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
-              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', flexShrink: 0 } }),
-              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 } }),
-              el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', flexShrink: 0 } }),
-              text(`${data.companyName} Live Workspace & Analytics`, { fontSize: '0.8125rem', color: 'var(--fp-muted)', marginLeft: '12px' }),
-            ]),
-            el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
-              el('Badge', { props: { text: 'Active & Verified', tone: 'success' } }),
-              el('Badge', { props: { text: '99.99% Uptime', tone: 'neutral' } }),
-            ]),
-          ]),
-          image(heroImageSrc, `${data.companyName} Dashboard Preview`, {
-            width: '100%',
-            maxHeight: '440px',
-            objectFit: 'cover',
-            borderRadius: '12px',
-            marginTop: '16px',
-          }),
-        ]),
-      ], { paddingTop: '60px', paddingBottom: '60px' }),
-
-      // Features Overview Section
-      section([
-        el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 48px auto' } }, [
-          el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-            text('CORE CAPABILITIES'),
-          ]),
-          heading('Engineered for High-Velocity Execution', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
-          text(`Discover why thousands trust ${data.companyName} for critical operations.`, { color: 'var(--fp-muted)', fontSize: '1rem' }),
-        ]),
-        el('Grid', {
-          styles: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' },
-          responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
-        }, [
-          ...data.features.map((feat) =>
-            el('Card', {
-              styles: {
-                background: 'var(--fp-surface)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '16px',
-                padding: '28px',
-                gap: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-              },
-            }, [
-              el('Box', { styles: { width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fp-primary)', marginBottom: '8px' } }, [
-                el('Icon', { props: { name: feat.icon || 'Sparkles' } }),
-              ]),
-              heading(feat.title, 'h3', { fontSize: '1.25rem', fontWeight: 700 }),
-              text(feat.desc, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
-            ])
-          ),
-        ]),
-      ], { id: 'features', paddingTop: '60px', paddingBottom: '60px' }),
-
-      // Testimonials with 5-Star Ratings
-      section([
-        el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
-          el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-            text('VERIFIED REVIEWS'),
-          ]),
-          heading('Loved by Fast-Growing Teams', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
-          text(`See what clients achieve daily with ${data.companyName}.`, { color: 'var(--fp-muted)', fontSize: '1rem' }),
-        ]),
-        el('Grid', {
-          styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px' },
-          responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
-        }, [
-          el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
-            el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
-            text(`"The speed and clarity provided by ${data.companyName} transformed our execution. We 4x-ed our performance within 2 weeks."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
-            el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
-              el('Avatar', { props: { name: 'Sarah Lin', role: 'Head of Growth' } }),
-            ]),
-          ]),
-          el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
-            el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
-            text(`"Clean interface, disciplined execution, and rock-solid reliability. ${data.companyName} is indispensable to our daily routine."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
-            el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
-              el('Avatar', { props: { name: 'Vikram Mehta', role: 'Managing Partner' } }),
-            ]),
-          ]),
-          el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
-            el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
-            text(`"Exceptional support and transparent deliverables. Best investment decision we made this year."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
-            el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
-              el('Avatar', { props: { name: 'Elena Rostova', role: 'Founder & CEO' } }),
-            ]),
-          ]),
-        ]),
-      ], { id: 'testimonials', paddingTop: '40px', paddingBottom: '60px' }),
-
-      // Pricing Plans
-      section([
-        el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
-          el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-            text('TRANSPARENT PLANS'),
-          ]),
-          heading('Simple, Predictable Investment', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
-          text('No hidden contracts. Upgrade, downgrade, or cancel at any time with confidence.', { color: 'var(--fp-muted)', fontSize: '1rem' }),
-        ]),
-        el('Grid', {
-          styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px', alignItems: 'stretch' },
-          responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
-        }, [
-          ...data.plans.map((plan) =>
-            el('Card', {
-              styles: {
-                background: plan.popular ? 'linear-gradient(180deg, rgba(99,102,241,0.15) 0%, var(--fp-surface) 100%)' : 'var(--fp-surface)',
-                border: plan.popular ? '2px solid var(--fp-primary)' : '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '20px',
-                padding: '32px 24px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                position: 'relative',
-              },
-            }, [
-              ...(plan.popular
-                ? [
-                    el('Box', { styles: { position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--fp-primary)', color: '#fff', fontSize: '0.6875rem', fontWeight: 800, padding: '3px 12px', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' } }, [
-                      text('Most Popular'),
-                    ]),
-                  ]
-                : []),
-              heading(plan.name, 'h3', { fontSize: '1.25rem', fontWeight: 800 }),
-              el('Row', { styles: { alignItems: 'baseline', gap: '4px' } }, [
-                heading(plan.price, 'h2', { fontSize: '2.5rem', fontWeight: 900 }),
-                text(plan.period, { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
-              ]),
-              el('Box', { styles: { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', flexGrow: 1 } }, [
-                ...plan.features.map((feat) =>
-                  el('Row', { styles: { alignItems: 'center', gap: '8px', fontSize: '0.875rem' } }, [
-                    el('Box', { styles: { color: '#10b981', fontWeight: 800 } }, [text('✓')]),
-                    text(feat, { color: 'var(--fp-text)' }),
-                  ])
-                ),
-              ]),
-              button(plan.popular ? 'Get Started Pro' : 'Choose Plan', '/pricing', plan.popular ? 'primary' : 'secondary'),
-            ])
-          ),
-        ]),
-      ], { id: 'pricing', paddingTop: '40px', paddingBottom: '60px' }),
-
-      // FAQ
-      section([
-        el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
-          el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-            text('FAQS'),
-          ]),
-          heading('Frequently Asked Questions', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
-          text(`Everything you need to know about getting started with ${data.companyName}.`, { color: 'var(--fp-muted)', fontSize: '1rem' }),
-        ]),
-        el('Box', { styles: { maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' } }, [
-          ...data.faq.map((item) =>
-            el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px', gap: '8px' } }, [
-              heading(item.q, 'h4', { fontSize: '1.0625rem', fontWeight: 700 }),
-              text(item.a, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
-            ])
-          ),
-        ]),
-      ], { id: 'faq', paddingTop: '40px', paddingBottom: '60px' }),
-    ];
-
-    // D. Features Page Elements
+    // Features Page
     const featuresPageElements: El[] = [
       section([
         el('Box', { styles: { textAlign: 'center', maxWidth: '720px', margin: '0 auto 48px auto', gap: '16px' } }, [
-          el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-            text('PLATFORM ARCHITECTURE'),
-          ]),
+          el('Badge', { props: { text: 'CAPABILITY ARCHITECTURE', tone: 'primary' } }),
           heading(`Everything Built into ${data.companyName}`, 'h1', { fontSize: '3rem', fontWeight: 900 }),
           text('Deep dive into our enterprise architecture, compliance safeguards, and automated execution engines.', { color: 'var(--fp-muted)', fontSize: '1.125rem' }),
         ]),
@@ -871,13 +1486,11 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
       ], { paddingTop: '60px', paddingBottom: '80px' }),
     ];
 
-    // E. Pricing Page Elements
+    // Pricing Page
     const pricingPageElements: El[] = [
       section([
         el('Box', { styles: { textAlign: 'center', maxWidth: '720px', margin: '0 auto 48px auto', gap: '16px' } }, [
-          el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-            text('PLANS & MEMBERSHIPS'),
-          ]),
+          el('Badge', { props: { text: 'PLANS & MEMBERSHIPS', tone: 'primary' } }),
           heading('Choose the Right Plan for You', 'h1', { fontSize: '3rem', fontWeight: 900 }),
           text('Transparent pricing backed by strict risk guardrails and dedicated support.', { color: 'var(--fp-muted)', fontSize: '1.125rem' }),
         ]),
@@ -925,13 +1538,11 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
       ], { paddingTop: '60px', paddingBottom: '80px' }),
     ];
 
-    // F. Contact Page Elements
+    // Contact Page
     const contactPageElements: El[] = [
       section([
         el('Box', { styles: { textAlign: 'center', maxWidth: '720px', margin: '0 auto 48px auto', gap: '16px' } }, [
-          el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-            text('GET IN TOUCH'),
-          ]),
+          el('Badge', { props: { text: 'GET IN TOUCH', tone: 'primary' } }),
           heading(`Connect with ${data.companyName}`, 'h1', { fontSize: '3rem', fontWeight: 900 }),
           text('Our advisory and technical teams are here to assist with onboarding, questions, or custom enterprise requirements.', { color: 'var(--fp-muted)', fontSize: '1.125rem' }),
         ]),
@@ -1036,239 +1647,7 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
   // ---------------------------------------------------------------------------
   // 3. LANDING PAGE & OTHER MODULE GENERATION (Single Page)
   // ---------------------------------------------------------------------------
-  const pageElements: El[] = [
-    // Top Brand Bar
-    el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' } }, [
-      heading(data.companyName, 'h3', { fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em' }),
-      el('Row', { styles: { gap: '12px', alignItems: 'center' } }, [
-        button('Features', '#features', 'ghost'),
-        button('Testimonials', '#testimonials', 'ghost'),
-        button('Pricing', '#pricing', 'ghost'),
-        button('FAQ', '#faq', 'ghost'),
-        styledButton('{{hero.cta_primary}}', '#pricing', 'primary', { padding: '8px 20px', fontSize: '0.875rem' }),
-      ]),
-    ]),
-
-    // Hero Section with Ticker and Mockup
-    section([
-      el('Box', { styles: { textAlign: 'center', maxWidth: '800px', margin: '0 auto', gap: '20px' } }, [
-        el('Box', { styles: { display: 'inline-flex', padding: '4px 14px', borderRadius: '9999px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 800, margin: '0 auto', letterSpacing: '0.05em' } }, [
-          text(`✨ INTRODUCING ${data.companyName.toUpperCase()}`),
-        ]),
-        heading(data.heroHeadline, 'h1', {
-          fontSize: '3.5rem',
-          fontWeight: 900,
-          lineHeight: 1.15,
-          letterSpacing: '-0.03em',
-          animation: 'shimmer 4s ease-in-out infinite alternate',
-        }),
-        text(data.heroSubtitle, {
-          color: 'var(--fp-muted)',
-          fontSize: '1.25rem',
-          lineHeight: 1.6,
-          maxWidth: '680px',
-          margin: '0 auto',
-        }),
-        el('Row', { styles: { gap: '16px', justifyContent: 'center', marginTop: '12px' } }, [
-          styledButton('{{hero.cta_primary}}', '#pricing', 'primary', { padding: '14px 32px', fontSize: '1rem', fontWeight: 700 }),
-          styledButton('{{hero.cta_secondary}}', '#features', 'secondary', { padding: '14px 28px', fontSize: '1rem' }),
-        ]),
-        el('Row', { styles: { justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' } }, [
-          el('Rating', { props: { rating: data.ratingScore, maxRating: 5, starColor: '#f59e0b' } }),
-          text(`${data.ratingScore} / 5 (${data.ratingReviews})`, { color: 'var(--fp-muted)', fontSize: '0.875rem', fontWeight: 600 }),
-        ]),
-      ]),
-
-      // Browser Mockup Showcase Card
-      el('Box', {
-        styles: {
-          background: 'var(--fp-surface)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '20px',
-          padding: '24px',
-          marginTop: '48px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15)',
-        },
-      }, [
-        el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)' } }, [
-          el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
-            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', flexShrink: 0 } }),
-            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 } }),
-            el('Box', { styles: { width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', flexShrink: 0 } }),
-            text(`${data.companyName} Live Playground & Analytics`, { fontSize: '0.8125rem', color: 'var(--fp-muted)', marginLeft: '12px' }),
-          ]),
-          el('Row', { styles: { gap: '8px', alignItems: 'center' } }, [
-            el('Badge', { props: { text: '200 OK', tone: 'success' } }),
-            el('Badge', { props: { text: '18ms', tone: 'neutral' } }),
-          ]),
-        ]),
-        image(heroImageSrc, `${data.companyName} Dashboard Preview`, {
-          width: '100%',
-          maxHeight: '440px',
-          objectFit: 'cover',
-          borderRadius: '12px',
-          marginTop: '16px',
-        }),
-      ]),
-    ], { paddingTop: '40px', paddingBottom: '60px' }),
-
-    // Features Section
-    section([
-      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 48px auto' } }, [
-        el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-          text('PLATFORM CAPABILITIES'),
-        ]),
-        heading('Engineered for High-Velocity Execution', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
-        text(`Every capability you need to scale workflows, convert prospective visitors, and automate operations with ${data.companyName}.`, { color: 'var(--fp-muted)', fontSize: '1rem' }),
-      ]),
-      el('Grid', {
-        styles: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' },
-        responsive: { mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
-      }, [
-        ...data.features.map((feat) =>
-          el('Card', {
-            styles: {
-              background: 'var(--fp-surface)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '16px',
-              padding: '28px',
-              gap: '12px',
-              display: 'flex',
-              flexDirection: 'column',
-            },
-          }, [
-            el('Box', { styles: { width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fp-primary)', marginBottom: '8px' } }, [
-              el('Icon', { props: { name: feat.icon || 'Sparkles' } }),
-            ]),
-            heading(feat.title, 'h3', { fontSize: '1.25rem', fontWeight: 700 }),
-            text(feat.desc, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
-          ])
-        ),
-      ]),
-    ], { id: 'features', paddingTop: '60px', paddingBottom: '60px' }),
-
-    // Testimonials
-    section([
-      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
-        el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-          text('CLIENT TESTIMONIALS'),
-        ]),
-        heading('Loved by Fast-Growing Teams', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
-        text(`Discover how industry leaders accelerate their pipeline with ${data.companyName}.`, { color: 'var(--fp-muted)', fontSize: '1rem' }),
-      ]),
-      el('Grid', {
-        styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px' },
-        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
-      }, [
-        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
-          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
-          text(`"The fastest way to launch new customer experiences. We 4x-ed our conversion rate within 2 weeks of deploying ${data.companyName}."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
-          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
-            el('Avatar', { props: { name: 'Sarah Lin', role: 'VP Growth at Apex' } }),
-          ]),
-        ]),
-        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
-          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
-          text(`"Completely replaced our previous clunky workflow. The AI synthesis and live analytics are an absolute game changer."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
-          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
-            el('Avatar', { props: { name: 'Michael Vance', role: 'Head of Engineering' } }),
-          ]),
-        ]),
-        el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '24px', gap: '14px', display: 'flex', flexDirection: 'column' } }, [
-          el('Rating', { props: { rating: 5, maxRating: 5, starColor: '#f59e0b' } }),
-          text(`"Incredible support, clean code embeds, and rock-solid performance under heavy multi-tenant production load."`, { fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }),
-          el('Row', { styles: { alignItems: 'center', gap: '10px', marginTop: 'auto' } }, [
-            el('Avatar', { props: { name: 'Elena Rostova', role: 'Founder & CEO' } }),
-          ]),
-        ]),
-      ]),
-    ], { id: 'testimonials', paddingTop: '40px', paddingBottom: '60px' }),
-
-    // Pricing Plans
-    section([
-      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
-        el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-          text('TRANSPARENT PLANS'),
-        ]),
-        heading('Simple, Predictable Investment', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
-        text('No hidden contracts. Upgrade, downgrade, or cancel at any time with confidence.', { color: 'var(--fp-muted)', fontSize: '1rem' }),
-      ]),
-      el('Grid', {
-        styles: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '24px', alignItems: 'stretch' },
-        responsive: { tablet: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }, mobile: { gridTemplateColumns: 'minmax(0, 1fr)' } },
-      }, [
-        ...data.plans.map((plan) =>
-          el('Card', {
-            styles: {
-              background: plan.popular ? 'linear-gradient(180deg, rgba(99,102,241,0.15) 0%, var(--fp-surface) 100%)' : 'var(--fp-surface)',
-              border: plan.popular ? '2px solid var(--fp-primary)' : '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '20px',
-              padding: '32px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              position: 'relative',
-            },
-          }, [
-            ...(plan.popular
-              ? [
-                  el('Box', { styles: { position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--fp-primary)', color: '#fff', fontSize: '0.6875rem', fontWeight: 800, padding: '3px 12px', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' } }, [
-                    text('Most Popular'),
-                  ]),
-                ]
-              : []),
-            heading(plan.name, 'h3', { fontSize: '1.25rem', fontWeight: 800 }),
-            el('Row', { styles: { alignItems: 'baseline', gap: '4px' } }, [
-              heading(plan.price, 'h2', { fontSize: '2.5rem', fontWeight: 900 }),
-              text(plan.period, { color: 'var(--fp-muted)', fontSize: '0.875rem' }),
-            ]),
-            el('Box', { styles: { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', flexGrow: 1 } }, [
-              ...plan.features.map((feat) =>
-                el('Row', { styles: { alignItems: 'center', gap: '8px', fontSize: '0.875rem' } }, [
-                  el('Box', { styles: { color: '#10b981', fontWeight: 800 } }, [text('✓')]),
-                  text(feat, { color: 'var(--fp-text)' }),
-                ])
-              ),
-            ]),
-            button(plan.popular ? 'Get Started Pro' : 'Choose Plan', '#pricing', plan.popular ? 'primary' : 'secondary'),
-          ])
-        ),
-      ]),
-    ], { id: 'pricing', paddingTop: '40px', paddingBottom: '60px' }),
-
-    // FAQ
-    section([
-      el('Box', { styles: { textAlign: 'center', gap: '12px', maxWidth: '640px', margin: '0 auto 40px auto' } }, [
-        el('Box', { styles: { display: 'inline-flex', padding: '4px 12px', borderRadius: '9999px', background: 'rgba(99,102,241,0.1)', color: 'var(--fp-primary)', fontSize: '0.75rem', fontWeight: 700, margin: '0 auto' } }, [
-          text('FAQS'),
-        ]),
-        heading('Frequently Asked Questions', 'h2', { fontSize: '2.25rem', fontWeight: 800 }),
-        text('Everything you need to know about getting started.', { color: 'var(--fp-muted)', fontSize: '1rem' }),
-      ]),
-      el('Box', { styles: { maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' } }, [
-        ...data.faq.map((item) =>
-          el('Card', { styles: { background: 'var(--fp-surface)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px', gap: '8px' } }, [
-            heading(item.q, 'h4', { fontSize: '1.0625rem', fontWeight: 700 }),
-            text(item.a, { color: 'var(--fp-muted)', fontSize: '0.9375rem', lineHeight: 1.6 }),
-          ])
-        ),
-      ]),
-    ], { id: 'faq', paddingTop: '40px', paddingBottom: '60px' }),
-
-    // Footer
-    section([
-      el('Row', { styles: { justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingTop: '30px', borderTop: '1px solid rgba(255,255,255,0.08)' }, responsive: { mobile: { flexDirection: 'column', gap: '16px', textAlign: 'center' } } }, [
-        text(`© ${new Date().getFullYear()} ${data.companyName}. All rights reserved.`, { color: 'var(--fp-muted)', fontSize: '0.8125rem' }),
-        el('Row', { styles: { gap: '16px' } }, [
-          button('Privacy Policy', '#', 'ghost'),
-          button('Terms of Service', '#', 'ghost'),
-          button('Regulatory Disclosures', '#', 'ghost'),
-        ]),
-      ]),
-    ], { paddingTop: '20px', paddingBottom: '40px' }),
-  ];
-
-  const docContent = synthesizeContent('ai', pageElements, {
+  const pageContent = synthesizeContent('ai', homeElements, {
     minHeight: '100vh',
     background: 'var(--fp-background)',
     color: 'var(--fp-text)',
@@ -1291,7 +1670,7 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
         title: 'Home',
         slug: '',
         position: 0,
-        content: docContent,
+        content: pageContent,
       },
     ],
   };

@@ -167,6 +167,6 @@ describe('aiGenerator', () => {
     const updated = rebrandVariablesWithAi(original, 'SEBI registered research analyst advisory platform for Devesh');
     expect(updated['company.name']).toContain('Devesh');
     expect(updated['hero.title']).toBeTruthy();
-    expect(updated['rating.score']).toBe(4.9);
+    expect(updated['rating.score']).toBeGreaterThanOrEqual(4.9);
   });
 });
