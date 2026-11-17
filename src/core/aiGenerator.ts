@@ -4,6 +4,7 @@ import { BLOCK_META } from '../renderer/blockMeta';
 import { button, el, El, heading, image, section, text } from '../templates/dsl';
 import { THEME_INDIGO, THEME_MIDNIGHT, THEME_EMERALD, THEME_OCEAN, THEME_CORAL, THEME_MONO } from '../templates/themes';
 import { photo } from '../templates/assets';
+import { callGeminiAi, isGeminiConnected } from './geminiService';
 
 export type AiInputMode = 'prompt' | 'url' | 'image';
 
@@ -1246,7 +1247,32 @@ export async function generateProjectWithAi(request: AiGenerationRequest, organi
     }
   }
 
-  const data = synthesizeBrandContent(brandName, domainName, archetype, promptText);
+  let data = synthesizeBrandContent(brandName, domainName, archetype, promptText);
+
+  // If Gemini AI is connected (via VITE_GEMINI_API_KEY in .env or user localStorage), call Gemini 2.0 Flash for live, rich synthesis
+  if (isGeminiConnected()) {
+    try {
+      const geminiData = await callGeminiAi({
+        type: request.type,
+        archetype,
+        brandName,
+        domainName,
+        promptText,
+        url: request.url,
+        imageDataUrl: request.imageDataUrl,
+      });
+      if (geminiData) {
+        data = {
+          ...data,
+          ...geminiData,
+          deepFeatures: geminiData.deepFeatures && geminiData.deepFeatures.length > 0 ? geminiData.deepFeatures : data.deepFeatures,
+          stats: geminiData.stats && geminiData.stats.length > 0 ? geminiData.stats : data.stats,
+        };
+      }
+    } catch (e) {
+      console.warn('Gemini live generation fallback to deterministic blueprint:', e);
+    }
+  }
   const theme = resolveTheme(request.themeTone || suggestedThemeTone, archetype);
   const isTour = request.type === 'tour';
   const isWebsite = request.type === 'website';

@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Globe, Image as ImageIcon, Loader2, Sparkles, Upload, Wand2, X } from 'lucide-react';
+import { Check, Globe, Image as ImageIcon, Key, Loader2, Sparkles, Upload, Wand2, X } from 'lucide-react';
 import { MODULE_LIST, moduleNoun } from '../../core/modules';
 import { ProjectType } from '../../core/schema';
 import { generateProjectWithAi, extractBrandFromUrl, AiInputMode } from '../../core/aiGenerator';
+import { getGeminiApiKey, setGeminiApiKey, isGeminiConnected } from '../../core/geminiService';
 import { ROUTES } from '../routes';
 import { useServices } from '../session';
 import { GLOBAL_LANGUAGES } from '../shared/GoogleTranslate';
@@ -79,6 +80,26 @@ export const AiCreateModal: React.FC<AiCreateModalProps> = ({ initialType = 'web
   const [language, setLanguage] = useState('en');
   const [stepMessage, setStepMessage] = useState<string | null>(null);
 
+  const [geminiConnected, setGeminiConnected] = useState(isGeminiConnected());
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(getGeminiApiKey());
+
+  const handleSaveApiKey = () => {
+    const trimmed = apiKeyInput.trim();
+    setGeminiApiKey(trimmed);
+    const connected = Boolean(trimmed);
+    setGeminiConnected(connected);
+    if (connected) {
+      setShowKeyInput(false);
+    }
+  };
+
+  const handleRemoveApiKey = () => {
+    setGeminiApiKey('');
+    setApiKeyInput('');
+    setGeminiConnected(false);
+  };
+
   useEffect(() => {
     dialogRef.current?.showModal?.();
   }, []);
@@ -114,11 +135,16 @@ export const AiCreateModal: React.FC<AiCreateModalProps> = ({ initialType = 'web
     mutationFn: async () => {
       if (!workspace?.organizationId) throw new Error('Workspace not ready');
 
-      setStepMessage(`Analyzing ${mode === 'url' ? 'website link & domain archetype' : 'requirements & prompt'}...`);
-      await new Promise((r) => setTimeout(r, 600));
-
-      setStepMessage(`Synthesizing complete ${noun} (${type === 'website' ? 'Multi-page site with Header & Footer' : 'Responsive layout'})...`);
-      await new Promise((r) => setTimeout(r, 700));
+      if (geminiConnected) {
+        setStepMessage('Connecting to Google Gemini 2.0 Flash AI...');
+        await new Promise((r) => setTimeout(r, 400));
+        setStepMessage(`Gemini 2.0 Flash generating ${noun} copy, feature pillars, & layout...`);
+      } else {
+        setStepMessage(`Analyzing ${mode === 'url' ? 'website link & domain archetype' : 'requirements & prompt'}...`);
+        await new Promise((r) => setTimeout(r, 600));
+        setStepMessage(`Synthesizing complete ${noun} (${type === 'website' ? 'Multi-page site with Header & Footer' : 'Responsive layout'})...`);
+        await new Promise((r) => setTimeout(r, 700));
+      }
 
       setStepMessage('Configuring animations, rating blocks, and variables...');
       const combinedPrompt = mode === 'url' && urlNotes ? `${urlNotes}. ${prompt}`.trim() : prompt;
@@ -184,13 +210,26 @@ export const AiCreateModal: React.FC<AiCreateModalProps> = ({ initialType = 'web
           <X className="w-4 h-4" />
         </button>
 
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           <span className="p-2 rounded-xl bg-gradient-to-r from-amber-400 to-indigo-500 text-slate-950 shadow-md">
             <Sparkles className="w-4 h-4 fill-current" />
           </span>
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-white/15 text-amber-300 border border-white/20">
             AI Assistant Engine
           </span>
+          <button
+            type="button"
+            onClick={() => setShowKeyInput(!showKeyInput)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase cursor-pointer transition-all ${
+              geminiConnected
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/30'
+                : 'bg-amber-500/20 text-amber-200 border border-amber-400/40 hover:bg-amber-500/30'
+            }`}
+            title={geminiConnected ? 'Click to view or edit Gemini API key' : 'Click to connect your Google Gemini API key'}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${geminiConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            {geminiConnected ? '⚡ Gemini 2.0 Flash Active' : '⚡ Connect Gemini Key'}
+          </button>
         </div>
 
         <h2 id="ai-modal-title" className="text-xl sm:text-2xl font-bold">
@@ -199,6 +238,48 @@ export const AiCreateModal: React.FC<AiCreateModalProps> = ({ initialType = 'web
         <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-lg">
           Generate a publication-ready {noun} from a prompt, an existing website link, or a mockup screenshot.
         </p>
+
+        {/* Gemini API Key Configuration Drawer */}
+        {showKeyInput && (
+          <div className="mt-3 p-3 rounded-2xl bg-black/50 border border-white/20 backdrop-blur-md">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-amber-400" /> Google Gemini API Key
+              </span>
+              <span className="text-[10px] text-slate-400">
+                Powers live LLM synthesis & vision
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="password"
+                placeholder="Paste Gemini API key (AIzaSy...)"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-white/10 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <button
+                type="button"
+                onClick={handleSaveApiKey}
+                className="px-3 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer"
+              >
+                Save
+              </button>
+              {geminiConnected && (
+                <button
+                  type="button"
+                  onClick={handleRemoveApiKey}
+                  className="px-2.5 py-1.5 text-xs font-medium rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-500/30 text-rose-300 transition-colors cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-[10px] text-slate-400">
+              Key is stored in browser local storage for live generation, or can be set in <code className="text-amber-300 font-mono">.env</code> as <code className="text-amber-300 font-mono">VITE_GEMINI_API_KEY</code>.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Body Content - Scrollable between pinned Header and Footer */}
