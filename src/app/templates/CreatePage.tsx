@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Eye, Monitor, Plus, Search, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Eye, Monitor, Plus, Search, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
 import { MODULE_LIST, moduleNoun, MODULES } from '../../core/modules';
 import { PROJECT_TYPES, ProjectType } from '../../core/schema';
 import { DEVICE_WIDTHS, ProjectPreview } from '../../experience/ProjectPreview';
@@ -227,16 +227,27 @@ const ChooseModule: React.FC<{ onChoose: (type: ProjectType) => void }> = ({ onC
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 relative z-10">
+            <div className="flex flex-wrap items-center gap-2 relative z-10">
+              <button
+                type="button"
+                onClick={() => {
+                  setAiType('website');
+                  setIsAiOpen(true);
+                }}
+                className="py-2 px-3.5 rounded-xl bg-white hover:bg-indigo-50 text-indigo-950 font-bold text-xs transition-colors shadow-md flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600 fill-current" />
+                Generate Website
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   setAiType('page');
                   setIsAiOpen(true);
                 }}
-                className="py-2.5 px-4 rounded-xl bg-white hover:bg-indigo-50 text-indigo-950 font-bold text-xs transition-colors shadow-md flex items-center gap-1.5"
+                className="py-2 px-3.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-white font-bold text-xs border border-indigo-400/30 transition-colors shadow-md flex items-center gap-1.5"
               >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600 fill-current" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-current" />
                 Generate Page
               </button>
               <button
@@ -245,7 +256,7 @@ const ChooseModule: React.FC<{ onChoose: (type: ProjectType) => void }> = ({ onC
                   setAiType('tour');
                   setIsAiOpen(true);
                 }}
-                className="py-2.5 px-4 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold text-xs border border-indigo-400/30 transition-colors shadow-md flex items-center gap-1.5"
+                className="py-2 px-3.5 rounded-xl bg-purple-600/90 hover:bg-purple-600 text-white font-bold text-xs border border-purple-400/30 transition-colors shadow-md flex items-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-current" />
                 Generate Tour
@@ -309,8 +320,23 @@ const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
     <div className={pageClass}>
       <header className={headerClass}>
         <div className="flex items-center gap-2 min-w-0">
-          <Link to={ROUTES.module(type)} aria-label={`Back to ${module.plural}`} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-4 h-4" /></Link>
-          <span className="font-bold truncate">New {moduleNoun(type)}</span>
+          <Link to={ROUTES.create()} aria-label="Back to module selection" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-4 h-4" /></Link>
+          <span className="font-bold truncate hidden sm:inline">New {moduleNoun(type)}</span>
+          <div className="relative ml-1 sm:ml-2">
+            <select
+              aria-label="Change module"
+              value={type}
+              onChange={(e) => navigate(ROUTES.create(e.target.value as ProjectType))}
+              className="py-1 px-2.5 pr-7 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 appearance-none cursor-pointer focus:ring-1 focus:ring-indigo-500"
+            >
+              {MODULE_LIST.map((m) => (
+                <option key={m.type} value={m.type}>
+                  {m.label} ({moduleNoun(m.type)})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2 pointer-events-none" />
+          </div>
         </div>
         <CreateSteps current={1} />
         <span />
