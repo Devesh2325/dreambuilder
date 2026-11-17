@@ -24,7 +24,8 @@ export const Pagination: React.FC<PaginationProps> = ({
 }) => {
   const [jumpInput, setJumpInput] = useState('');
 
-  if (totalPages <= 1 && (!totalItems || totalItems <= pageSize)) {
+  // Only hide pagination when there are literally 0 items
+  if (totalItems === 0) {
     return null;
   }
 
@@ -59,12 +60,12 @@ export const Pagination: React.FC<PaginationProps> = ({
   };
 
   const navButtonClass =
-    'p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors';
+    'p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer';
 
   return (
     <div
       aria-label="Pagination Navigation"
-      className={`flex flex-wrap items-center justify-between gap-3 p-3.5 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 ${className}`}
+      className={`sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 ${className}`}
     >
       {/* 1. Item summary */}
       <div className="flex items-center gap-2">
@@ -136,7 +137,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                 onClick={() => onPageChange(p - 1)}
                 aria-label={`Page ${p}`}
                 aria-current={currentPage === p - 1 ? 'page' : undefined}
-                className={`min-w-[28px] h-7 px-2 rounded-lg text-xs font-semibold transition-colors ${
+                className={`min-w-[28px] h-7 px-2 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                   currentPage === p - 1
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -176,28 +177,27 @@ export const Pagination: React.FC<PaginationProps> = ({
         </button>
 
         {/* 3. Jump to page */}
-        {totalPages > 3 && (
-          <form onSubmit={handleJump} className="flex items-center gap-1 ml-2 pl-2 border-l border-slate-200 dark:border-slate-700">
-            <span className="text-slate-400">Go to:</span>
-            <input
-              type="number"
-              min={1}
-              max={totalPages}
-              placeholder="#"
-              value={jumpInput}
-              onChange={(e) => setJumpInput(e.target.value)}
-              aria-label="Jump to page"
-              className="w-12 h-7 px-1.5 text-center text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-            <button
-              type="submit"
-              disabled={!jumpInput.trim()}
-              className="h-7 px-2 text-xs font-bold rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/40 text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors disabled:opacity-40 cursor-pointer"
-            >
-              Jump
-            </button>
-          </form>
-        )}
+        <form onSubmit={handleJump} className="flex items-center gap-1 ml-2 pl-2 border-l border-slate-200 dark:border-slate-700">
+          <span className="text-slate-400">Go to:</span>
+          <input
+            type="number"
+            min={1}
+            max={Math.max(1, totalPages)}
+            placeholder="#"
+            value={jumpInput}
+            disabled={totalPages <= 1}
+            onChange={(e) => setJumpInput(e.target.value)}
+            aria-label="Jump to page"
+            className="w-12 h-7 px-1.5 text-center text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+          />
+          <button
+            type="submit"
+            disabled={totalPages <= 1 || !jumpInput.trim() || Number(jumpInput) < 1 || Number(jumpInput) > totalPages}
+            className="h-7 px-2 text-xs font-bold rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/40 text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+          >
+            Jump
+          </button>
+        </form>
       </div>
     </div>
   );
