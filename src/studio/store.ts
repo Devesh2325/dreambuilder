@@ -40,7 +40,7 @@ interface HistoryEntry {
   at: number;
 }
 
-export type StudioTool = 'edit' | 'variables' | 'add' | 'layers' | 'pages' | 'theme';
+export type StudioTool = 'edit' | 'variables' | 'add' | 'layers' | 'pages' | 'theme' | 'ai';
 export type SaveStatus = 'saved' | 'dirty' | 'saving' | 'conflict' | 'error';
 export type DragPayload =
   | { kind: 'block'; type: string }

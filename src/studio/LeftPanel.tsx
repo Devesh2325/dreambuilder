@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowUp, Braces, ChevronRight, CircleHelp, Eye, EyeOff, FileText, GripVertical, Layers, LucideIcon, PanelLeft, Palette, Pencil, Plus, Search, SlidersHorizontal, SquarePlus, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Braces, ChevronRight, CircleHelp, Eye, EyeOff, FileText, GripVertical, Layers, LucideIcon, PanelLeft, Palette, Pencil, Plus, Search, SlidersHorizontal, Sparkles, SquarePlus, Trash2, X } from 'lucide-react';
 import { DocContent, GLOBAL_FOOTER_SLUG, GLOBAL_HEADER_SLUG, ProjectType } from '../core/schema';
 import { Icon } from '../app/shared/Icon';
 import { MODULES } from '../core/modules';
@@ -7,6 +7,7 @@ import { BusyIcon, errorMessage } from '../app/shared/ui';
 import { pagesOf } from '../experience/SiteView';
 import { BLOCK_META, canContain } from '../renderer/blockMeta';
 import { ALL_THEMES } from '../templates/themes';
+import { AiCopilotPanel } from './AiCopilotPanel';
 import { ColorField, fieldClass, FontField, labelClass, slugFromTitle } from './fields';
 import { useEmbeddableProjects } from './ProjectField';
 import { SectionsPanel, usesSections } from './SectionsPanel';
@@ -489,6 +490,7 @@ const TOOL_HINTS: Partial<Record<StudioTool, string>> = {
   layers: 'Everything on this page, in order.',
   pages: 'Your pages, their addresses and search settings.',
   theme: 'Colors and fonts for the whole project.',
+  ai: 'Auto-fill content and generate sections with AI.',
 };
 
 const railDivider = <span role="presentation" className="w-8 my-1 border-t border-slate-200 dark:border-slate-700" />;
@@ -512,7 +514,10 @@ export const LeftPanel: React.FC<{ onStartTour?: () => void }> = ({ onStartTour 
       { id: 'layers', label: 'Layers', icon: Layers },
       ...(usesPages ? [{ id: 'pages' as StudioTool, label: 'Pages', icon: FileText }] : []),
     ],
-    [{ id: 'theme', label: 'Theme', icon: Palette }],
+    [
+      { id: 'theme', label: 'Theme', icon: Palette },
+      { id: 'ai', label: 'AI', icon: Sparkles },
+    ],
   ];
   const active = toolGroups.flat().find((item) => item.id === tool);
 
@@ -585,6 +590,7 @@ export const LeftPanel: React.FC<{ onStartTour?: () => void }> = ({ onStartTour 
             {tool === 'pages' && <PagesPanel />}
             {tool === 'variables' && <VariablesPanel />}
             {tool === 'theme' && <ThemePanel />}
+            {tool === 'ai' && <AiCopilotPanel />}
           </div>
         </div>
       )}

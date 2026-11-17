@@ -270,6 +270,20 @@ const Editor: React.FC = () => {
 
         <div data-tour="publish" className="flex items-center justify-end gap-2">
           <GoogleTranslateSelector variant="compact" />
+          {!readOnly && (
+            <button
+              type="button"
+              aria-label="AI Copilot"
+              title="AI Copilot: Auto-fill variables and generate sections"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white shadow-sm flex items-center gap-1.5 transition-all"
+              onClick={() => {
+                useStudio.getState().setTool('ai');
+              }}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-current" />
+              <span className="hidden xl:inline">AI Copilot</span>
+            </button>
+          )}
           {project.status === 'published' && project.slug && (
             <button
               type="button"

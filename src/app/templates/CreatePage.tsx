@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Eye, Monitor, Plus, Search, Smartphone, Tablet, X } from 'lucide-react';
+import { ArrowLeft, Eye, Monitor, Plus, Search, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
 import { MODULE_LIST, moduleNoun, MODULES } from '../../core/modules';
 import { PROJECT_TYPES, ProjectType } from '../../core/schema';
 import { DEVICE_WIDTHS, ProjectPreview } from '../../experience/ProjectPreview';
@@ -13,6 +13,7 @@ import { Icon } from '../shared/Icon';
 import { GLOBAL_LANGUAGES } from '../shared/GoogleTranslate';
 import { BusyLabel, ErrorNote, errorMessage, inputClass, primaryButton, secondaryButton } from '../shared/ui';
 import { useWorkspace } from '../workspace';
+import { AiCreateModal } from './AiCreateModal';
 import { CreateSteps } from './CreateSteps';
 import { LiveThumbnail } from './LiveThumbnail';
 
@@ -191,35 +192,88 @@ const pageClass = 'app-scroll h-screen flex flex-col overflow-hidden bg-slate-50
 const headerClass = 'h-14 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800';
 
 /** The first question when someone hasn't come from a module's own page. */
-const ChooseModule: React.FC<{ onChoose: (type: ProjectType) => void }> = ({ onChoose }) => (
-  <div className={pageClass}>
-    <header className={headerClass}>
-      <div className="flex items-center gap-2 min-w-0">
-        <Link to={ROUTES.home} aria-label="Back to the dashboard" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-4 h-4" /></Link>
-        <span className="font-bold truncate">Create new</span>
-      </div>
-      <CreateSteps current={1} />
-      <span />
-    </header>
-    <main className="relative flex-1 min-h-0 overflow-y-auto p-6">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold text-center">What do you want to create?</h1>
-        <p className="mt-1 mb-8 text-center text-slate-500 dark:text-slate-400">Choose one, and we'll show you its templates.</p>
-        <ul aria-label="What to create" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {MODULE_LIST.map((item) => (
-            <li key={item.type}>
-              <button type="button" onClick={() => onChoose(item.type)} className="w-full h-full p-5 text-left rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 hover:shadow-lg transition-all">
-                <span className="w-11 h-11 mb-3 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><Icon name={item.icon} className="w-5 h-5" /></span>
-                <span className="block font-semibold">{item.label}</span>
-                <span className="block mt-1 text-sm text-slate-500 dark:text-slate-400">{item.description}</span>
+const ChooseModule: React.FC<{ onChoose: (type: ProjectType) => void }> = ({ onChoose }) => {
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [aiType, setAiType] = useState<ProjectType>('page');
+
+  return (
+    <div className={pageClass}>
+      <header className={headerClass}>
+        <div className="flex items-center gap-2 min-w-0">
+          <Link to={ROUTES.home} aria-label="Back to the dashboard" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft className="w-4 h-4" /></Link>
+          <span className="font-bold truncate">Create new</span>
+        </div>
+        <CreateSteps current={1} />
+        <span />
+      </header>
+      <main className="relative flex-1 min-h-0 overflow-y-auto p-6">
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* AI Quick Launch Banner */}
+          <div className="p-6 rounded-3xl bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 text-white shadow-xl flex flex-wrap items-center justify-between gap-4 border border-indigo-500/30 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shrink-0">
+                <Sparkles className="w-6 h-6 text-slate-950 fill-current" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg text-white">Generate with AI in Seconds</h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    ✨ AI Powered
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1 max-w-xl">
+                  Give a natural language prompt, paste an existing website link, or drop a UI mockup screenshot. AI builds and publishes your experience instantly.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 relative z-10">
+              <button
+                type="button"
+                onClick={() => {
+                  setAiType('page');
+                  setIsAiOpen(true);
+                }}
+                className="py-2.5 px-4 rounded-xl bg-white hover:bg-indigo-50 text-indigo-950 font-bold text-xs transition-colors shadow-md flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600 fill-current" />
+                Generate Page
               </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </main>
-  </div>
-);
+              <button
+                type="button"
+                onClick={() => {
+                  setAiType('tour');
+                  setIsAiOpen(true);
+                }}
+                className="py-2.5 px-4 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold text-xs border border-indigo-400/30 transition-colors shadow-md flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-current" />
+                Generate Tour
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-bold text-center">What do you want to create?</h1>
+            <p className="mt-1 mb-8 text-center text-slate-500 dark:text-slate-400">Choose one, and we'll show you its templates.</p>
+            <ul aria-label="What to create" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {MODULE_LIST.map((item) => (
+                <li key={item.type}>
+                  <button type="button" onClick={() => onChoose(item.type)} className="w-full h-full p-5 text-left rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 hover:shadow-lg transition-all">
+                    <span className="w-11 h-11 mb-3 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><Icon name={item.icon} className="w-5 h-5" /></span>
+                    <span className="block font-semibold">{item.label}</span>
+                    <span className="block mt-1 text-sm text-slate-500 dark:text-slate-400">{item.description}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </main>
+      {isAiOpen && <AiCreateModal initialType={aiType} onClose={() => setIsAiOpen(false)} />}
+    </div>
+  );
+};
 
 /** One module's templates, with room to compare them. */
 const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
@@ -231,6 +285,7 @@ const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
   const [category, setCategory] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<TemplateDefinition | null>(null);
   const [isBlankOpen, setIsBlankOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
 
   const all = useMemo(() => [...team.templates.filter((t) => t.type === type), ...templatesFor(type)], [team.templates, type]);
   const categories = [...new Set(all.flatMap((t) => (t.category ? [t.category] : [])))];
@@ -285,13 +340,38 @@ const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
 
           <ul aria-label="Templates" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {can('create:project') && !term && !category && (
-              <li>
-                <button type="button" onClick={() => setIsBlankOpen(true)} className="w-full h-full min-h-[280px] flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
-                  <Plus className="w-7 h-7" aria-hidden="true" />
-                  <span className="font-semibold">Start blank</span>
-                  <span className="text-sm text-slate-500 dark:text-slate-400">Build it yourself in the editor</span>
-                </button>
-              </li>
+              <>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setIsAiOpen(true)}
+                    className="w-full h-full min-h-[280px] flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-indigo-500/70 dark:border-indigo-500/70 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-amber-500/10 hover:from-indigo-500/20 hover:to-purple-500/15 text-indigo-900 dark:text-indigo-200 transition-all shadow-sm hover:shadow-md group relative overflow-hidden text-center"
+                  >
+                    <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-gradient-to-r from-amber-400 to-indigo-500 text-slate-950 shadow-sm flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 fill-current" /> AI Magic
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                      <Sparkles className="w-6 h-6 fill-current text-amber-300" />
+                    </div>
+                    <div>
+                      <span className="block font-bold text-base text-slate-900 dark:text-white">Create with AI</span>
+                      <span className="block mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-[200px]">
+                        From prompt, site link, or mockup image
+                      </span>
+                    </div>
+                    <span className="mt-1 px-3 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-sm group-hover:bg-indigo-500 transition-colors">
+                      Build {moduleNoun(type)} →
+                    </span>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => setIsBlankOpen(true)} className="w-full h-full min-h-[280px] flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+                    <Plus className="w-7 h-7" aria-hidden="true" />
+                    <span className="font-semibold">Start blank</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">Build it yourself in the editor</span>
+                  </button>
+                </li>
+              </>
             )}
             {templates.map((template) => (
               <li key={template.id} className="group relative rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 hover:shadow-lg transition-all">
@@ -320,6 +400,7 @@ const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
 
       {previewing && <PreviewDialog template={previewing} onClose={() => setPreviewing(null)} onUse={() => use(previewing)} />}
       {isBlankOpen && <BlankDialog type={type} onClose={() => setIsBlankOpen(false)} />}
+      {isAiOpen && <AiCreateModal initialType={type} onClose={() => setIsAiOpen(false)} />}
     </div>
   );
 };
