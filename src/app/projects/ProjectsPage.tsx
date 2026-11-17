@@ -13,6 +13,7 @@ import { Icon } from '../shared/Icon';
 import { MODULE_COLORS } from '../shared/moduleColors';
 import { BusyIcon, cardClass, ErrorNote, errorMessage, inputClass, PageHeader, StatTile, TableSkeleton } from '../shared/ui';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { Pagination } from '../shared/Pagination';
 import { CreateButton } from '../templates/CreateButton';
 import { useWorkspace } from '../workspace';
 import { collectsResponses, MODULE_COLUMNS, ProjectRow } from './moduleColumns';
@@ -62,6 +63,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
   const [sort, setSort] = useState<SortKey>('updatedAt');
   const [descending, setDescending] = useState(true);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null);
 
   const query = useQuery({
@@ -106,9 +108,9 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
     }));
   }, [moduleProjects, search, status, sort, descending, details.data]);
 
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
-  const visibleRows = rows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  const visibleRows = rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const columns = MODULE_COLUMNS[type];
   const failure = duplicate.isError ? duplicate.error : remove.isError ? remove.error : null;
 
@@ -227,13 +229,17 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
               </table>
             </div>
 
-            {pageCount > 1 && (
-              <div className="flex items-center justify-end gap-2 p-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
-                Page {currentPage + 1} of {pageCount}
-                <button type="button" aria-label="Previous page" className={iconAction} disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronLeft className="w-4 h-4" /></button>
-                <button type="button" aria-label="Next page" className={iconAction} disabled={currentPage >= pageCount - 1} onClick={() => setPage(currentPage + 1)}><ChevronRight className="w-4 h-4" /></button>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pageCount}
+              totalItems={rows.length}
+              pageSize={pageSize}
+              onPageChange={(newPage) => setPage(newPage)}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(0);
+              }}
+            />
           </div>
         </>
       )}

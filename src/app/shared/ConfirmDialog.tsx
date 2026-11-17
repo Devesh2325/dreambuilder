@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Loader2, Trash2, X } from 'lucide-react';
 
 export interface ConfirmDialogProps {
@@ -26,51 +27,48 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onClose,
 }) => {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
+  // Listen for Escape key
   useEffect(() => {
-    if (isOpen) {
-      if (typeof dialogRef.current?.showModal === 'function') {
-        try {
-          if (!dialogRef.current.open) {
-            dialogRef.current.showModal();
-          }
-        } catch {
-          // ignore
-        }
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isPending) {
+        onClose();
       }
-    } else {
-      if (typeof dialogRef.current?.close === 'function') {
-        try {
-          dialogRef.current.close();
-        } catch {
-          // ignore
-        }
-      }
-    }
-  }, [isOpen]);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isPending, onClose]);
 
   if (!isOpen) return null;
 
   const isDanger = variant === 'danger';
 
-  return (
-    <dialog
-      ref={dialogRef}
-      open={isOpen}
-      onClose={onClose}
+  const modalContent = (
+    <div
+      role="dialog"
+      aria-modal="true"
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-desc"
-      className="p-0 rounded-2xl w-full max-w-md mx-auto my-auto bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xl border border-slate-200 dark:border-slate-800 backdrop:bg-slate-950/70 overflow-hidden outline-none animate-in fade-in zoom-in-95 duration-150"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isPending) {
+          onClose();
+        }
+      }}
     >
-      <div className="relative p-6">
+      <div
+        className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xl border border-slate-200 dark:border-slate-800 p-6 overflow-hidden animate-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
           disabled={isPending}
           aria-label="Close dialog"
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
@@ -137,6 +135,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
         </div>
       </div>
-    </dialog>
+    </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
