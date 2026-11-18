@@ -13,6 +13,7 @@ import { cardClass, DashboardSkeleton, ErrorNote, secondaryButton, StatTile } fr
 import { StatusBadge } from '../projects/ProjectsPage';
 import { CreateButton } from '../templates/CreateButton';
 import { AppTour, useAppTour } from '../tours/AppTour';
+import { CompanyOnboardingModal } from '../workspace/CompanyOnboardingModal';
 import { useWorkspace } from '../workspace';
 
 const guideKey = (organizationId: string) => `fp_guide_dismissed_${organizationId}`;
@@ -92,6 +93,15 @@ export const DashboardPage: React.FC = () => {
   // Read on every render, because the workspace isn't known yet on the first one.
   const [justDismissed, setJustDismissed] = useState(false);
   const isDismissed = justDismissed || readDismissed(organizationId);
+
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => {
+    try {
+      if (!organizationId) return false;
+      return localStorage.getItem(`fp_onboarded_${organizationId}`) !== '1';
+    } catch {
+      return false;
+    }
+  });
 
   const list = useQuery({ queryKey: ['projects', organizationId], queryFn: () => projects.list(organizationId!), enabled: Boolean(organizationId) });
   const responses = useQuery({ queryKey: ['project-details-responses', organizationId], queryFn: () => forms.countByProject(organizationId!), enabled: Boolean(organizationId) });
@@ -276,6 +286,16 @@ export const DashboardPage: React.FC = () => {
           </div>
         </>
       )}
+
+      <CompanyOnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={() => {
+          if (organizationId) {
+            localStorage.setItem(`fp_onboarded_${organizationId}`, '1');
+          }
+          setIsOnboardingOpen(false);
+        }}
+      />
     </div>
   );
 };
