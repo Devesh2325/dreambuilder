@@ -53,14 +53,14 @@ const DEFAULT_WAIT_SECONDS = 2.5;
 const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: PlayerHost; settings: TourSettings }> = ({ tree, ctxBase, host, settings }) => {
   const steps = tree.children.filter((child) => child.type === 'TourStep');
   const [index, setIndex] = useState(() => Math.min(host.initialStep ?? 0, Math.max(steps.length - 1, 0)));
-  const [targetRect, setTargetRect] = useState<Rect | null>(null);
-  const [position, setPosition] = useState<{ top: number; left: number; side?: Placement; caret?: number } | null>(null);
-  const [isCentered, setIsCentered] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const directionRef = useRef(1);
   const step = steps[index];
   const layout = (step?.props.layout as string) || 'tooltip';
   const usesTarget = layout === 'tooltip';
+  const [targetRect, setTargetRect] = useState<Rect | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; side?: Placement; caret?: number } | null>(null);
+  const [isCentered, setIsCentered] = useState(() => Boolean(host.standalone || layout === 'modal' || !usesTarget || !step?.props.selector));
+  const cardRef = useRef<HTMLDivElement>(null);
+  const directionRef = useRef(1);
   const view = host.targetDocument.defaultView ?? window;
 
   const finish = useCallback((reason: 'closed' | 'completed') => {
@@ -209,9 +209,9 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
 
   if (!step || !isOnPage) return null;
 
-  const pad = settings.highlightPadding ?? 6;
+  const pad = settings.highlightPadding ?? 8;
   const dims = step.props.spotlight !== false && layout !== 'slideout';
-  const shade = `rgba(15,23,42,${Math.max(0, Math.min(90, settings.backdrop ?? 55)) / 100})`;
+  const shade = `rgba(15,23,42,${Math.max(0, Math.min(90, settings.backdrop ?? 40)) / 100})`;
   const usesPage = step.props.advance === 'target' || step.props.allowInteraction === true || !dims;
   // The arrow follows the side the step really ended up on, which can differ near an edge.
   const shown: RenderNode = {
@@ -243,9 +243,10 @@ const TourPlayer: React.FC<{ tree: RenderNode; ctxBase: RenderContext; host: Pla
             left: targetRect.left - pad,
             width: targetRect.width + pad * 2,
             height: targetRect.height + pad * 2,
-            borderRadius: 8,
+            borderRadius: 10,
             pointerEvents: 'none',
-            boxShadow: dims ? `0 0 0 9999px ${shade}` : '0 0 0 3px var(--fp-primary)',
+            boxShadow: dims ? `0 0 0 9999px ${shade}, 0 0 20px rgba(99,102,241,0.45)` : '0 0 0 3px var(--fp-primary), 0 0 16px rgba(99,102,241,0.35)',
+            transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         />
       )}

@@ -40,36 +40,93 @@
     return parts.join(' > ');
   }
 
-  // Elevates clicks on tiny sub-elements (like <svg>, <path>, <span>) to their parent interactive button or link
-  function getSmartTarget(element) {
+  // Selection mode: 'smart' (auto-snaps to cards, buttons, widgets), 'section' (snaps to section/grid), 'exact' (leaf node)
+  let selectionMode = 'smart';
+
+  // Elevates clicks on tiny sub-elements (like <svg>, <path>, <span>, <p>) to their parent interactive button or card
+  function getSmartTarget(element, mode = selectionMode) {
     if (!element || element.nodeType !== 1) return element;
-    const tag = element.tagName.toLowerCase();
-    if (['svg', 'path', 'g', 'circle', 'rect', 'line', 'polygon', 'polyline', 'span', 'i', 'b', 'strong', 'em', 'img'].includes(tag)) {
-      const interactive = element.closest('button, a, input, select, textarea, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [data-tour], [data-testid], .btn, .button, nav');
-      if (interactive) return interactive;
+
+    // 1. Exact mode returns verbatim hovered element
+    if (mode === 'exact') return element;
+
+    // 2. Section mode snaps to larger structural containers
+    if (mode === 'section') {
+      const section = element.closest('section, main, header, footer, nav, aside, [role="region"], [role="main"], [role="navigation"], [class*="section"], [class*="container"], [class*="grid"], [class*="row"], [class*="layout"]');
+      if (section && section !== document.body && section !== document.documentElement) return section;
+      return element;
     }
+
+    // 3. Smart mode (default):
+    // First, direct interactive controls (buttons, links, inputs, dropdowns)
+    const interactive = element.closest('button, a, input, select, textarea, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [data-tour], [data-testid], .btn, .button');
+    if (interactive) return interactive;
+
+    // Second, metric / stat / KPI card containers (e.g. "Pending Bilty's", stat tiles, dashboard widgets)
+    const card = element.closest(
+      '[class*="card"], [class*="stat"], [class*="tile"], [class*="metric"], [class*="kpi"], [class*="widget"], [class*="box"], [class*="panel"], [class*="summary"], [class*="item"], [role="region"], [role="article"], article'
+    );
+    if (card && card !== document.body && card !== document.documentElement) {
+      const r = card.getBoundingClientRect();
+      // Snap to card if it's a reasonably sized card/tile (between 50px and 900px wide)
+      if (r.width >= 50 && r.height >= 30 && r.width <= 900 && r.height <= 700) {
+        return card;
+      }
+    }
+
+    // Third, inner text / icon / badge elevation to parent container
+    const tag = element.tagName.toLowerCase();
+    if (['svg', 'path', 'g', 'circle', 'rect', 'line', 'polygon', 'polyline', 'span', 'i', 'b', 'strong', 'em', 'small', 'img', 'p', 'label'].includes(tag)) {
+      if (element.parentElement && element.parentElement !== document.body && element.parentElement !== document.documentElement) {
+        const pr = element.parentElement.getBoundingClientRect();
+        if (pr.width >= 30 && pr.height >= 20 && pr.width <= 750 && pr.height <= 500) {
+          return element.parentElement;
+        }
+      }
+    }
+
     return element;
   }
 
-  // Human-friendly description for badge display
+  // Human-friendly description for badge display & default step title
   function describeElement(el) {
-    if (!el) return { kind: 'Element', text: 'Element', quality: 'standard' };
+    if (!el || el.nodeType !== 1) {
+      return { kind: 'Element', label: 'Element', cleanTitle: 'Step', quality: 'standard', selector: '' };
+    }
     const tag = el.tagName.toLowerCase();
-    const role = el.getAttribute('role');
+    const role = el.getAttribute('role') || '';
     const aria = el.getAttribute('aria-label');
     const title = el.getAttribute('title');
     const ph = el.getAttribute('placeholder');
-    const raw = (aria || title || ph || el.innerText || el.getAttribute('name') || '').trim().replace(/\s+/g, ' ').slice(0, 32);
+    const cls = (el.className || '').toString().toLowerCase();
 
+    // Determine semantic kind
     let kind = 'Element';
-    if (tag === 'button' || role === 'button') kind = 'Button';
+    if (tag === 'button' || role === 'button' || cls.includes('btn') || cls.includes('button')) kind = 'Button';
     else if (tag === 'a' || role === 'link') kind = 'Link';
-    else if (tag === 'input') kind = el.type === 'submit' ? 'Submit Button' : `${el.type || 'Text'} Field`;
+    else if (tag === 'input') kind = el.type === 'submit' ? 'Submit Button' : `${el.type || 'Text'} Input`;
     else if (tag === 'select') kind = 'Dropdown';
+    else if (tag === 'nav' || role === 'navigation') kind = 'Nav Bar';
+    else if (tag === 'header') kind = 'Header';
+    else if (tag === 'aside' || cls.includes('sidebar')) kind = 'Sidebar';
+    else if (tag === 'section' || cls.includes('section')) kind = 'Section';
+    else if (cls.includes('card') || cls.includes('stat') || cls.includes('metric') || cls.includes('tile') || cls.includes('kpi') || cls.includes('widget') || cls.includes('box')) kind = 'Card / Widget';
     else if (/^h[1-6]$/.test(tag)) kind = 'Heading';
-    else if (tag === 'nav') kind = 'Nav Bar';
-    else if (tag === 'img') kind = 'Image';
-    else if (el.id?.toLowerCase().includes('profile') || el.className?.toString().toLowerCase().includes('avatar')) kind = 'Profile';
+    else if (cls.includes('profile') || cls.includes('avatar') || el.id?.toLowerCase().includes('profile')) kind = 'Profile';
+    else if (cls.includes('table') || tag === 'table') kind = 'Table';
+
+    // Extract smart clean title from inside card or element
+    let cleanTitle = '';
+    if (kind === 'Card / Widget' || kind === 'Section') {
+      const heading = el.querySelector('h1, h2, h3, h4, h5, h6, [class*="title"], [class*="label"], [class*="name"], strong, b');
+      if (heading) {
+        cleanTitle = (heading.innerText || '').trim().replace(/\s+/g, ' ');
+      }
+    }
+    if (!cleanTitle) {
+      cleanTitle = (aria || title || ph || el.innerText || el.getAttribute('name') || '').trim().replace(/\s+/g, ' ');
+    }
+    cleanTitle = cleanTitle.slice(0, 32);
 
     const hasTestId = el.hasAttribute('data-testid') || el.hasAttribute('data-tour');
     const hasId = el.id && !/\d{3,}/.test(el.id);
@@ -77,7 +134,8 @@
 
     return {
       kind,
-      label: raw ? `${kind}: "${raw}"` : kind,
+      label: cleanTitle ? `${kind}: "${cleanTitle}"` : kind,
+      cleanTitle: cleanTitle || `${kind} Step`,
       quality,
       selector: selectorFor(el),
     };
@@ -125,9 +183,9 @@
         position: fixed;
         pointer-events: none;
         border: 2px solid #6366f1;
-        background: rgba(99, 102, 241, 0.16);
-        border-radius: 6px;
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 4px 24px rgba(79, 70, 229, 0.35);
+        background: rgba(99, 102, 241, 0.12);
+        border-radius: 8px;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 0 18px rgba(99, 102, 241, 0.45);
         transition: all 0.08s ease-out;
         z-index: 2147483640;
         display: none;
@@ -135,21 +193,39 @@
 
       .fp-badge {
         position: absolute;
-        top: -30px;
+        top: -32px;
         left: 0;
         background: #0f172a;
         color: #e2e8f0;
         font-size: 11px;
         font-weight: 600;
-        padding: 3px 10px;
+        padding: 4px 10px;
         border-radius: 6px;
         border: 1px solid #4338ca;
         white-space: nowrap;
         pointer-events: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        box-shadow: 0 4px 14px rgba(0,0,0,0.45);
         display: flex;
         align-items: center;
         gap: 6px;
+      }
+
+      .fp-badge-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 6px;
+        border-left: 1px solid rgba(255, 255, 255, 0.2);
+        padding-left: 6px;
+      }
+
+      .fp-key-pill {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.15);
+        color: #cbd5e1;
       }
 
       .fp-quality-pill {
@@ -182,6 +258,38 @@
         border: 1px solid rgba(255, 255, 255, 0.18);
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.3);
         backdrop-filter: blur(16px);
+      }
+
+      .fp-mode-group {
+        display: flex;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        gap: 2px;
+      }
+
+      .fp-mode-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .fp-mode-btn:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .fp-mode-btn.active {
+        background: #4f46e5;
+        color: #fff;
+        box-shadow: 0 1px 6px rgba(79, 70, 229, 0.4);
       }
 
       .fp-brand {
@@ -408,19 +516,23 @@
       .fp-player-scrim {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.65);
+        background: transparent;
         z-index: 2147483644;
         pointer-events: auto;
       }
 
       .fp-player-spotlight {
         position: fixed;
-        border: 2px solid #818cf8;
-        border-radius: 8px;
-        box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.65), 0 0 25px rgba(99, 102, 241, 0.8);
+        border: 2px solid #6366f1;
+        border-radius: 12px;
+        box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.38), 0 0 24px rgba(99, 102, 241, 0.55);
         z-index: 2147483645;
         pointer-events: none;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .fp-player-spotlight.fp-dim-off {
+        box-shadow: 0 0 0 2px #818cf8, 0 0 20px rgba(99, 102, 241, 0.4);
       }
 
       .fp-player-card {
@@ -505,6 +617,39 @@
   // 3. VISUAL RECORDING & INLINE STEP EDITOR
   // =========================================================================
 
+  let hoveredRaw = null;
+  let hierarchyStack = [];
+
+  function renderHighlight(target) {
+    if (!target || !target.getBoundingClientRect || !highlightBox || !tagBadge) return;
+    const rect = target.getBoundingClientRect();
+    const desc = describeElement(target);
+
+    highlightBox.style.display = 'block';
+    highlightBox.style.top = `${rect.top}px`;
+    highlightBox.style.left = `${rect.left}px`;
+    highlightBox.style.width = `${rect.width}px`;
+    highlightBox.style.height = `${rect.height}px`;
+
+    // Position badge above or below depending on available space
+    if (rect.top < 36) {
+      tagBadge.style.top = 'auto';
+      tagBadge.style.bottom = '-34px';
+    } else {
+      tagBadge.style.top = '-34px';
+      tagBadge.style.bottom = 'auto';
+    }
+
+    tagBadge.innerHTML = `
+      <span>${desc.label}</span>
+      <span class="fp-quality-pill">${desc.quality}</span>
+      <div class="fp-badge-nav">
+        <span class="fp-key-pill" title="Press Up Arrow to expand to parent section">↑ Parent</span>
+        <span class="fp-key-pill" title="Press Enter or Click to pick this element">↵ Pick</span>
+      </div>
+    `;
+  }
+
   function renderToolbar() {
     if (!toolbar) return;
 
@@ -513,6 +658,13 @@
         <div class="fp-logo-icon">FP</div>
         <span>${isPaused ? 'Navigate Mode' : 'Recording'}</span>
       </div>
+
+      <div class="fp-mode-group" title="Target Selection Mode (Hotkeys: 1, 2, 3)">
+        <button class="fp-mode-btn ${selectionMode === 'smart' ? 'active' : ''}" data-mode="smart" title="Auto-snaps to entire cards, widgets and buttons (Press 1)">🎯 Card Snap</button>
+        <button class="fp-mode-btn ${selectionMode === 'section' ? 'active' : ''}" data-mode="section" title="Snaps to large section / container grids (Press 2)">📦 Section</button>
+        <button class="fp-mode-btn ${selectionMode === 'exact' ? 'active' : ''}" data-mode="exact" title="Select exact hovered leaf element (Press 3)">🔍 Exact</button>
+      </div>
+
       <span class="fp-counter">${steps.length} step${steps.length === 1 ? '' : 's'}</span>
       <button class="fp-btn" id="fp-tb-toggle-mode">
         <span>${isPaused ? '🎯 Click to Add Steps' : '🧭 Use / Navigate App'}</span>
@@ -527,6 +679,19 @@
       </button>
       <button class="fp-btn danger" id="fp-tb-close" title="Exit recording">✕</button>
     `;
+
+    shadowRoot.querySelectorAll('.fp-mode-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectionMode = btn.dataset.mode;
+        renderToolbar();
+        if (hoveredRaw) {
+          activeElement = getSmartTarget(hoveredRaw, selectionMode);
+          hierarchyStack = [];
+          renderHighlight(activeElement);
+        }
+      });
+    });
 
     shadowRoot.getElementById('fp-tb-toggle-mode')?.addEventListener('click', () => {
       isPaused = !isPaused;
@@ -554,22 +719,12 @@
     const raw = e.target;
     if (!raw || raw === hostEl || hostEl?.contains(raw)) return;
 
-    const target = getSmartTarget(raw);
+    hoveredRaw = raw;
+    const target = getSmartTarget(raw, selectionMode);
     activeElement = target;
+    hierarchyStack = [];
 
-    const rect = target.getBoundingClientRect();
-    const desc = describeElement(target);
-
-    highlightBox.style.display = 'block';
-    highlightBox.style.top = `${rect.top}px`;
-    highlightBox.style.left = `${rect.left}px`;
-    highlightBox.style.width = `${rect.width}px`;
-    highlightBox.style.height = `${rect.height}px`;
-
-    tagBadge.innerHTML = `
-      <span>${desc.label}</span>
-      <span class="fp-quality-pill">${desc.quality}</span>
-    `;
+    renderHighlight(target);
   }
 
   function handleClick(e) {
@@ -581,7 +736,7 @@
     e.preventDefault();
     e.stopPropagation();
 
-    const target = getSmartTarget(raw);
+    const target = activeElement || getSmartTarget(raw, selectionMode);
     activeElement = target;
 
     openInlineStepEditor(target);
@@ -592,17 +747,17 @@
     if (!inlineEditorContainer) return;
 
     const desc = describeElement(target);
-    const rect = target.getBoundingClientRect();
     let currentPlacement = 'bottom';
     let targetEl = target;
+    let localHierarchy = [];
 
     // Calculate position
     const updateEditorPosition = (side) => {
       currentPlacement = side;
       const editor = shadowRoot.querySelector('.fp-inline-tooltip');
-      if (!editor) return;
+      if (!editor || !targetEl || !targetEl.getBoundingClientRect) return;
 
-      const edRect = editor.getBoundingClientRect();
+      const rect = targetEl.getBoundingClientRect();
       const edWidth = 320;
       const edHeight = 220;
       const gap = 12;
@@ -633,7 +788,7 @@
       });
     };
 
-    const initialTitle = desc.fullText || `${desc.kind} Step`;
+    const initialTitle = desc.cleanTitle || `${desc.kind} Step`;
 
     inlineEditorContainer.innerHTML = `
       <div class="fp-inline-tooltip">
@@ -654,8 +809,8 @@
           </div>
 
           <div class="fp-target-adjust">
-            <button class="fp-btn-adjust" id="fp-ed-parent" title="Select parent container">▲ Parent</button>
-            <button class="fp-btn-adjust" id="fp-ed-child" title="Select child element">▼ Child</button>
+            <button class="fp-btn-adjust" id="fp-ed-parent" title="Expand to parent section container">▲ Parent</button>
+            <button class="fp-btn-adjust" id="fp-ed-child" title="Shrink to inner element">▼ Child</button>
           </div>
         </div>
 
@@ -688,8 +843,37 @@
     // Parent target adjustment
     shadowRoot.getElementById('fp-ed-parent')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (targetEl.parentElement && targetEl.parentElement !== document.body) {
+      if (targetEl.parentElement && targetEl.parentElement !== document.body && targetEl.parentElement !== document.documentElement) {
+        localHierarchy.push(targetEl);
         targetEl = targetEl.parentElement;
+        const newDesc = describeElement(targetEl);
+        renderHighlight(targetEl);
+        updateEditorPosition(currentPlacement);
+
+        if (titleInput && (!titleInput.value || titleInput.value === initialTitle)) {
+          titleInput.value = newDesc.cleanTitle || `${newDesc.kind} Step`;
+        }
+        const badge = shadowRoot.querySelector('.fp-tooltip-badge');
+        if (badge) badge.textContent = `✨ Step #${steps.length + 1}: ${newDesc.kind}`;
+      }
+    });
+
+    // Child target adjustment
+    shadowRoot.getElementById('fp-ed-child')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (localHierarchy.length > 0) {
+        targetEl = localHierarchy.pop();
+        const newDesc = describeElement(targetEl);
+        renderHighlight(targetEl);
+        updateEditorPosition(currentPlacement);
+
+        if (titleInput) {
+          titleInput.value = newDesc.cleanTitle || `${newDesc.kind} Step`;
+        }
+        const badge = shadowRoot.querySelector('.fp-tooltip-badge');
+        if (badge) badge.textContent = `✨ Step #${steps.length + 1}: ${newDesc.kind}`;
+      }
+    });
         const newDesc = describeElement(targetEl);
         const newRect = targetEl.getBoundingClientRect();
         highlightBox.style.top = `${newRect.top}px`;
@@ -754,6 +938,7 @@
 
     let currentStepIdx = 0;
     const totalSteps = tour.steps.length;
+    let dimEnabled = true;
 
     // Build spotlight + card container
     livePlayerContainer.innerHTML = `
@@ -761,7 +946,10 @@
       <div class="fp-player-spotlight" id="fp-spotlight"></div>
       <div class="fp-player-card" id="fp-card">
         <div class="fp-player-top">
-          <span class="fp-counter">${tour.title || 'Tour'}</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="fp-counter">${tour.title || 'Tour'}</span>
+            <button class="fp-btn-adjust" id="fp-player-dim-toggle" title="Toggle backdrop dimming" style="font-size:11px;padding:2px 8px;border-radius:6px;cursor:pointer;">💡 Dim: On</button>
+          </div>
           <button class="fp-tooltip-close" id="fp-player-close">✕</button>
         </div>
         <h3 class="fp-player-title" id="fp-player-headline">Step Title</h3>
@@ -785,6 +973,14 @@
     const prevBtn = shadowRoot.getElementById('fp-player-prev');
     const nextBtn = shadowRoot.getElementById('fp-player-next');
     const closeBtn = shadowRoot.getElementById('fp-player-close');
+    const dimToggleBtn = shadowRoot.getElementById('fp-player-dim-toggle');
+
+    dimToggleBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dimEnabled = !dimEnabled;
+      spotlight.classList.toggle('fp-dim-off', !dimEnabled);
+      if (dimToggleBtn) dimToggleBtn.textContent = dimEnabled ? '💡 Dim: On' : '💡 Dim: Off';
+    });
 
     function renderStep(idx) {
       if (idx < 0 || idx >= totalSteps) {
@@ -801,6 +997,8 @@
 
       prevBtn.style.display = idx === 0 ? 'none' : 'inline-flex';
       nextBtn.textContent = idx === totalSteps - 1 ? '🎉 Finish Tour' : 'Next Step →';
+
+      spotlight.classList.toggle('fp-dim-off', !dimEnabled);
 
       // Find target element
       let el = null;
@@ -914,14 +1112,77 @@
 
   function handleKeyDown(e) {
     if (!isRecording) return;
-    if (e.key === 'Escape') {
-      if (inlineEditorContainer?.innerHTML) {
+
+    // If inline tooltip editor is active, Escape cancels it
+    if (inlineEditorContainer?.innerHTML) {
+      if (e.key === 'Escape') {
         inlineEditorContainer.innerHTML = '';
-      } else {
-        isPaused = !isPaused;
-        if (highlightBox) highlightBox.style.display = 'none';
-        renderToolbar();
-        notifyState();
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      isPaused = !isPaused;
+      if (highlightBox) highlightBox.style.display = 'none';
+      renderToolbar();
+      notifyState();
+      return;
+    }
+
+    // Expand to parent container on ArrowUp or 'w' / 'W'
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+      if (activeElement && activeElement.parentElement && activeElement.parentElement !== document.body && activeElement.parentElement !== document.documentElement) {
+        e.preventDefault();
+        hierarchyStack.push(activeElement);
+        activeElement = activeElement.parentElement;
+        renderHighlight(activeElement);
+      }
+      return;
+    }
+
+    // Shrink to child on ArrowDown or 's' / 'S'
+    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+      if (hierarchyStack.length > 0) {
+        e.preventDefault();
+        activeElement = hierarchyStack.pop();
+        renderHighlight(activeElement);
+      }
+      return;
+    }
+
+    // Pick and open editor on Enter or Space
+    if (e.key === 'Enter' || e.key === ' ') {
+      if (activeElement && !isPaused) {
+        e.preventDefault();
+        openInlineStepEditor(activeElement);
+      }
+      return;
+    }
+
+    // Selection mode quick hotkeys (1: Smart Card, 2: Section, 3: Exact)
+    if (e.key === '1') {
+      selectionMode = 'smart';
+      renderToolbar();
+      if (hoveredRaw) {
+        activeElement = getSmartTarget(hoveredRaw, selectionMode);
+        hierarchyStack = [];
+        renderHighlight(activeElement);
+      }
+    } else if (e.key === '2') {
+      selectionMode = 'section';
+      renderToolbar();
+      if (hoveredRaw) {
+        activeElement = getSmartTarget(hoveredRaw, selectionMode);
+        hierarchyStack = [];
+        renderHighlight(activeElement);
+      }
+    } else if (e.key === '3') {
+      selectionMode = 'exact';
+      renderToolbar();
+      if (hoveredRaw) {
+        activeElement = getSmartTarget(hoveredRaw, selectionMode);
+        hierarchyStack = [];
+        renderHighlight(activeElement);
       }
     }
   }
