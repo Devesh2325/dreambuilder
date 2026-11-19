@@ -1,10 +1,14 @@
-// FlowPilot Tour Builder - Content Script
-// Visual element picker and step recorder with isolated Shadow DOM UI
+// FlowPilot Tour Builder & Live Player - Content Script
+// Visual element picker, smart target resolver, inline tooltip editor & on-page tour player
+// Uses an isolated Shadow DOM container (#fp-extension-root) so host CSS never interferes.
 
 (function () {
-  // Prevent duplicate injection
   if (window.__flowpilot_extension_injected) return;
   window.__flowpilot_extension_injected = true;
+
+  // =========================================================================
+  // 1. SELECTOR ENGINE & SMART TARGET ELEVATION
+  // =========================================================================
 
   // Exact selector builder from FlowPilot core (tourPosition.ts)
   function selectorFor(element) {
@@ -36,12 +40,57 @@
     return parts.join(' > ');
   }
 
-  // State
+  // Elevates clicks on tiny sub-elements (like <svg>, <path>, <span>) to their parent interactive button or link
+  function getSmartTarget(element) {
+    if (!element || element.nodeType !== 1) return element;
+    const tag = element.tagName.toLowerCase();
+    if (['svg', 'path', 'g', 'circle', 'rect', 'line', 'polygon', 'polyline', 'span', 'i', 'b', 'strong', 'em', 'img'].includes(tag)) {
+      const interactive = element.closest('button, a, input, select, textarea, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [data-tour], [data-testid], .btn, .button, nav');
+      if (interactive) return interactive;
+    }
+    return element;
+  }
+
+  // Human-friendly description for badge display
+  function describeElement(el) {
+    if (!el) return { kind: 'Element', text: 'Element', quality: 'standard' };
+    const tag = el.tagName.toLowerCase();
+    const role = el.getAttribute('role');
+    const aria = el.getAttribute('aria-label');
+    const title = el.getAttribute('title');
+    const ph = el.getAttribute('placeholder');
+    const raw = (aria || title || ph || el.innerText || el.getAttribute('name') || '').trim().replace(/\s+/g, ' ').slice(0, 32);
+
+    let kind = 'Element';
+    if (tag === 'button' || role === 'button') kind = 'Button';
+    else if (tag === 'a' || role === 'link') kind = 'Link';
+    else if (tag === 'input') kind = el.type === 'submit' ? 'Submit Button' : `${el.type || 'Text'} Field`;
+    else if (tag === 'select') kind = 'Dropdown';
+    else if (/^h[1-6]$/.test(tag)) kind = 'Heading';
+    else if (tag === 'nav') kind = 'Nav Bar';
+    else if (tag === 'img') kind = 'Image';
+    else if (el.id?.toLowerCase().includes('profile') || el.className?.toString().toLowerCase().includes('avatar')) kind = 'Profile';
+
+    const hasTestId = el.hasAttribute('data-testid') || el.hasAttribute('data-tour');
+    const hasId = el.id && !/\d{3,}/.test(el.id);
+    const quality = hasTestId ? '🟢 TestID' : hasId ? '🟢 ID' : aria ? '🟢 ARIA' : '🟡 Class';
+
+    return {
+      kind,
+      label: raw ? `${kind}: "${raw}"` : kind,
+      quality,
+      selector: selectorFor(el),
+    };
+  }
+
+  // =========================================================================
+  // 2. STATE & SHADOW DOM CONTAINER
+  // =========================================================================
   let isRecording = false;
   let isPaused = false;
   let steps = [];
-  let hoveredElement = null;
-  let toolbarMinimized = false;
+  let currentTourTitle = 'App Onboarding Tour';
+  let activeElement = null;
   let hostEl = null;
   let shadowRoot = null;
 
@@ -49,9 +98,9 @@
   let highlightBox = null;
   let tagBadge = null;
   let toolbar = null;
-  let modalContainer = null;
+  let inlineEditorContainer = null;
+  let livePlayerContainer = null;
 
-  // Initialize Shadow DOM root
   function ensureShadowRoot() {
     if (hostEl && shadowRoot) return;
 
@@ -62,7 +111,6 @@
 
     shadowRoot = hostEl.attachShadow({ mode: 'open' });
 
-    // Injected styles inside Shadow DOM
     const style = document.createElement('style');
     style.textContent = `
       * {
@@ -72,13 +120,14 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       }
 
+      /* Hover Highlight */
       .fp-highlight {
         position: fixed;
         pointer-events: none;
         border: 2px solid #6366f1;
         background: rgba(99, 102, 241, 0.16);
-        border-radius: 4px;
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 4px 20px rgba(79, 70, 229, 0.35);
+        border-radius: 6px;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 4px 24px rgba(79, 70, 229, 0.35);
         transition: all 0.08s ease-out;
         z-index: 2147483640;
         display: none;
@@ -86,23 +135,36 @@
 
       .fp-badge {
         position: absolute;
-        top: -26px;
+        top: -30px;
         left: 0;
-        background: #1e1b4b;
-        color: #e0e7ff;
+        background: #0f172a;
+        color: #e2e8f0;
         font-size: 11px;
         font-weight: 600;
-        padding: 2px 8px;
-        border-radius: 4px;
+        padding: 3px 10px;
+        border-radius: 6px;
         border: 1px solid #4338ca;
         white-space: nowrap;
         pointer-events: none;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
 
+      .fp-quality-pill {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: rgba(99, 102, 241, 0.25);
+        color: #a5b4fc;
+      }
+
+      /* Floating Bottom Toolbar */
       .fp-toolbar-wrap {
         position: fixed;
-        bottom: 20px;
+        bottom: 24px;
         left: 50%;
         transform: translateX(-50%);
         z-index: 2147483647;
@@ -115,28 +177,28 @@
         gap: 10px;
         background: #0f172a;
         color: #f8fafc;
-        padding: 8px 12px;
+        padding: 8px 14px;
         border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.2);
-        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.3);
+        backdrop-filter: blur(16px);
       }
 
       .fp-brand {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 7px;
         font-size: 13px;
         font-weight: 700;
         color: #fff;
-        padding-right: 8px;
-        border-right: 1px solid rgba(255, 255, 255, 0.15);
+        padding-right: 10px;
+        border-right: 1px solid rgba(255, 255, 255, 0.18);
       }
 
       .fp-logo-icon {
-        width: 18px;
-        height: 18px;
-        border-radius: 4px;
+        width: 20px;
+        height: 20px;
+        border-radius: 5px;
         background: linear-gradient(135deg, #4f46e5, #9333ea);
         display: flex;
         align-items: center;
@@ -146,25 +208,12 @@
         font-weight: 900;
       }
 
-      .fp-status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #22c55e;
-        box-shadow: 0 0 8px #22c55e;
-      }
-
-      .fp-status-dot.paused {
-        background: #f59e0b;
-        box-shadow: 0 0 8px #f59e0b;
-      }
-
       .fp-counter {
-        background: rgba(99, 102, 241, 0.2);
-        color: #a5b4fc;
+        background: rgba(99, 102, 241, 0.25);
+        color: #c7d2fe;
         font-size: 12px;
-        font-weight: 600;
-        padding: 2px 8px;
+        font-weight: 700;
+        padding: 3px 10px;
         border-radius: 12px;
         border: 1px solid rgba(99, 102, 241, 0.4);
       }
@@ -177,15 +226,15 @@
         color: #f1f5f9;
         font-size: 12px;
         font-weight: 600;
-        padding: 6px 12px;
+        padding: 6px 14px;
         border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.14);
         cursor: pointer;
         transition: all 0.15s ease;
       }
 
       .fp-btn:hover {
-        background: rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.18);
         color: #fff;
       }
 
@@ -193,114 +242,241 @@
         background: #4f46e5;
         border-color: #6366f1;
         color: #fff;
-        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+        box-shadow: 0 2px 10px rgba(79, 70, 229, 0.45);
       }
 
       .fp-btn.primary:hover {
         background: #4338ca;
       }
 
-      .fp-btn.active {
+      .fp-btn.success {
         background: #059669;
         border-color: #10b981;
+        color: #fff;
       }
 
-      .fp-btn.warning {
-        background: rgba(245, 158, 11, 0.15);
-        color: #fbbf24;
-        border-color: rgba(245, 158, 11, 0.3);
+      .fp-btn.danger {
+        color: #fca5a5;
+      }
+      .fp-btn.danger:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fee2e2;
       }
 
-      .fp-modal-overlay {
+      /* Inline Tooltip Editor (snapped right on the clicked element) */
+      .fp-inline-tooltip {
         position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(4px);
-        z-index: 2147483646;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: auto;
-      }
-
-      .fp-modal {
+        width: 320px;
         background: #0f172a;
         color: #f8fafc;
-        border: 1px solid #334155;
-        border-radius: 16px;
-        padding: 20px;
-        width: 380px;
-        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+        border-radius: 14px;
+        padding: 16px;
+        border: 1px solid rgba(99, 102, 241, 0.4);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+        z-index: 2147483646;
+        pointer-events: auto;
+        animation: fpFadeIn 0.15s ease-out;
       }
 
-      .fp-modal-header {
+      @keyframes fpFadeIn {
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
+      }
+
+      .fp-tooltip-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 14px;
-      }
-
-      .fp-modal-title {
-        font-size: 15px;
-        font-weight: 700;
-        color: #fff;
-      }
-
-      .fp-field {
         margin-bottom: 12px;
       }
 
-      .fp-label {
-        display: block;
-        font-size: 12px;
-        font-weight: 600;
-        color: #94a3b8;
-        margin-bottom: 4px;
+      .fp-tooltip-badge {
+        font-size: 11px;
+        font-weight: 700;
+        color: #a5b4fc;
+        background: rgba(99, 102, 241, 0.2);
+        padding: 2px 8px;
+        border-radius: 6px;
       }
 
-      .fp-input, .fp-textarea {
+      .fp-tooltip-close {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .fp-tooltip-close:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .fp-tooltip-input {
         width: 100%;
         background: #1e293b;
-        color: #fff;
         border: 1px solid #334155;
         border-radius: 8px;
         padding: 8px 10px;
         font-size: 13px;
+        font-weight: 600;
+        color: #fff;
         outline: none;
+        margin-bottom: 8px;
       }
-
-      .fp-input:focus, .fp-textarea:focus {
+      .fp-tooltip-input:focus {
         border-color: #6366f1;
       }
 
-      .fp-textarea {
-        resize: vertical;
-        min-height: 60px;
+      .fp-tooltip-textarea {
+        width: 100%;
+        height: 60px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+        color: #cbd5e1;
+        outline: none;
+        resize: none;
+        margin-bottom: 10px;
+      }
+      .fp-tooltip-textarea:focus {
+        border-color: #6366f1;
       }
 
-      .fp-selector-preview {
-        background: #090d16;
-        border: 1px solid #1e293b;
-        border-radius: 6px;
-        padding: 6px 8px;
-        font-family: monospace;
-        font-size: 11px;
-        color: #a5b4fc;
-        overflow-x: auto;
-        white-space: nowrap;
-      }
-
-      .fp-modal-actions {
+      .fp-tooltip-meta-row {
         display: flex;
-        justify-content: flex-end;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 11px;
+        color: #94a3b8;
+      }
+
+      .fp-placement-group {
+        display: flex;
+        gap: 3px;
+        background: #1e293b;
+        padding: 2px;
+        border-radius: 6px;
+      }
+
+      .fp-placement-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 10px;
+        padding: 3px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .fp-placement-btn.active {
+        background: #4f46e5;
+        color: #fff;
+      }
+
+      .fp-target-adjust {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .fp-btn-adjust {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #94a3b8;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .fp-btn-adjust:hover {
+        color: #fff;
+        border-color: #6366f1;
+      }
+
+      .fp-tooltip-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         gap: 8px;
-        margin-top: 16px;
+      }
+
+      /* LIVE TOUR PLAYER ON PAGE */
+      .fp-player-scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        z-index: 2147483644;
+        pointer-events: auto;
+      }
+
+      .fp-player-spotlight {
+        position: fixed;
+        border: 2px solid #818cf8;
+        border-radius: 8px;
+        box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.65), 0 0 25px rgba(99, 102, 241, 0.8);
+        z-index: 2147483645;
+        pointer-events: none;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .fp-player-card {
+        position: fixed;
+        width: 340px;
+        background: #0f172a;
+        color: #f8fafc;
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+        z-index: 2147483646;
+        pointer-events: auto;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .fp-player-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .fp-player-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.3;
+        margin-bottom: 6px;
+      }
+
+      .fp-player-desc {
+        font-size: 13px;
+        color: #cbd5e1;
+        line-height: 1.5;
+        margin-bottom: 16px;
+      }
+
+      .fp-player-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .fp-player-step-indicator {
+        font-size: 12px;
+        color: #94a3b8;
+        font-weight: 600;
       }
     `;
 
     shadowRoot.appendChild(style);
 
-    // Highlight box
+    // Highlight element box
     highlightBox = document.createElement('div');
     highlightBox.className = 'fp-highlight';
     tagBadge = document.createElement('div');
@@ -308,293 +484,410 @@
     highlightBox.appendChild(tagBadge);
     shadowRoot.appendChild(highlightBox);
 
-    // Toolbar wrapper
-    const wrap = document.createElement('div');
-    wrap.className = 'fp-toolbar-wrap';
+    // Bottom floating toolbar
+    const toolbarWrap = document.createElement('div');
+    toolbarWrap.className = 'fp-toolbar-wrap';
     toolbar = document.createElement('div');
     toolbar.className = 'fp-toolbar';
-    wrap.appendChild(toolbar);
-    shadowRoot.appendChild(wrap);
+    toolbarWrap.appendChild(toolbar);
+    shadowRoot.appendChild(toolbarWrap);
 
-    // Modal container
-    modalContainer = document.createElement('div');
-    shadowRoot.appendChild(modalContainer);
+    // Inline Editor container
+    inlineEditorContainer = document.createElement('div');
+    shadowRoot.appendChild(inlineEditorContainer);
 
-    renderToolbar();
+    // Live Player container
+    livePlayerContainer = document.createElement('div');
+    shadowRoot.appendChild(livePlayerContainer);
   }
+
+  // =========================================================================
+  // 3. VISUAL RECORDING & INLINE STEP EDITOR
+  // =========================================================================
 
   function renderToolbar() {
     if (!toolbar) return;
 
-    if (toolbarMinimized) {
-      toolbar.innerHTML = `
-        <div class="fp-brand">
-          <div class="fp-logo-icon">F</div>
-          <span>FlowPilot</span>
-        </div>
-        <div class="fp-status-dot ${isPaused ? 'paused' : ''}"></div>
-        <div class="fp-counter">${steps.length}</div>
-        <button class="fp-btn" id="fp-btn-maximize">Expand 🔼</button>
-      `;
-      shadowRoot.getElementById('fp-btn-maximize')?.addEventListener('click', () => {
-        toolbarMinimized = false;
-        renderToolbar();
-      });
-      return;
-    }
-
     toolbar.innerHTML = `
       <div class="fp-brand">
-        <div class="fp-logo-icon">F</div>
-        <span>FlowPilot Tour</span>
+        <div class="fp-logo-icon">FP</div>
+        <span>${isPaused ? 'Navigate Mode' : 'Recording'}</span>
       </div>
-      <div class="fp-status-dot ${isPaused ? 'paused' : ''}" title="${isPaused ? 'Paused - navigating' : 'Active - click to record'}"></div>
-      <div class="fp-counter" title="${steps.length} steps recorded">${steps.length} ${steps.length === 1 ? 'step' : 'steps'}</div>
-
-      <button class="fp-btn ${isPaused ? 'warning' : 'active'}" id="fp-btn-mode">
-        ${isPaused ? '🧭 Navigate mode' : '🎯 Picking elements'}
+      <span class="fp-counter">${steps.length} step${steps.length === 1 ? '' : 's'}</span>
+      <button class="fp-btn" id="fp-tb-toggle-mode">
+        <span>${isPaused ? '🎯 Click to Add Steps' : '🧭 Use / Navigate App'}</span>
       </button>
-
       ${steps.length > 0 ? `
-        <button class="fp-btn" id="fp-btn-undo" title="Remove last recorded step">↩ Undo</button>
+        <button class="fp-btn" id="fp-tb-test-live">
+          <span>▶ Play Test</span>
+        </button>
       ` : ''}
-
-      <button class="fp-btn primary" id="fp-btn-finish">
-        🚀 Save & Open Studio
+      <button class="fp-btn primary" id="fp-tb-save">
+        <span>✓ Save to FlowPilot</span>
       </button>
-
-      <button class="fp-btn" id="fp-btn-minimize" title="Minimize toolbar">_</button>
-      <button class="fp-btn" id="fp-btn-close" title="Cancel & close tour builder">✕</button>
+      <button class="fp-btn danger" id="fp-tb-close" title="Exit recording">✕</button>
     `;
 
-    // Event listeners
-    shadowRoot.getElementById('fp-btn-mode')?.addEventListener('click', () => {
+    shadowRoot.getElementById('fp-tb-toggle-mode')?.addEventListener('click', () => {
       isPaused = !isPaused;
       if (highlightBox) highlightBox.style.display = 'none';
       renderToolbar();
       notifyState();
     });
 
-    shadowRoot.getElementById('fp-btn-undo')?.addEventListener('click', () => {
-      if (steps.length > 0) {
-        steps.pop();
-        saveSteps();
-        renderToolbar();
-        notifyState();
-      }
+    shadowRoot.getElementById('fp-tb-test-live')?.addEventListener('click', () => {
+      startLiveTourPlayer({ title: currentTourTitle, steps });
     });
 
-    shadowRoot.getElementById('fp-btn-finish')?.addEventListener('click', () => {
+    shadowRoot.getElementById('fp-tb-save')?.addEventListener('click', () => {
       exportToFlowPilot();
     });
 
-    shadowRoot.getElementById('fp-btn-minimize')?.addEventListener('click', () => {
-      toolbarMinimized = true;
-      renderToolbar();
-    });
-
-    shadowRoot.getElementById('fp-btn-close')?.addEventListener('click', () => {
+    shadowRoot.getElementById('fp-tb-close')?.addEventListener('click', () => {
       stopRecording();
     });
   }
 
-  // Hover effect on host elements
   function handleMouseMove(e) {
     if (!isRecording || isPaused) return;
 
-    const target = e.target;
-    if (!target || target === hostEl || hostEl?.contains(target)) return;
+    const raw = e.target;
+    if (!raw || raw === hostEl || hostEl?.contains(raw)) return;
 
-    hoveredElement = target;
+    const target = getSmartTarget(raw);
+    activeElement = target;
+
     const rect = target.getBoundingClientRect();
+    const desc = describeElement(target);
 
-    if (highlightBox && tagBadge) {
-      highlightBox.style.display = 'block';
-      highlightBox.style.top = `${rect.top}px`;
-      highlightBox.style.left = `${rect.left}px`;
-      highlightBox.style.width = `${rect.width}px`;
-      highlightBox.style.height = `${rect.height}px`;
+    highlightBox.style.display = 'block';
+    highlightBox.style.top = `${rect.top}px`;
+    highlightBox.style.left = `${rect.left}px`;
+    highlightBox.style.width = `${rect.width}px`;
+    highlightBox.style.height = `${rect.height}px`;
 
-      const idText = target.id ? `#${target.id}` : '';
-      const classText = typeof target.className === 'string' && target.className.trim()
-        ? `.${target.className.trim().split(/\s+/)[0]}`
-        : '';
-      const tag = target.tagName.toLowerCase();
-      tagBadge.textContent = `${tag}${idText}${classText} — Click to capture`;
-    }
+    tagBadge.innerHTML = `
+      <span>${desc.label}</span>
+      <span class="fp-quality-pill">${desc.quality}</span>
+    `;
   }
 
-  // Click on host element to add step
   function handleClick(e) {
     if (!isRecording || isPaused) return;
 
-    const target = e.target;
-    if (!target || target === hostEl || hostEl?.contains(target)) return;
+    const raw = e.target;
+    if (!raw || raw === hostEl || hostEl?.contains(raw)) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    const selector = selectorFor(target);
-    const rawText = (target.getAttribute('aria-label') || target.getAttribute('title') || target.innerText || target.getAttribute('placeholder') || '').trim().replace(/\s+/g, ' ').slice(0, 80);
-    const rect = target.getBoundingClientRect();
+    const target = getSmartTarget(raw);
+    activeElement = target;
 
-    promptStepDetails({
-      selector,
-      rawText,
-      path: window.location.pathname,
-      rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
-      tagName: target.tagName.toLowerCase(),
+    openInlineStepEditor(target);
+  }
+
+  // Opens the inline tooltip directly next to the clicked element
+  function openInlineStepEditor(target) {
+    if (!inlineEditorContainer) return;
+
+    const desc = describeElement(target);
+    const rect = target.getBoundingClientRect();
+    let currentPlacement = 'bottom';
+    let targetEl = target;
+
+    // Calculate position
+    const updateEditorPosition = (side) => {
+      currentPlacement = side;
+      const editor = shadowRoot.querySelector('.fp-inline-tooltip');
+      if (!editor) return;
+
+      const edRect = editor.getBoundingClientRect();
+      const edWidth = 320;
+      const edHeight = 220;
+      const gap = 12;
+
+      let top = rect.bottom + gap;
+      let left = rect.left + rect.width / 2 - edWidth / 2;
+
+      if (side === 'top') {
+        top = rect.top - edHeight - gap;
+      } else if (side === 'left') {
+        top = rect.top + rect.height / 2 - edHeight / 2;
+        left = rect.left - edWidth - gap;
+      } else if (side === 'right') {
+        top = rect.top + rect.height / 2 - edHeight / 2;
+        left = rect.right + gap;
+      }
+
+      // Clamp to viewport
+      top = Math.max(16, Math.min(window.innerHeight - edHeight - 16, top));
+      left = Math.max(16, Math.min(window.innerWidth - edWidth - 16, left));
+
+      editor.style.top = `${top}px`;
+      editor.style.left = `${left}px`;
+
+      // Update active placement button
+      shadowRoot.querySelectorAll('.fp-placement-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.side === side);
+      });
+    };
+
+    const initialTitle = desc.fullText || `${desc.kind} Step`;
+
+    inlineEditorContainer.innerHTML = `
+      <div class="fp-inline-tooltip">
+        <div class="fp-tooltip-header">
+          <span class="fp-tooltip-badge">✨ Step #${steps.length + 1}: ${desc.kind}</span>
+          <button class="fp-tooltip-close" id="fp-ed-close">✕</button>
+        </div>
+
+        <input class="fp-tooltip-input" id="fp-ed-title" value="${initialTitle.replace(/"/g, '&quot;')}" placeholder="Step Title..." autofocus />
+        <textarea class="fp-tooltip-textarea" id="fp-ed-desc" placeholder="Explain what to do here (e.g. Click to filter transactions)..."></textarea>
+
+        <div class="fp-tooltip-meta-row">
+          <div class="fp-placement-group">
+            <button class="fp-placement-btn" data-side="top">▲ Top</button>
+            <button class="fp-placement-btn active" data-side="bottom">▼ Bottom</button>
+            <button class="fp-placement-btn" data-side="left">◀ Left</button>
+            <button class="fp-placement-btn" data-side="right">▶ Right</button>
+          </div>
+
+          <div class="fp-target-adjust">
+            <button class="fp-btn-adjust" id="fp-ed-parent" title="Select parent container">▲ Parent</button>
+            <button class="fp-btn-adjust" id="fp-ed-child" title="Select child element">▼ Child</button>
+          </div>
+        </div>
+
+        <div class="fp-tooltip-actions">
+          <button class="fp-btn primary" id="fp-ed-add-next">
+            <span>✓ Add Step & Pick Next</span>
+          </button>
+          <button class="fp-btn success" id="fp-ed-save-finish">
+            <span>Save & Finish</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => updateEditorPosition('bottom'), 10);
+
+    const titleInput = shadowRoot.getElementById('fp-ed-title');
+    const descInput = shadowRoot.getElementById('fp-ed-desc');
+    titleInput?.focus();
+    titleInput?.select();
+
+    // Placement changes
+    shadowRoot.querySelectorAll('.fp-placement-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateEditorPosition(btn.dataset.side);
+      });
+    });
+
+    // Parent target adjustment
+    shadowRoot.getElementById('fp-ed-parent')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (targetEl.parentElement && targetEl.parentElement !== document.body) {
+        targetEl = targetEl.parentElement;
+        const newDesc = describeElement(targetEl);
+        const newRect = targetEl.getBoundingClientRect();
+        highlightBox.style.top = `${newRect.top}px`;
+        highlightBox.style.left = `${newRect.left}px`;
+        highlightBox.style.width = `${newRect.width}px`;
+        highlightBox.style.height = `${newRect.height}px`;
+        tagBadge.innerHTML = `<span>${newDesc.label}</span><span class="fp-quality-pill">${newDesc.quality}</span>`;
+      }
+    });
+
+    // Save and continue picking next step immediately
+    const saveStep = (andFinish = false) => {
+      const step = {
+        selector: selectorFor(targetEl),
+        title: titleInput?.value.trim() || initialTitle,
+        text: titleInput?.value.trim() || initialTitle,
+        description: descInput?.value.trim() || 'Tell people what this does.',
+        path: window.location.pathname,
+        placement: currentPlacement,
+        tagName: targetEl.tagName.toLowerCase(),
+      };
+
+      steps.push(step);
+      saveSteps();
+      closeInlineEditor();
+      renderToolbar();
+      notifyState();
+
+      if (andFinish) {
+        exportToFlowPilot();
+      }
+    };
+
+    const closeInlineEditor = () => {
+      inlineEditorContainer.innerHTML = '';
+    };
+
+    shadowRoot.getElementById('fp-ed-add-next')?.addEventListener('click', () => saveStep(false));
+    shadowRoot.getElementById('fp-ed-save-finish')?.addEventListener('click', () => saveStep(true));
+    shadowRoot.getElementById('fp-ed-close')?.addEventListener('click', closeInlineEditor);
+
+    titleInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveStep(false);
+      if (e.key === 'Escape') closeInlineEditor();
     });
   }
 
-  // Quick edit modal right on the page
-  function promptStepDetails(stepData) {
-    if (!modalContainer) return;
+  // =========================================================================
+  // 4. ON-PAGE LIVE TOUR RUNNER / PLAYER
+  // =========================================================================
 
-    const defaultTitle = stepData.rawText || `Step ${steps.length + 1}`;
+  let activeTourPlayer = null;
 
-    modalContainer.innerHTML = `
-      <div class="fp-modal-overlay">
-        <div class="fp-modal">
-          <div class="fp-modal-header">
-            <h3 class="fp-modal-title">✨ Add Tour Step #${steps.length + 1}</h3>
-          </div>
-          <div class="fp-field">
-            <label class="fp-label">Step Headline</label>
-            <input class="fp-input" id="fp-modal-input-title" value="${defaultTitle.replace(/"/g, '&quot;')}" autofocus />
-          </div>
-          <div class="fp-field">
-            <label class="fp-label">Description / Instructions</label>
-            <textarea class="fp-textarea" id="fp-modal-input-desc" placeholder="Explain what this element does or what action to take..."></textarea>
-          </div>
-          <div class="fp-field">
-            <label class="fp-label">Target Selector</label>
-            <div class="fp-selector-preview">${stepData.selector}</div>
-          </div>
-          <div class="fp-modal-actions">
-            <button class="fp-btn" id="fp-modal-cancel">Cancel</button>
-            <button class="fp-btn primary" id="fp-modal-save">Add to Tour</button>
+  function startLiveTourPlayer(tour) {
+    if (!tour || !Array.isArray(tour.steps) || tour.steps.length === 0) {
+      alert('This tour has no steps to play.');
+      return;
+    }
+
+    ensureShadowRoot();
+    stopLiveTourPlayer();
+
+    let currentStepIdx = 0;
+    const totalSteps = tour.steps.length;
+
+    // Build spotlight + card container
+    livePlayerContainer.innerHTML = `
+      <div class="fp-player-scrim" id="fp-scrim"></div>
+      <div class="fp-player-spotlight" id="fp-spotlight"></div>
+      <div class="fp-player-card" id="fp-card">
+        <div class="fp-player-top">
+          <span class="fp-counter">${tour.title || 'Tour'}</span>
+          <button class="fp-tooltip-close" id="fp-player-close">✕</button>
+        </div>
+        <h3 class="fp-player-title" id="fp-player-headline">Step Title</h3>
+        <p class="fp-player-desc" id="fp-player-body">Step description goes here...</p>
+        <div class="fp-player-nav">
+          <span class="fp-player-step-indicator" id="fp-player-progress">Step 1 of ${totalSteps}</span>
+          <div style="display:flex;gap:6px;">
+            <button class="fp-btn" id="fp-player-prev">Back</button>
+            <button class="fp-btn primary" id="fp-player-next">Next →</button>
           </div>
         </div>
       </div>
     `;
 
-    const titleInput = shadowRoot.getElementById('fp-modal-input-title');
-    const descInput = shadowRoot.getElementById('fp-modal-input-desc');
+    const scrim = shadowRoot.getElementById('fp-scrim');
+    const spotlight = shadowRoot.getElementById('fp-spotlight');
+    const card = shadowRoot.getElementById('fp-card');
+    const headline = shadowRoot.getElementById('fp-player-headline');
+    const body = shadowRoot.getElementById('fp-player-body');
+    const progress = shadowRoot.getElementById('fp-player-progress');
+    const prevBtn = shadowRoot.getElementById('fp-player-prev');
+    const nextBtn = shadowRoot.getElementById('fp-player-next');
+    const closeBtn = shadowRoot.getElementById('fp-player-close');
 
-    titleInput?.focus();
-    titleInput?.select();
+    function renderStep(idx) {
+      if (idx < 0 || idx >= totalSteps) {
+        finishTour();
+        return;
+      }
 
-    const save = () => {
-      const step = {
-        selector: stepData.selector,
-        text: titleInput?.value.trim() || defaultTitle,
-        title: titleInput?.value.trim() || defaultTitle,
-        description: descInput?.value.trim() || 'Tell people what this does.',
-        path: stepData.path,
-        rect: stepData.rect,
-      };
+      currentStepIdx = idx;
+      const step = tour.steps[idx];
 
-      steps.push(step);
-      saveSteps();
-      closeModal();
-      renderToolbar();
-      notifyState();
-    };
+      headline.textContent = step.title || step.text || `Step ${idx + 1}`;
+      body.textContent = step.description || '';
+      progress.textContent = `Step ${idx + 1} of ${totalSteps}`;
 
-    const closeModal = () => {
-      modalContainer.innerHTML = '';
-    };
+      prevBtn.style.display = idx === 0 ? 'none' : 'inline-flex';
+      nextBtn.textContent = idx === totalSteps - 1 ? '🎉 Finish Tour' : 'Next Step →';
 
-    shadowRoot.getElementById('fp-modal-save')?.addEventListener('click', save);
-    shadowRoot.getElementById('fp-modal-cancel')?.addEventListener('click', closeModal);
+      // Find target element
+      let el = null;
+      if (step.selector) {
+        try {
+          el = document.querySelector(step.selector);
+        } catch {
+          el = null;
+        }
+      }
 
-    titleInput?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') save();
-      if (e.key === 'Escape') closeModal();
-    });
-  }
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const rect = el.getBoundingClientRect();
+        const pad = 8;
 
-  // Keyboard controls
-  function handleKeyDown(e) {
-    if (!isRecording) return;
-    if (e.key === 'Escape') {
-      if (modalContainer && modalContainer.children.length > 0) {
-        modalContainer.innerHTML = '';
+        spotlight.style.display = 'block';
+        spotlight.style.top = `${rect.top - pad}px`;
+        spotlight.style.left = `${rect.left - pad}px`;
+        spotlight.style.width = `${rect.width + pad * 2}px`;
+        spotlight.style.height = `${rect.height + pad * 2}px`;
+
+        // Position card next to target
+        const cardWidth = 340;
+        const cardHeight = 180;
+        let cTop = rect.bottom + 16;
+        let cLeft = rect.left + rect.width / 2 - cardWidth / 2;
+
+        if (step.placement === 'top' || (cTop + cardHeight > window.innerHeight && rect.top > cardHeight + 20)) {
+          cTop = rect.top - cardHeight - 16;
+        }
+
+        cTop = Math.max(16, Math.min(window.innerHeight - cardHeight - 16, cTop));
+        cLeft = Math.max(16, Math.min(window.innerWidth - cardWidth - 16, cLeft));
+
+        card.style.top = `${cTop}px`;
+        card.style.left = `${cLeft}px`;
+        card.style.transform = 'none';
+
+        // Auto-advance if user clicks the actual target on their page
+        const onTargetClick = () => {
+          el.removeEventListener('click', onTargetClick);
+          renderStep(currentStepIdx + 1);
+        };
+        el.addEventListener('click', onTargetClick, { once: true });
       } else {
-        isPaused = !isPaused;
-        if (highlightBox) highlightBox.style.display = 'none';
-        renderToolbar();
-        notifyState();
+        // Center card if target missing
+        spotlight.style.display = 'none';
+        card.style.top = '50%';
+        card.style.left = '50%';
+        card.style.transform = 'translate(-50%, -50%)';
       }
     }
-  }
 
-  // Send state update to background
-  function notifyState() {
-    chrome.runtime.sendMessage({
-      type: 'FP_STATE_UPDATED',
-      payload: {
-        isRecording,
-        isPaused,
-        stepCount: steps.length,
-        steps,
-        url: window.location.href,
-        pathname: window.location.pathname,
-      },
-    }).catch(() => undefined);
-  }
-
-  // Save steps to chrome.storage.local
-  function saveSteps() {
-    chrome.storage.local.set({
-      flowpilot_recorded_steps: steps,
-      flowpilot_last_site: window.location.href,
-    });
-  }
-
-  // Export steps and open FlowPilot studio
-  function exportToFlowPilot() {
-    if (steps.length === 0) {
-      alert('Please click at least one element to add a tour step before saving.');
-      return;
+    function finishTour() {
+      stopLiveTourPlayer();
+      // Show celebratory confirmation
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#059669;color:#fff;padding:10px 20px;border-radius:12px;font:700 13px system-ui;box-shadow:0 10px 30px rgba(0,0,0,0.5);display:flex;align-items:center;gap:8px;';
+      toast.innerHTML = '<span>🎉</span><span>Tour finished successfully on your platform!</span>';
+      shadowRoot.appendChild(toast);
+      setTimeout(() => toast.remove(), 3500);
     }
 
-    chrome.storage.local.get(['flowpilot_dashboard_url'], (res) => {
-      const dashboardBase = res.flowpilot_dashboard_url || 'https://dreambuilder-two.vercel.app';
-      const cleanBase = dashboardBase.replace(/\/+$/, '');
+    prevBtn?.addEventListener('click', () => renderStep(currentStepIdx - 1));
+    nextBtn?.addEventListener('click', () => renderStep(currentStepIdx + 1));
+    closeBtn?.addEventListener('click', stopLiveTourPlayer);
+    scrim?.addEventListener('click', stopLiveTourPlayer);
 
-      const payload = {
-        type: 'tour',
-        title: `${document.title || 'App'} Onboarding Tour`,
-        builderUrl: window.location.href,
-        steps: steps.map((s) => ({
-          selector: s.selector,
-          title: s.title || s.text || 'Step',
-          text: s.text || s.title || 'Step',
-          description: s.description || '',
-          path: s.path || window.location.pathname,
-        })),
-        createdAt: new Date().toISOString(),
-      };
-
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-      const targetUrl = `${cleanBase}/create?type=tour#fp-extension-import=${encoded}`;
-
-      // Open dashboard in new tab
-      window.open(targetUrl, '_blank');
-
-      // Stop recording here
-      stopRecording();
-    });
+    renderStep(0);
+    activeTourPlayer = { stop: stopLiveTourPlayer };
   }
 
-  // Start recording
-  function startRecording(initialSteps = []) {
+  function stopLiveTourPlayer() {
+    if (livePlayerContainer) livePlayerContainer.innerHTML = '';
+    activeTourPlayer = null;
+  }
+
+  // =========================================================================
+  // 5. LIFECYCLE & SYNC
+  // =========================================================================
+
+  function startRecording(initialSteps = [], options = {}) {
     ensureShadowRoot();
     isRecording = true;
     isPaused = false;
-    steps = initialSteps.length > 0 ? initialSteps : steps;
+    steps = initialSteps || [];
 
     document.addEventListener('mousemove', handleMouseMove, true);
     document.addEventListener('click', handleClick, true);
@@ -605,7 +898,6 @@
     notifyState();
   }
 
-  // Stop recording
   function stopRecording() {
     isRecording = false;
     isPaused = false;
@@ -615,20 +907,115 @@
     document.removeEventListener('keydown', handleKeyDown, true);
 
     if (highlightBox) highlightBox.style.display = 'none';
-    if (hostEl) hostEl.style.display = 'none';
+    if (inlineEditorContainer) inlineEditorContainer.innerHTML = '';
+    if (toolbar) toolbar.innerHTML = '';
     notifyState();
   }
 
-  // Listen for messages from background / popup
+  function handleKeyDown(e) {
+    if (!isRecording) return;
+    if (e.key === 'Escape') {
+      if (inlineEditorContainer?.innerHTML) {
+        inlineEditorContainer.innerHTML = '';
+      } else {
+        isPaused = !isPaused;
+        if (highlightBox) highlightBox.style.display = 'none';
+        renderToolbar();
+        notifyState();
+      }
+    }
+  }
+
+  function saveSteps() {
+    chrome.storage.local.set({
+      flowpilot_recorded_steps: steps,
+      flowpilot_last_site: window.location.href,
+    });
+  }
+
+  function notifyState() {
+    chrome.runtime.sendMessage({
+      type: 'FP_STATE_UPDATED',
+      payload: {
+        isRecording,
+        isPaused,
+        stepCount: steps.length,
+        steps,
+      },
+    }).catch(() => undefined);
+  }
+
+  function exportToFlowPilot() {
+    if (steps.length === 0) {
+      alert('Please click at least one element to add a tour step before saving.');
+      return;
+    }
+
+    chrome.storage.local.get(['flowpilot_dashboard_url', 'flowpilot_current_tour_title', 'flowpilot_workspace_tours'], (res) => {
+      const dashboardBase = res.flowpilot_dashboard_url || 'https://dreambuilder-two.vercel.app';
+      const cleanBase = dashboardBase.replace(/\/+$/, '');
+      const tourTitle = res.flowpilot_current_tour_title || `${document.title || 'App'} Onboarding Tour`;
+
+      const payload = {
+        type: 'tour',
+        title: tourTitle,
+        builderUrl: window.location.href,
+        steps: steps.map((s) => ({
+          selector: s.selector,
+          title: s.title || s.text || 'Step',
+          text: s.text || s.title || 'Step',
+          description: s.description || '',
+          path: s.path || window.location.pathname,
+          placement: s.placement || 'bottom',
+        })),
+        createdAt: new Date().toISOString(),
+      };
+
+      // Also save to extension's local list
+      const existing = res.flowpilot_workspace_tours || [];
+      const updated = [{ id: `tour_${Date.now()}`, ...payload, domain: window.location.hostname }, ...existing];
+      chrome.storage.local.set({ flowpilot_workspace_tours: updated });
+
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+      const targetUrl = `${cleanBase}/create?type=tour#fp-extension-import=${encoded}`;
+
+      window.open(targetUrl, '_blank');
+      stopRecording();
+    });
+  }
+
+  // =========================================================================
+  // 6. MESSAGING INTERFACE
+  // =========================================================================
+
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message.type) {
       case 'START_RECORDING':
-        startRecording(message.steps || []);
+        currentTourTitle = message.tourTitle || 'App Onboarding Tour';
+        startRecording(message.steps || [], message.options || {});
         sendResponse({ success: true, count: steps.length });
         break;
 
       case 'STOP_RECORDING':
         stopRecording();
+        sendResponse({ success: true });
+        break;
+
+      case 'TOGGLE_PAUSE':
+        isPaused = !isPaused;
+        if (highlightBox) highlightBox.style.display = 'none';
+        renderToolbar();
+        notifyState();
+        sendResponse({ success: true, isPaused });
+        break;
+
+      case 'PLAY_TOUR':
+        startLiveTourPlayer(message.tour);
+        sendResponse({ success: true });
+        break;
+
+      case 'STOP_TOUR':
+        stopLiveTourPlayer();
         sendResponse({ success: true });
         break;
 
@@ -662,7 +1049,7 @@
               highlightBox.style.left = `${rect.left}px`;
               highlightBox.style.width = `${rect.width}px`;
               highlightBox.style.height = `${rect.height}px`;
-              tagBadge.textContent = `Preview: ${message.selector}`;
+              tagBadge.textContent = `Target: ${message.selector}`;
               setTimeout(() => {
                 if (!isRecording && highlightBox) highlightBox.style.display = 'none';
               }, 3000);
@@ -683,8 +1070,9 @@
   });
 
   // Check if we were already recording on this tab
-  chrome.storage.local.get(['flowpilot_recording_active', 'flowpilot_recorded_steps'], (res) => {
+  chrome.storage.local.get(['flowpilot_recording_active', 'flowpilot_recorded_steps', 'flowpilot_current_tour_title'], (res) => {
     if (res.flowpilot_recording_active) {
+      currentTourTitle = res.flowpilot_current_tour_title || 'App Onboarding Tour';
       startRecording(res.flowpilot_recorded_steps || []);
     }
   });

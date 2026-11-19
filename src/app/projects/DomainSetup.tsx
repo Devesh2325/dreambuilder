@@ -6,6 +6,7 @@ import { isLocalBackend } from '../../data';
 import { DomainRecord, ProjectRecord } from '../../data/services';
 import { useServices } from '../session';
 import { BusyIcon, BusyLabel, ErrorNote, errorMessage, inputClass, primaryButton, secondaryButton } from '../shared/ui';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useWorkspace } from '../workspace';
 
 const REGISTRARS = [
@@ -46,6 +47,7 @@ const DomainRow: React.FC<{ domain: DomainRecord; canEdit: boolean }> = ({ domai
   const queryClient = useQueryClient();
   const records = dnsRecords(domain.domain, domain.verificationToken);
   const [found, setFound] = useState<Record<string, string[]>>();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['domains', domain.projectId] });
 
   const lookUp = useMutation({
@@ -88,13 +90,32 @@ const DomainRow: React.FC<{ domain: DomainRecord; canEdit: boolean }> = ({ domai
         </>
       )}
       {canEdit && (
-        <button type="button" className="inline-flex items-center gap-1 text-[13px] font-semibold text-slate-500 hover:text-rose-600" disabled={remove.isPending} onClick={() => {
-          if (window.confirm(`Stop using ${domain.domain} for this site?`)) remove.mutate();
-        }}>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-[13px] font-semibold text-slate-500 hover:text-rose-600 cursor-pointer"
+          disabled={remove.isPending}
+          onClick={() => setIsDeleteOpen(true)}
+        >
           <BusyIcon busy={remove.isPending} className="w-3.5 h-3.5"><Trash2 className="w-3.5 h-3.5" aria-hidden="true" /></BusyIcon>
           Remove
         </button>
       )}
+
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        title="Remove custom domain?"
+        itemName={domain.domain}
+        description={`Stop using ${domain.domain} for this site? Visitors will no longer be able to reach your site using this domain.`}
+        confirmLabel="Remove domain"
+        variant="danger"
+        isPending={remove.isPending}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={() => {
+          remove.mutate(undefined, {
+            onSettled: () => setIsDeleteOpen(false),
+          });
+        }}
+      />
     </li>
   );
 };

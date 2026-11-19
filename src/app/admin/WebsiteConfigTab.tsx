@@ -8,6 +8,7 @@ import {
   WebsiteConfig, FAQItem, TestimonialItem, BlogItem, FooterColumn,
 } from '../../data/websiteConfigStore';
 import { cardClass, inputClass, primaryButton, secondaryButton } from '../shared/ui';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 
 type SectionId = 'company' | 'social' | 'footer' | 'faqs' | 'testimonials' | 'blogs';
 
@@ -15,6 +16,7 @@ export const WebsiteConfigTab: React.FC = () => {
   const [config, setConfig] = useState<WebsiteConfig>(getWebsiteConfig);
   const [activeSection, setActiveSection] = useState<SectionId>('company');
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   // New item draft states
   const [newFaq, setNewFaq] = useState<Omit<FAQItem, 'id'>>({ question: '', answer: '', category: 'General' });
@@ -37,12 +39,15 @@ export const WebsiteConfigTab: React.FC = () => {
   };
 
   const handleReset = () => {
-    if (window.confirm('Reset all website configuration back to factory defaults? Any custom edits to company info, footer, FAQs and testimonials will be restored to default.')) {
-      resetWebsiteConfig();
-      setConfig(DEFAULT_WEBSITE_CONFIG);
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
-    }
+    setIsResetDialogOpen(true);
+  };
+
+  const confirmReset = () => {
+    resetWebsiteConfig();
+    setConfig(DEFAULT_WEBSITE_CONFIG);
+    setSavedSuccess(true);
+    setIsResetDialogOpen(false);
+    setTimeout(() => setSavedSuccess(false), 3000);
   };
 
   const handleExport = () => {
@@ -914,6 +919,16 @@ export const WebsiteConfigTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isResetDialogOpen}
+        title="Reset website configuration?"
+        description="All website configuration will be restored back to factory defaults. Any custom edits to company info, footer, FAQs, testimonials, and blogs will be reset."
+        confirmLabel="Reset to defaults"
+        variant="warning"
+        onClose={() => setIsResetDialogOpen(false)}
+        onConfirm={confirmReset}
+      />
     </div>
   );
 };

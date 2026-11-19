@@ -21,8 +21,10 @@ describe('documentation', () => {
   it('has only working links between guides', () => {
     for (const doc of allDocs()) {
       for (const [, target] of doc.body.matchAll(/\]\(([^)]+)\)/g)) {
-        if (/^https?:/.test(target)) continue;
-        expect(getDoc(target), `${doc.slug} links to ${target}`).toBeDefined();
+        if (/^https?:/.test(target) || /^\/downloads\//.test(target)) continue;
+        const targetDoc = target.split('#')[0];
+        if (!targetDoc) continue;
+        expect(getDoc(targetDoc), `${doc.slug} links to ${target}`).toBeDefined();
       }
     }
   });

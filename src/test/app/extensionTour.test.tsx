@@ -6,7 +6,6 @@ import path from 'node:path';
 import { ChromeExtensionModal } from '../../app/tours/ChromeExtensionModal';
 import { buildContent, el } from '../../templates/dsl';
 import { STARTING_BLOCK } from '../../templates';
-import { DEFAULT_THEME, NewProject } from '../../core/schema';
 
 describe('Chrome Extension Tour Builder', () => {
   it('renders the 3-step setup guide in ChromeExtensionModal', () => {

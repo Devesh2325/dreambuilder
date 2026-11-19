@@ -6,6 +6,7 @@ import { validateValues } from '../core/validation';
 import { defaultValues, VariableDef, VariableType } from '../core/variables';
 import { useServices } from '../app/session';
 import { BusyLabel, ErrorNote, errorMessage } from '../app/shared/ui';
+import { ConfirmDialog } from '../app/shared/ConfirmDialog';
 import { VariableField, VariableForm } from '../app/shared/VariableForm';
 import { useWorkspace } from '../app/workspace';
 import { projectVariableDefs } from '../templates';
@@ -319,12 +320,22 @@ export const VariablesPanel: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['memberships'] });
   };
 
-  const remove = (def: { key: string; label: string }) => {
-    if (counts[def.key] && !window.confirm(`"${def.label}" is used in ${counts[def.key]} ${counts[def.key] === 1 ? 'place' : 'places'}. Those places will go blank. Remove it?`)) return false;
+  const [variableToDelete, setVariableToDelete] = useState<{ key: string; label: string } | null>(null);
+
+  const doRemoveVariable = (def: { key: string; label: string }) => {
     updateDraft((d) => {
       d.settings.variableDefs = (d.settings.variableDefs ?? []).filter((other) => other.key !== def.key);
       delete d.variables[def.key];
     });
+    setVariableToDelete(null);
+  };
+
+  const remove = (def: { key: string; label: string }) => {
+    if (counts[def.key]) {
+      setVariableToDelete(def);
+      return false;
+    }
+    doRemoveVariable(def);
     return true;
   };
 
@@ -458,6 +469,21 @@ export const VariablesPanel: React.FC = () => {
           {!canEditGlobals && <p className="text-xs text-slate-500 dark:text-slate-400">Only workspace owners and admins can change these.</p>}
         </section>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(variableToDelete)}
+        title="Remove variable?"
+        itemName={variableToDelete?.label}
+        description={variableToDelete && counts[variableToDelete.key] ? `"${variableToDelete.label}" is used in ${counts[variableToDelete.key]} ${counts[variableToDelete.key] === 1 ? 'place' : 'places'}. Those places will go blank.` : 'Remove this variable definition?'}
+        confirmLabel="Remove variable"
+        variant="warning"
+        onClose={() => setVariableToDelete(null)}
+        onConfirm={() => {
+          if (variableToDelete) {
+            doRemoveVariable(variableToDelete);
+          }
+        }}
+      />
     </div>
   );
 };

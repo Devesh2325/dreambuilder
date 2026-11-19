@@ -8,6 +8,7 @@ import { AppTour, useAppTour } from '../app/tours/AppTour';
 import { ROUTES } from '../app/routes';
 import { useServices } from '../app/session';
 import { BusyIcon, BusyLabel, EmptyState, primaryButton, secondaryButton, StudioSkeleton } from '../app/shared/ui';
+import { ConfirmDialog } from '../app/shared/ConfirmDialog';
 import { GoogleTranslateSelector } from '../app/shared/GoogleTranslate';
 import { useWorkspace } from '../app/workspace';
 import { EmbedLoaderContext } from '../experience/EmbeddedProject';
@@ -65,6 +66,8 @@ const ConflictBanner: React.FC = () => {
   const status = useStudio((s) => s.status);
   const { reloadFromServer, overwriteServer } = useStudio.getState();
   const [busy, setBusy] = useState<'reload' | 'overwrite' | null>(null);
+  const [isOverwriteOpen, setIsOverwriteOpen] = useState(false);
+
   if (status !== 'conflict') return null;
   const run = async (which: 'reload' | 'overwrite', action: () => Promise<void>) => {
     setBusy(which);
@@ -75,22 +78,36 @@ const ConflictBanner: React.FC = () => {
     }
   };
   return (
-    <div role="alert" className="flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">
-      Someone else changed this project while you were editing.
-      <button type="button" disabled={busy !== null} className="inline-flex items-center gap-1 font-semibold underline disabled:opacity-60" onClick={() => run('reload', reloadFromServer)}>
-        <BusyLabel busy={busy === 'reload'}>Load their version</BusyLabel>
-      </button>
-      <button
-        type="button"
-        disabled={busy !== null}
-        className="inline-flex items-center gap-1 font-semibold underline disabled:opacity-60"
-        onClick={() => {
-          if (window.confirm('Replace their changes with yours? Their changes will be lost.')) void run('overwrite', overwriteServer);
+    <>
+      <div role="alert" className="flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">
+        Someone else changed this project while you were editing.
+        <button type="button" disabled={busy !== null} className="inline-flex items-center gap-1 font-semibold underline disabled:opacity-60 cursor-pointer" onClick={() => run('reload', reloadFromServer)}>
+          <BusyLabel busy={busy === 'reload'}>Load their version</BusyLabel>
+        </button>
+        <button
+          type="button"
+          disabled={busy !== null}
+          className="inline-flex items-center gap-1 font-semibold underline disabled:opacity-60 cursor-pointer"
+          onClick={() => setIsOverwriteOpen(true)}
+        >
+          <BusyLabel busy={busy === 'overwrite'}>Keep my version</BusyLabel>
+        </button>
+      </div>
+
+      <ConfirmDialog
+        isOpen={isOverwriteOpen}
+        title="Keep your version and overwrite changes?"
+        description="Replace their changes with yours? Any edits made by another user while you were editing will be permanently overwritten."
+        confirmLabel="Overwrite and keep mine"
+        variant="warning"
+        isPending={busy === 'overwrite'}
+        onClose={() => setIsOverwriteOpen(false)}
+        onConfirm={async () => {
+          setIsOverwriteOpen(false);
+          await run('overwrite', overwriteServer);
         }}
-      >
-        <BusyLabel busy={busy === 'overwrite'}>Keep my version</BusyLabel>
-      </button>
-    </div>
+      />
+    </>
   );
 };
 

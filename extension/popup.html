@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FlowPilot Tour Builder</title>
+  <title>FlowPilot Tour Builder & Player</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="fp-popup-body">
@@ -12,8 +12,8 @@
     <div class="fp-logo-wrap">
       <div class="fp-logo-badge">FP</div>
       <div>
-        <h1 class="fp-title">FlowPilot</h1>
-        <p class="fp-subtitle">Visual Tour Builder</p>
+        <h1 class="fp-title">FlowPilot Live</h1>
+        <p class="fp-subtitle">Visual Tour Builder & On-Page Player</p>
       </div>
     </div>
     <div class="fp-status-pill" id="fp-status-indicator">
@@ -22,23 +22,62 @@
     </div>
   </header>
 
-  <!-- Main Controls -->
-  <main class="fp-main">
+  <!-- Navigation Tabs -->
+  <nav class="fp-tabs" role="tablist">
+    <button class="fp-tab-btn active" id="fp-tab-build" role="tab" aria-selected="true">
+      <span>🎯 Create Tour</span>
+    </button>
+    <button class="fp-tab-btn" id="fp-tab-tours" role="tab" aria-selected="false">
+      <span>🧭 Live Tours</span>
+      <span class="fp-badge-count" id="fp-saved-tours-count">0</span>
+    </button>
+    <button class="fp-tab-btn" id="fp-tab-settings" role="tab" aria-selected="false">
+      <span>⚙️ Settings</span>
+    </button>
+  </nav>
+
+  <!-- TAB 1: BUILD & RECORD -->
+  <main class="fp-tab-content active" id="fp-panel-build">
     <!-- Active Site Info -->
     <div class="fp-site-card" id="fp-site-card">
-      <span class="fp-site-label">CURRENT TAB</span>
+      <div class="fp-site-header">
+        <span class="fp-site-label">ACTIVE PLATFORM</span>
+        <span class="fp-site-tag" id="fp-site-domain">localhost</span>
+      </div>
       <p class="fp-site-url" id="fp-current-url">Loading tab...</p>
+    </div>
+
+    <!-- Tour Name Quick Setup -->
+    <div class="fp-quick-setup" id="fp-tour-meta-wrap">
+      <label class="fp-field-label" for="fp-tour-name-input">Tour Title</label>
+      <input type="text" id="fp-tour-name-input" class="fp-input" placeholder="e.g. User Onboarding Tour" value="App Onboarding Tour" />
     </div>
 
     <!-- Record Trigger Button -->
     <div class="fp-action-block">
       <button class="fp-btn-record" id="fp-toggle-record">
         <span class="fp-record-icon" id="fp-record-icon">🎯</span>
-        <span id="fp-record-btn-text">Start Visual Recording</span>
+        <span id="fp-record-btn-text">Start Point-and-Click Recording</span>
       </button>
       <p class="fp-hint" id="fp-record-hint">
-        Click to launch the visual element picker on this page
+        Hover over buttons, inputs, or menus on your app. Click to attach an interactive tooltip instantly.
       </p>
+    </div>
+
+    <!-- Active Recording Controls (shown while recording) -->
+    <div class="fp-live-controls" id="fp-recording-controls" style="display: none;">
+      <div class="fp-recording-banner">
+        <span class="fp-pulse-dot"></span>
+        <span class="fp-recording-text">Visual Recording Active on Tab</span>
+      </div>
+      <div class="fp-recording-buttons">
+        <button class="fp-btn-secondary" id="fp-pause-record">
+          <span>⏸ Pause</span>
+        </button>
+        <button class="fp-btn-primary" id="fp-finish-record">
+          <span>✓ Done & Save Tour</span>
+        </button>
+      </div>
     </div>
 
     <!-- Steps List Container -->
@@ -48,9 +87,14 @@
           <span>Captured Steps</span>
           <span class="fp-step-count" id="fp-step-count">0</span>
         </h2>
-        <button class="fp-btn-link" id="fp-clear-steps" title="Clear all steps" style="display: none;">
-          Clear
-        </button>
+        <div class="fp-steps-actions">
+          <button class="fp-btn-link" id="fp-preview-captured-steps" title="Preview these steps live on page" style="display: none;">
+            ▶ Test on Page
+          </button>
+          <button class="fp-btn-link danger" id="fp-clear-steps" title="Clear all steps" style="display: none;">
+            Clear
+          </button>
+        </div>
       </div>
 
       <div class="fp-steps-list" id="fp-steps-list">
@@ -58,7 +102,7 @@
         <div class="fp-empty-state" id="fp-empty-state">
           <div class="fp-empty-icon">🧭</div>
           <p class="fp-empty-text">No steps captured yet.</p>
-          <p class="fp-empty-subtext">Click "Start Visual Recording", then click on any buttons, links or fields on your website.</p>
+          <p class="fp-empty-subtext">Click "Start Point-and-Click Recording" above, then click any button, menu, or form field on your app.</p>
         </div>
       </div>
     </section>
@@ -66,25 +110,71 @@
     <!-- Export & Studio Actions -->
     <div class="fp-bottom-actions">
       <button class="fp-btn-primary" id="fp-export-studio" disabled>
-        <span>🚀 Open & Save in FlowPilot</span>
+        <span>🚀 Open & Edit in FlowPilot Studio</span>
       </button>
     </div>
   </main>
 
-  <!-- Settings Footer -->
-  <footer class="fp-footer">
-    <details class="fp-settings-details">
-      <summary class="fp-settings-summary">⚙️ Dashboard Connection</summary>
-      <div class="fp-settings-body">
-        <label class="fp-field-label" for="fp-dashboard-url">FlowPilot App URL</label>
+  <!-- TAB 2: LIVE TOURS MANAGER (Play Live on Any App) -->
+  <section class="fp-tab-content" id="fp-panel-tours" style="display: none;">
+    <div class="fp-tours-header-card">
+      <div class="fp-tours-header-text">
+        <h2 class="fp-section-heading">Live Tours on This Platform</h2>
+        <p class="fp-section-sub">Play, test, and experience tours live on your website with zero embed code.</p>
+      </div>
+      <button class="fp-btn-sm primary" id="fp-btn-new-tour-from-list">
+        + New Tour
+      </button>
+    </div>
+
+    <div class="fp-tours-list-container" id="fp-tours-list">
+      <!-- Populated dynamically via popup.js -->
+      <div class="fp-empty-state">
+        <div class="fp-empty-icon">✨</div>
+        <p class="fp-empty-text">No saved tours for this domain yet.</p>
+        <p class="fp-empty-subtext">Switch to "Create Tour" to record your first interactive walkthrough!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 3: SETTINGS & DASHBOARD SYNC -->
+  <section class="fp-tab-content" id="fp-panel-settings" style="display: none;">
+    <div class="fp-settings-section">
+      <h2 class="fp-section-heading">FlowPilot Dashboard Connection</h2>
+      <p class="fp-section-sub">Connect the extension to your FlowPilot cloud or local dashboard to sync tours.</p>
+
+      <div class="fp-field-group">
+        <label class="fp-field-label" for="fp-dashboard-url">Dashboard URL</label>
         <div class="fp-input-row">
           <input type="url" id="fp-dashboard-url" class="fp-input" placeholder="https://dreambuilder-two.vercel.app" />
           <button class="fp-btn-save-settings" id="fp-save-settings">Save</button>
         </div>
-        <p class="fp-field-hint">Use localhost:5173 for local development or your production URL.</p>
+        <p class="fp-field-hint">Default: https://dreambuilder-two.vercel.app (or http://localhost:5173)</p>
       </div>
-    </details>
-  </footer>
+
+      <div class="fp-field-group pt-2">
+        <h3 class="fp-field-title">Visual Element Picker Options</h3>
+        <label class="fp-checkbox-label">
+          <input type="checkbox" id="fp-opt-smart-target" checked />
+          <span>Smart Interactive Target Elevation (auto-picks buttons & links instead of inner SVGs/spans)</span>
+        </label>
+        <label class="fp-checkbox-label">
+          <input type="checkbox" id="fp-opt-inline-editor" checked />
+          <span>Inline Tooltip Preview (type title directly next to the clicked element)</span>
+        </label>
+        <label class="fp-checkbox-label">
+          <input type="checkbox" id="fp-opt-highlight-scrim" checked />
+          <span>Highlight Dimmed Backdrop (illuminates targeted areas)</span>
+        </label>
+      </div>
+
+      <div class="fp-field-group pt-2">
+        <a href="https://dreambuilder-two.vercel.app/docs/tour" target="_blank" class="fp-link-btn">
+          📖 View Chrome Extension Tour Documentation →
+        </a>
+      </div>
+    </div>
+  </section>
 
   <script src="popup.js"></script>
 </body>

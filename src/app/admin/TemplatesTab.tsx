@@ -16,6 +16,7 @@ import {
 import { ROUTES } from '../routes';
 import { useServices } from '../session';
 import { cardClass, EmptyState, inputClass, primaryButton, secondaryButton } from '../shared/ui';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { useWorkspace } from '../workspace';
 
 // ---- Preview Modal ----------------------------------------------------------
@@ -740,6 +741,22 @@ export const TemplatesManagementTab: React.FC = () => {
     });
   }, [allTemplates, selectedType, selectedCategory, search]);
 
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    variant: 'danger' | 'warning';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmLabel: 'Confirm',
+    variant: 'danger',
+    onConfirm: () => {},
+  });
+
   const handleSaveEdit = (updated: TemplateDefinition) => {
     saveTemplateOverride(updated.id, updated);
     setOverrides(getTemplateOverrides());
@@ -747,10 +764,18 @@ export const TemplatesManagementTab: React.FC = () => {
   };
 
   const handleResetOverride = (id: string) => {
-    if (confirm('Revert this template back to factory defaults? Any custom edits will be undone.')) {
-      removeTemplateOverride(id);
-      setOverrides(getTemplateOverrides());
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Revert template to factory defaults?',
+      description: 'Any custom edits to this template made by super admin will be undone, and the built-in factory design will be restored.',
+      confirmLabel: 'Revert to factory default',
+      variant: 'warning',
+      onConfirm: () => {
+        removeTemplateOverride(id);
+        setOverrides(getTemplateOverrides());
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleDuplicate = (template: TemplateDefinition) => {
@@ -765,12 +790,20 @@ export const TemplatesManagementTab: React.FC = () => {
   };
 
   const handleDeleteCustom = (id: string) => {
-    if (confirm('Delete this custom template permanently?')) {
-      removeCustomTemplate(id);
-      removeTemplateOverride(id);
-      setCustomList(getCustomTemplates());
-      setOverrides(getTemplateOverrides());
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete custom template permanently?',
+      description: 'This custom template will be permanently removed from the system. Projects already created from it will remain intact.',
+      confirmLabel: 'Delete custom template',
+      variant: 'danger',
+      onConfirm: () => {
+        removeCustomTemplate(id);
+        removeTemplateOverride(id);
+        setCustomList(getCustomTemplates());
+        setOverrides(getTemplateOverrides());
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   return (
@@ -843,10 +876,18 @@ export const TemplatesManagementTab: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                if (confirm('Reset all super admin overrides back to built-in factory defaults?')) {
-                  resetAllTemplateOverrides();
-                  setOverrides({});
-                }
+                setConfirmDialog({
+                  isOpen: true,
+                  title: 'Reset all template overrides?',
+                  description: 'All super admin overrides will be erased, restoring all templates back to factory default designs.',
+                  confirmLabel: 'Reset all overrides',
+                  variant: 'warning',
+                  onConfirm: () => {
+                    resetAllTemplateOverrides();
+                    setOverrides({});
+                    setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                  },
+                });
               }}
               className={`${secondaryButton} !text-xs !py-1.5`}
             >
@@ -1014,6 +1055,17 @@ export const TemplatesManagementTab: React.FC = () => {
           onClose={() => setEditingTemplate(null)}
         />
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmLabel={confirmDialog.confirmLabel}
+        variant={confirmDialog.variant}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+      />
     </div>
   );
 };

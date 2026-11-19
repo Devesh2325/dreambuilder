@@ -5,6 +5,7 @@ import { cloneSubtree } from '../core/tree';
 import { loadRows, useDataSources } from '../experience/useDataSources';
 import { buildContent, el, El } from '../templates/dsl';
 import { fieldClass, labelClass } from './fields';
+import { ConfirmDialog } from '../app/shared/ConfirmDialog';
 import { useStudio } from './store';
 
 const smallButton = 'h-8 px-3 inline-flex items-center gap-1.5 text-[13px] font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 disabled:opacity-50';
@@ -112,6 +113,7 @@ export const DataSourcesPanel: React.FC = () => {
   const data = useDataSources(sources);
   const [isAdding, setIsAdding] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [sourceToRemove, setSourceToRemove] = useState<DataSource | null>(null);
   const list = sources ?? [];
 
   return (
@@ -132,9 +134,7 @@ export const DataSourcesPanel: React.FC = () => {
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={source.url}>{source.url}</p>
                 </div>
                 {!readOnly && (
-                  <button type="button" aria-label={`Remove ${source.label}`} className="p-1 text-slate-400 hover:text-rose-600" onClick={() => {
-                    if (window.confirm(`Stop loading ${source.label}? Blocks that repeat over it will show nothing.`)) updateDraft((d) => { d.settings.dataSources = (d.settings.dataSources ?? []).filter((item) => item.key !== source.key); });
-                  }}>
+                  <button type="button" aria-label={`Remove ${source.label}`} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer" onClick={() => setSourceToRemove(source)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -172,6 +172,24 @@ export const DataSourcesPanel: React.FC = () => {
           Connect an API
         </button>
       ))}
+
+      <ConfirmDialog
+        isOpen={Boolean(sourceToRemove)}
+        title="Remove data source?"
+        itemName={sourceToRemove?.label}
+        description="Stop loading this API data source? Any blocks or sections repeating over it will no longer display items."
+        confirmLabel="Remove source"
+        variant="danger"
+        onClose={() => setSourceToRemove(null)}
+        onConfirm={() => {
+          if (sourceToRemove) {
+            updateDraft((d) => {
+              d.settings.dataSources = (d.settings.dataSources ?? []).filter((item) => item.key !== sourceToRemove.key);
+            });
+            setSourceToRemove(null);
+          }
+        }}
+      />
     </section>
   );
 };

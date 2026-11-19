@@ -11,6 +11,7 @@ import { useServices, useSession } from '../session';
 import { formatDate, formatDateTime } from '../shared/format';
 import { Icon } from '../shared/Icon';
 import { BusyLabel, cardClass, EmptyState, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton, StatTile, TableSkeleton } from '../shared/ui';
+import { Pagination } from '../shared/Pagination';
 import { TemplatesManagementTab } from './TemplatesTab';
 import { WebsiteConfigTab } from './WebsiteConfigTab';
 
@@ -127,6 +128,8 @@ const UsersTab: React.FC = () => {
   const query = useQuery({ queryKey: ['admin-users'], queryFn: () => admin.listUsers() });
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [nudging, setNudging] = useState<AdminUser | 'everyone' | null>(null);
   const setPlan = useMutation({
     mutationFn: ({ organizationId, plan }: { organizationId: string; plan: SubscriptionPlan }) => admin.setWorkspacePlan(organizationId, plan),
@@ -139,6 +142,10 @@ const UsersTab: React.FC = () => {
       (!term || [user.email, user.fullName, user.workspaceName].some((value) => value?.toLowerCase().includes(term)))
       && (!planFilter || user.plan === planFilter));
   }, [query.data, search, planFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleRows = rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   return (
     <>
@@ -172,7 +179,7 @@ const UsersTab: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {rows.map((user) => (
+              {visibleRows.map((user) => (
                 <tr key={user.userId}>
                   <th scope="row" className="px-4 py-2.5 font-medium max-w-[280px]">
                     <span className="block truncate">{user.fullName || user.email}</span>
@@ -200,10 +207,22 @@ const UsersTab: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {query.isSuccess && rows.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500 dark:text-slate-400">Nobody matches your search.</td></tr>}
+              {query.isSuccess && visibleRows.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500 dark:text-slate-400">Nobody matches your search.</td></tr>}
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={pageCount}
+          totalItems={rows.length}
+          pageSize={pageSize}
+          onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(0);
+          }}
+        />
       </div>
     </>
   );

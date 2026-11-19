@@ -48,8 +48,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         chrome.storage.local.get(['flowpilot_recorded_steps'], (res) => {
           const existingSteps = res.flowpilot_recorded_steps || [];
+          const tourTitle = message.tourTitle || 'New Interactive Tour';
+          const options = message.options || {};
 
-          chrome.tabs.sendMessage(tabId, { type: 'START_RECORDING', steps: existingSteps }, (response) => {
+          chrome.storage.local.set({ flowpilot_tour_title: tourTitle });
+
+          chrome.tabs.sendMessage(tabId, { type: 'START_RECORDING', steps: existingSteps, tourTitle, options }, (response) => {
             if (chrome.runtime.lastError) {
               // Inject content script manually if needed
               chrome.scripting.executeScript({
@@ -57,7 +61,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 files: ['content.js'],
               }, () => {
                 setTimeout(() => {
-                  chrome.tabs.sendMessage(tabId, { type: 'START_RECORDING', steps: existingSteps });
+                  chrome.tabs.sendMessage(tabId, { type: 'START_RECORDING', steps: existingSteps, tourTitle, options });
                 }, 200);
               });
             }
@@ -68,6 +72,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       });
       return true; // Keep sendResponse open
+    }
+
+    case 'PLAY_TOUR': {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs[0]?.id) return sendResponse({ ok: false, error: 'No active tab' });
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'PLAY_TOUR', tour: message.tour }, () => {
+          sendResponse({ ok: true });
+        });
+      });
+      return true;
     }
 
     case 'STOP_RECORDING': {
@@ -85,10 +99,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     case 'EXPORT_TO_FLOWPILOT': {
-      chrome.storage.local.get(['flowpilot_dashboard_url', 'flowpilot_recorded_steps', 'flowpilot_last_site'], (res) => {
+      chrome.storage.local.get(['flowpilot_dashboard_url', 'flowpilot_recorded_steps', 'flowpilot_last_site', 'flowpilot_tour_title'], (res) => {
         const dashboard = (res.flowpilot_dashboard_url || DEFAULT_DASHBOARD_URL).replace(/\/+$/, '');
         const steps = res.flowpilot_recorded_steps || [];
         const lastSite = res.flowpilot_last_site || '';
+        const tourTitle = message.title || res.flowpilot_tour_title || 'Imported Web Tour';
 
         if (steps.length === 0) {
           return sendResponse({ ok: false, error: 'No steps recorded' });
@@ -96,7 +111,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         const payload = {
           type: 'tour',
-          title: 'Imported Web Tour',
+          title: tourTitle,
           builderUrl: lastSite,
           steps: steps.map((s) => ({
             selector: s.selector,
