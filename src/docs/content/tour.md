@@ -2,7 +2,27 @@
 
 A tour guides users step by step around your own app, highlighting one element at a time.
 
-## Install
+## Visual Chrome Extension (Zero-Code Tour Creation)
+
+Create tours directly on your live website by clicking elements with our **FlowPilot Chrome Extension** — just like Userpilot and Whatfix, without having to install any JavaScript snippet first:
+
+1. **Download**: Download `flowpilot-extension.zip` from your dashboard or [Download Extension](/downloads/flowpilot-extension.zip).
+2. **Install in Chrome**:
+   - Go to `chrome://extensions` in your browser.
+   - Turn ON **Developer mode** (top-right toggle).
+   - Click **Load unpacked** (top-left) and choose the unzipped `extension` folder.
+3. **Record on Your Live Site**:
+   - Open your real web application (e.g. `https://app.yoursite.com` or `http://localhost:3000`).
+   - Click the **FlowPilot** icon in your browser toolbar.
+   - Click **Start Visual Recording**.
+   - Hover and click on any element (buttons, menus, profile, inputs). A floating toolbar lets you add titles, descriptions, and toggle between clicking and navigating.
+4. **Save & Customize in FlowPilot**:
+   - Click **Done & Save to FlowPilot**.
+   - Your tour automatically imports into the FlowPilot Studio with all steps already set up and linked to your elements!
+
+---
+
+## Install with Embed Script
 
 Add the script to your app, as described in the [installation guide](install):
 

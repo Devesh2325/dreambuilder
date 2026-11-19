@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowPilot Tour Builder</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="fp-popup-body">
+  <!-- Header -->
+  <header class="fp-header">
+    <div class="fp-logo-wrap">
+      <div class="fp-logo-badge">FP</div>
+      <div>
+        <h1 class="fp-title">FlowPilot</h1>
+        <p class="fp-subtitle">Visual Tour Builder</p>
+      </div>
+    </div>
+    <div class="fp-status-pill" id="fp-status-indicator">
+      <span class="fp-dot"></span>
+      <span id="fp-status-text">Ready</span>
+    </div>
+  </header>
+
+  <!-- Main Controls -->
+  <main class="fp-main">
+    <!-- Active Site Info -->
+    <div class="fp-site-card" id="fp-site-card">
+      <span class="fp-site-label">CURRENT TAB</span>
+      <p class="fp-site-url" id="fp-current-url">Loading tab...</p>
+    </div>
+
+    <!-- Record Trigger Button -->
+    <div class="fp-action-block">
+      <button class="fp-btn-record" id="fp-toggle-record">
+        <span class="fp-record-icon" id="fp-record-icon">🎯</span>
+        <span id="fp-record-btn-text">Start Visual Recording</span>
+      </button>
+      <p class="fp-hint" id="fp-record-hint">
+        Click to launch the visual element picker on this page
+      </p>
+    </div>
+
+    <!-- Steps List Container -->
+    <section class="fp-steps-section">
+      <div class="fp-steps-header">
+        <h2 class="fp-steps-title">
+          <span>Captured Steps</span>
+          <span class="fp-step-count" id="fp-step-count">0</span>
+        </h2>
+        <button class="fp-btn-link" id="fp-clear-steps" title="Clear all steps" style="display: none;">
+          Clear
+        </button>
+      </div>
+
+      <div class="fp-steps-list" id="fp-steps-list">
+        <!-- Empty state placeholder -->
+        <div class="fp-empty-state" id="fp-empty-state">
+          <div class="fp-empty-icon">🧭</div>
+          <p class="fp-empty-text">No steps captured yet.</p>
+          <p class="fp-empty-subtext">Click "Start Visual Recording", then click on any buttons, links or fields on your website.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Export & Studio Actions -->
+    <div class="fp-bottom-actions">
+      <button class="fp-btn-primary" id="fp-export-studio" disabled>
+        <span>🚀 Open & Save in FlowPilot</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- Settings Footer -->
+  <footer class="fp-footer">
+    <details class="fp-settings-details">
+      <summary class="fp-settings-summary">⚙️ Dashboard Connection</summary>
+      <div class="fp-settings-body">
+        <label class="fp-field-label" for="fp-dashboard-url">FlowPilot App URL</label>
+        <div class="fp-input-row">
+          <input type="url" id="fp-dashboard-url" class="fp-input" placeholder="https://dreambuilder-two.vercel.app" />
+          <button class="fp-btn-save-settings" id="fp-save-settings">Save</button>
+        </div>
+        <p class="fp-field-hint">Use localhost:5173 for local development or your production URL.</p>
+      </div>
+    </details>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

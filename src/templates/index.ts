@@ -101,7 +101,7 @@ export function projectFromTemplate(
   };
 }
 
-const STARTING_BLOCK: Partial<Record<ProjectType, ReturnType<typeof el>[]>> = {
+export const STARTING_BLOCK: Partial<Record<ProjectType, ReturnType<typeof el>[]>> = {
   tour: [el('TourStep', {}, [el('Heading', { props: { text: 'First step', level: 'h4' } }), el('Text', { props: { text: 'Describe this step.' } })])],
   form: [el('Form', {}, [el('FormField', { props: { name: 'email', label: 'Email', inputType: 'email', required: true } })])],
   demo: [el('DemoScreen', {}, [el('DemoHotspot')])],

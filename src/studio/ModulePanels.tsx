@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CircleDot, ExternalLink, Hammer, Loader2, Play, PlaySquare, Plus, Sparkles } from 'lucide-react';
+import { CircleDot, Download, ExternalLink, Hammer, Loader2, Play, PlaySquare, Plus, Puzzle, Sparkles } from 'lucide-react';
 import { ProjectRecord } from '../data/services';
 import { embedSnippet } from '../app/projects/projectHelpers';
 import { ImageInput } from '../app/shared/VariableForm';
+import { ChromeExtensionModal } from '../app/tours/ChromeExtensionModal';
 import { ROUTES } from '../app/routes';
 import { fieldClass, labelClass } from './fields';
 import { LiveMode, useLiveSite } from './liveSite';
@@ -156,6 +157,7 @@ const LiveSite: React.FC<{ project: ProjectRecord }> = ({ project }) => {
   const { updateDraft } = useStudio.getState();
   const status = useLiveSite((s) => s.status);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [isExtensionGuideOpen, setIsExtensionGuideOpen] = useState(false);
   const url = draft?.settings.builderUrl ?? '';
 
   const open = (next: LiveMode) => {
@@ -243,6 +245,40 @@ const LiveSite: React.FC<{ project: ProjectRecord }> = ({ project }) => {
           </div>
         </div>
       )}
+
+      {/* Chrome Extension Alternative Card */}
+      <div className="rounded-xl p-3 bg-gradient-to-br from-indigo-50/80 via-purple-50/40 to-transparent dark:from-indigo-950/40 dark:via-purple-950/20 border border-indigo-200/80 dark:border-indigo-800/80 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-xs text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+            <Puzzle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            FlowPilot Chrome Extension
+          </span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300">
+            Zero Code
+          </span>
+        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-300">
+          Want to click elements directly inside your app without installing code first? Use the FlowPilot Chrome Extension.
+        </p>
+        <div className="flex items-center gap-2 pt-1">
+          <a
+            href="/downloads/flowpilot-extension.zip"
+            download="flowpilot-extension.zip"
+            className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+          >
+            <Download className="w-3 h-3" /> Download .zip
+          </a>
+          <button
+            type="button"
+            onClick={() => setIsExtensionGuideOpen(true)}
+            className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:underline cursor-pointer"
+          >
+            How to use →
+          </button>
+        </div>
+      </div>
+
+      <ChromeExtensionModal isOpen={isExtensionGuideOpen} onClose={() => setIsExtensionGuideOpen(false)} />
     </section>
   );
 };

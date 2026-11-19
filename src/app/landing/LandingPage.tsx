@@ -591,8 +591,8 @@ export const LandingPage: React.FC = () => {
                 {
                   icon: MousePointerClick,
                   title: '2. Shadow DOM Product Tours',
-                  desc: 'Guide new visitors through live features with zero style bleed. Guaranteed clean injection that never breaks host CSS or causes layout shifts.',
-                  badge: '100% CSS Isolated',
+                  desc: 'Point & click on any element of your live app with our Chrome Extension (Userpilot style) or use our visual canvas. Guaranteed clean Shadow DOM injection with zero CSS bleed.',
+                  badge: 'Chrome Extension + Zero CSS Bleed',
                   gradient: 'from-purple-600/20 to-pink-600/20',
                   border: 'border-purple-500/30',
                 },
@@ -744,6 +744,7 @@ export const LandingPage: React.FC = () => {
                 <tbody className="divide-y divide-white/5">
                   {[
                     ['Interactive Product Tours', '✓ Included (Shadow DOM)', '✓ Included', '✓ Included'],
+                    ['Chrome Extension Visual Builder', '✓ Included (Click on your live app)', '✓ Included', '✗ Complex Setup Only'],
                     ['Clickable Demos & Spotlights', '✓ Included (Spotlight Presets)', '✗ 3rd-party required ($$$)', '✗ Missing'],
                     ['Landing Pages & Websites', '✓ Included (All-in-One)', '✗ Not supported', '✗ Not supported'],
                     ['Gemini AI Prompt Generator', '✓ Gemini 2.0 Flash Included', '✗ Not available', '✗ Not available'],

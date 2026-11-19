@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Eye, Monitor, Plus, Search, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, Loader2, Monitor, Plus, Puzzle, Search, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
 import { moduleNoun, MODULES } from '../../core/modules';
-import { PROJECT_TYPES, ProjectType } from '../../core/schema';
+import { DEFAULT_THEME, PROJECT_TYPES, ProjectType } from '../../core/schema';
+import { NewProject } from '../../data/services';
 import { DEVICE_WIDTHS, ProjectPreview } from '../../experience/ProjectPreview';
-import { blankProject, initialValues, TemplateDefinition, templatesFor } from '../../templates';
+import { blankProject, buildContent, el, initialValues, STARTING_BLOCK, TemplateDefinition, templatesFor } from '../../templates';
 import { teamTemplate } from '../../templates/library';
 import { ROUTES } from '../routes';
 import { useServices } from '../session';
 import { GLOBAL_LANGUAGES } from '../shared/GoogleTranslate';
 import { BusyLabel, ErrorNote, errorMessage, inputClass, primaryButton, secondaryButton } from '../shared/ui';
+import { ChromeExtensionModal } from '../tours/ChromeExtensionModal';
 import { useWorkspace } from '../workspace';
 import { AiCreateModal } from './AiCreateModal';
 import { CreateSteps } from './CreateSteps';
@@ -193,7 +195,9 @@ const headerClass = 'h-14 shrink-0 grid grid-cols-[1fr_auto_1fr] items-center ga
 /** One module's templates, with room to compare them. */
 const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
   const navigate = useNavigate();
-  const { can } = useWorkspace();
+  const { can, workspace } = useWorkspace();
+  const { projects } = useServices();
+  const queryClient = useQueryClient();
   const team = useTeamTemplates();
   const module = MODULES[type];
   const [search, setSearch] = useState('');
@@ -201,6 +205,112 @@ const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
   const [previewing, setPreviewing] = useState<TemplateDefinition | null>(null);
   const [isBlankOpen, setIsBlankOpen] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
+  const [importingFromExtension, setImportingFromExtension] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  // Auto-import tour from Chrome Extension if hash is present
+  useEffect(() => {
+    const handleHashImport = async () => {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#fp-extension-import=')) return;
+
+      const encoded = hash.slice('#fp-extension-import='.length);
+      if (!encoded || !workspace?.organizationId) return;
+
+      try {
+        setImportingFromExtension(true);
+        setImportError(null);
+        const jsonStr = decodeURIComponent(escape(atob(encoded)));
+        const payload = JSON.parse(jsonStr);
+
+        if (!payload || !Array.isArray(payload.steps)) {
+          throw new Error('Invalid tour data received from Chrome extension');
+        }
+
+        const stepElements = payload.steps.length > 0
+          ? payload.steps.map((step: any, idx: number) =>
+              el(
+                'TourStep',
+                {
+                  props: {
+                    selector: step.selector || 'body',
+                    path: step.path || '',
+                  },
+                },
+                [
+                  el('Heading', { props: { text: step.title || step.text || `Step ${idx + 1}`, level: 'h4' } }),
+                  el('Text', { props: { text: step.description || 'Guide users through this part of your app.' } }),
+                  el('Row', { styles: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } }, [
+                    el('Button', { props: { text: 'Back', action: 'prev', variant: 'secondary' } }),
+                    el('Button', {
+                      props: {
+                        text: idx === payload.steps.length - 1 ? 'Finish' : 'Next',
+                        action: idx === payload.steps.length - 1 ? 'close' : 'next',
+                        variant: 'primary',
+                      },
+                    }),
+                  ]),
+                ],
+              ),
+            )
+          : STARTING_BLOCK['tour']!;
+
+        const content = buildContent('ext', stepElements);
+
+        const newProject: NewProject = {
+          organizationId: workspace.organizationId,
+          type: 'tour',
+          title: payload.title || 'Chrome Extension Imported Tour',
+          description: `Recorded directly on ${payload.builderUrl || 'your website'} using FlowPilot Chrome Extension.`,
+          variables: {},
+          theme: DEFAULT_THEME,
+          settings: {
+            builderUrl: payload.builderUrl || '',
+            tour: {
+              showProgress: true,
+              showClose: true,
+              closeOnBackdrop: false,
+              keyboard: true,
+              scrollToTarget: true,
+              backdrop: 55,
+              highlightPadding: 8,
+              waitSeconds: 2.5,
+            },
+          },
+          documents: [
+            {
+              kind: 'experience',
+              title: 'Main',
+              slug: '',
+              content,
+            },
+          ],
+        };
+
+        const projectId = await projects.create(newProject);
+        // Clean URL hash so refreshing doesn't duplicate
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['project-details'] });
+
+        navigate(ROUTES.studio(projectId), {
+          state: {
+            justCreated: true,
+            justImportedFromExtension: true,
+            stepCount: payload.steps.length,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to import tour from extension', err);
+        setImportError(err instanceof Error ? err.message : 'Could not import tour from extension.');
+      } finally {
+        setImportingFromExtension(false);
+      }
+    };
+
+    void handleHashImport();
+  }, [workspace?.organizationId, projects, navigate, queryClient]);
 
   const all = useMemo(() => [...team.templates.filter((t) => t.type === type), ...templatesFor(type)], [team.templates, type]);
   const categories = [...new Set(all.flatMap((t) => (t.category ? [t.category] : [])))];
@@ -292,6 +402,32 @@ const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
                     <span className="text-sm text-slate-500 dark:text-slate-400">Build it yourself in the editor</span>
                   </button>
                 </li>
+                {type === 'tour' && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setIsExtensionModalOpen(true)}
+                      className="w-full h-full min-h-[280px] flex flex-col items-center justify-between p-6 rounded-2xl border-2 border-indigo-500 bg-gradient-to-br from-indigo-950/80 via-slate-900 to-indigo-900/60 text-white transition-all shadow-md hover:shadow-xl hover:border-indigo-400 group relative overflow-hidden text-center cursor-pointer"
+                    >
+                      <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500 text-white shadow-sm flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> Userpilot Style
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform mt-3">
+                        <Puzzle className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block font-bold text-base text-white">Record on Live Site</span>
+                        <span className="block mt-1 text-xs text-indigo-200/80 max-w-[210px] leading-relaxed">
+                          Point & click on any element of your real website using our Chrome Extension. Zero code changes.
+                        </span>
+                      </div>
+                      <div className="w-full flex items-center justify-center gap-1.5 mt-2 py-2 px-3 rounded-lg text-xs font-bold bg-indigo-600 group-hover:bg-indigo-500 text-white shadow transition-colors">
+                        <span>Use Chrome Extension</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </div>
+                    </button>
+                  </li>
+                )}
               </>
             )}
             {templates.map((template) => (
@@ -322,6 +458,27 @@ const ChooseTemplate: React.FC<{ type: ProjectType }> = ({ type }) => {
       {previewing && <PreviewDialog template={previewing} onClose={() => setPreviewing(null)} onUse={() => use(previewing)} />}
       {isBlankOpen && <BlankDialog type={type} onClose={() => setIsBlankOpen(false)} />}
       {isAiOpen && <AiCreateModal initialType={type} onClose={() => setIsAiOpen(false)} />}
+      <ChromeExtensionModal isOpen={isExtensionModalOpen} onClose={() => setIsExtensionModalOpen(false)} />
+
+      {importingFromExtension && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col items-center gap-3 text-center max-w-sm">
+            <Loader2 className="w-9 h-9 text-indigo-600 animate-spin" />
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">Importing Tour from Chrome Extension</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Creating your tour project and preparing captured steps in the visual editor...</p>
+          </div>
+        </div>
+      )}
+
+      {importError && (
+        <div className="fixed bottom-4 right-4 z-50 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 shadow-xl max-w-md">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold text-xs">Import Failed</span>
+            <button type="button" onClick={() => setImportError(null)} className="p-1 text-xs">✕</button>
+          </div>
+          <p className="text-xs mt-1">{importError}</p>
+        </div>
+      )}
     </div>
   );
 };

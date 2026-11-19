@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Copy, ExternalLink, Pencil, Search, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, Pencil, Puzzle, Search, Trash2 } from 'lucide-react';
 import { MODULES } from '../../core/modules';
 import { ProjectType } from '../../core/schema';
 import { ProjectRecord } from '../../data/services';
@@ -14,6 +14,7 @@ import { MODULE_COLORS } from '../shared/moduleColors';
 import { BusyIcon, cardClass, ErrorNote, errorMessage, inputClass, PageHeader, StatTile, TableSkeleton } from '../shared/ui';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 import { Pagination } from '../shared/Pagination';
+import { ChromeExtensionModal } from '../tours/ChromeExtensionModal';
 import { CreateButton } from '../templates/CreateButton';
 import { useWorkspace } from '../workspace';
 import { collectsResponses, MODULE_COLUMNS, ProjectRow } from './moduleColumns';
@@ -65,6 +66,7 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null);
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
 
   const query = useQuery({
     queryKey: ['projects', organizationId],
@@ -131,6 +133,43 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
         actions={<CreateButton type={type} />}
       />
       <ErrorNote message={failure ? errorMessage(failure) : null} />
+
+      {type === 'tour' && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-slate-900 to-indigo-900/60 border border-indigo-500/40 text-white shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
+              <Puzzle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm">Visual Tour Builder (Chrome Extension)</h3>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  No Code Needed
+                </span>
+              </div>
+              <p className="text-xs text-indigo-200/80 mt-0.5">
+                Build interactive tours on your live web app by clicking elements without installing code snippets — just like Userpilot & Whatfix.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href="/downloads/flowpilot-extension.zip"
+              download="flowpilot-extension.zip"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow transition-all"
+            >
+              <Download className="w-3.5 h-3.5" /> Download Extension (.zip)
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsExtensionModalOpen(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors cursor-pointer"
+            >
+              How it works
+            </button>
+          </div>
+        </div>
+      )}
       {(query.isLoading || isLoadingWorkspace) && <TableSkeleton />}
       {query.isError && <ErrorNote message="We couldn't load your projects. Please refresh the page." />}
 
@@ -261,6 +300,8 @@ export const ProjectsPage: React.FC<{ type: ProjectType }> = ({ type }) => {
           }
         }}
       />
+
+      <ChromeExtensionModal isOpen={isExtensionModalOpen} onClose={() => setIsExtensionModalOpen(false)} />
     </>
   );
 };

@@ -2,6 +2,8 @@
 
 The script is about 21 KB when compressed, loads with `defer` so it doesn't delay your page, and has no dependencies. It keeps its styles in a Shadow DOM, so your CSS and FlowPilot's can't affect each other.
 
+> 💡 **No-Code Alternative (Userpilot / Whatfix style)**: If you want to create product tours without adding any JavaScript to your codebase first, use the **FlowPilot Chrome Extension**. You can install it in Chrome, click directly on elements in your app, and save the tour to FlowPilot. See the [Tour Chrome Extension Guide](tour#visual-chrome-extension-zero-code-tour-creation) or [Download Extension](/downloads/flowpilot-extension.zip).
+
 Add it once per project. To use several projects on a page, add one script tag for each.
 
 Each project's **Share and install** tab has these steps with your code filled in, including WordPress, Shopify, Webflow, Wix, Squarespace and Google Tag Manager. Websites and pages don't need the script, since they're hosted for you. To show one of your forms or demos in a website you built here, see [Use your projects inside a page](embedding).

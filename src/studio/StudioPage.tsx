@@ -147,8 +147,10 @@ const Editor: React.FC = () => {
     initialLanguage?: string;
     editingTemplateId?: string;
     editingTemplateTitle?: string;
+    justImportedFromExtension?: boolean;
+    stepCount?: number;
   } | null;
-  const [welcome, setWelcome] = useState(() => (arrival?.justCreated ? 'created' : arrival?.buildingTemplate ? 'template' : null));
+  const [welcome, setWelcome] = useState(() => (arrival?.justImportedFromExtension ? 'extension' : arrival?.justCreated ? 'created' : arrival?.buildingTemplate ? 'template' : null));
 
   const editingTemplateId = arrival?.editingTemplateId ?? (draft?.settings as Record<string, unknown>)?.editingTemplateId as string | undefined;
   const editingTemplateTitle = arrival?.editingTemplateTitle;
@@ -320,7 +322,9 @@ const Editor: React.FC = () => {
 
       {welcome && (
         <div role="status" className="shrink-0 flex items-center justify-center gap-3 px-4 py-2 text-sm bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
-          {welcome === 'created'
+          {welcome === 'extension'
+            ? `🎉 Successfully imported ${arrival?.stepCount ?? 0} tour step${(arrival?.stepCount ?? 0) === 1 ? '' : 's'} from FlowPilot Chrome Extension! Click each step below to customize.`
+            : welcome === 'created'
             ? `Your ${moduleNoun(project.type)} is ready. Change anything you like, then publish.`
             : 'Build your template from sections and blocks, then choose Save as template at the top.'}
           <button type="button" aria-label="Dismiss" className="p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10" onClick={() => setWelcome(null)}><X className="w-3.5 h-3.5" /></button>
