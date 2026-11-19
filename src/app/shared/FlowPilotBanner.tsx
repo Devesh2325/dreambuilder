@@ -116,6 +116,7 @@ export const ModuleEmptyBanner: React.FC<{ type: ProjectType; canCreate?: boolea
   const copy = MODULE_COPY[type];
   const actions = useMemo<BannerAction[]>(() => [
     ...(canCreate ? [{ label: 'Choose a template', href: ROUTES.create(type), primary: true }] : []),
+    ...(type === 'tour' ? [{ label: 'Download Chrome Extension (.zip)', href: '/downloads/flowpilot-extension.zip' }] : []),
     { label: 'Read the guide', href: ROUTES.doc(type) },
   ], [canCreate, type]);
   return <FlowPilotBanner title={`No ${module.plural.toLowerCase()} yet`} text={copy.text} steps={copy.steps} actions={actions} />;

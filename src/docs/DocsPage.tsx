@@ -57,6 +57,18 @@ const DocsPage: React.FC = () => {
             </div>
           ))}
         </nav>
+
+        <div className="mt-6 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs">
+          <p className="font-bold text-indigo-900 dark:text-indigo-200">Chrome Extension</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Build tours by clicking on your live app.</p>
+          <a
+            href="/downloads/flowpilot-extension.zip"
+            download="flowpilot-extension.zip"
+            className="mt-2 block w-full py-1.5 px-2 rounded-lg text-center text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-colors"
+          >
+            Download Extension (.zip)
+          </a>
+        </div>
       </aside>
       <main className="flex-1 min-w-0 p-6 md:p-10">
         {doc ? (

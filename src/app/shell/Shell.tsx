@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { BarChart3, BookOpen, ChevronDown, Crown, Image, LayoutDashboard, LayoutTemplate, LifeBuoy, Loader2, LogOut, Moon, PanelLeft, Palette, Settings, ShieldCheck, Sun, Users } from 'lucide-react';
+import { BarChart3, BookOpen, ChevronDown, Crown, Download, Image, LayoutDashboard, LayoutTemplate, LifeBuoy, Loader2, LogOut, Moon, PanelLeft, Palette, Puzzle, Settings, ShieldCheck, Sun, Users } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
 import { isLocalBackend } from '../../data';
 import { AuthUser } from '../../data/services';
@@ -14,6 +14,7 @@ import { useIsSuperAdmin } from '../admin/AdminPage';
 import { initials } from '../shared/format';
 import { useTheme } from '../theme';
 import { NudgeBanner } from './NudgeBanner';
+import { ChromeExtensionModal } from '../tours/ChromeExtensionModal';
 import { useWorkspace } from '../workspace';
 
 const STORAGE_KEY = 'fp_sidebar_collapsed';
@@ -151,6 +152,7 @@ export const Shell: React.FC = () => {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
   const superAdmin = useIsSuperAdmin();
 
   const toggleCollapsed = () => {
@@ -221,6 +223,24 @@ export const Shell: React.FC = () => {
           </Group>
           <Group label="Engage" collapsed={collapsed}>
             {MODULE_LIST.filter((m) => !m.primary).map((m) => <SideLink key={m.type} to={m.path} collapsed={collapsed} label={m.plural} icon={<Icon name={m.icon} className={iconSize} />} />)}
+            <button
+              type="button"
+              onClick={() => setIsExtensionModalOpen(true)}
+              title={collapsed ? 'Chrome Extension (Tour Builder)' : undefined}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-all cursor-pointer ${
+                collapsed
+                  ? 'justify-center text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
+                  : 'mt-1 text-indigo-700 dark:text-indigo-300 bg-indigo-50/70 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 border border-indigo-200/80 dark:border-indigo-800/60'
+              }`}
+            >
+              <Puzzle className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+              {!collapsed && (
+                <div className="flex-1 min-w-0 flex items-center justify-between">
+                  <span className="truncate">Chrome Extension</span>
+                  <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-indigo-600 text-white shadow-xs">Zero Code</span>
+                </div>
+              )}
+            </button>
           </Group>
           <Group label="Library" collapsed={collapsed}>
             <SideLink to={ROUTES.templates} collapsed={collapsed} label="Template library" icon={<LayoutTemplate className={iconSize} aria-hidden="true" />} />
@@ -237,6 +257,37 @@ export const Shell: React.FC = () => {
             <SideLink to={ROUTES.support} collapsed={collapsed} label="Support" icon={<LifeBuoy className={iconSize} aria-hidden="true" />} />
           </Group>
         </nav>
+
+        {!collapsed && (
+          <div className="shrink-0 p-2.5 m-2 rounded-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white border border-indigo-500/30 shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                <Puzzle className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-xs font-bold truncate">Visual Tour Extension</span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-300 leading-snug">
+              Build & play tours on your live web app by clicking elements.
+            </p>
+            <div className="mt-2.5 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIsExtensionModalOpen(true)}
+                className="flex-1 py-1 px-2 rounded-lg text-[11px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white text-center transition-colors cursor-pointer"
+              >
+                Install Guide
+              </button>
+              <a
+                href="/downloads/flowpilot-extension.zip"
+                download="flowpilot-extension.zip"
+                title="Download Extension Package (.zip)"
+                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
 
         {isLocalBackend && !collapsed && (
           <div className="shrink-0 p-2 border-t border-slate-200 dark:border-slate-800">
@@ -260,6 +311,17 @@ export const Shell: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Chrome Extension Quick Install & Guide Button */}
+            <button
+              type="button"
+              onClick={() => setIsExtensionModalOpen(true)}
+              title="Install FlowPilot Chrome Extension to create & play tours directly on your live site"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 transition-all shadow-xs cursor-pointer"
+            >
+              <Puzzle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Chrome Extension</span>
+            </button>
+
             {/* Google Translation Global Selector */}
             <GoogleTranslateSelector variant="header" />
 
@@ -306,6 +368,12 @@ export const Shell: React.FC = () => {
           {isLoading ? <DashboardSkeleton /> : <Outlet />}
         </div>
       </main>
+
+      {/* Chrome Extension Setup Modal */}
+      <ChromeExtensionModal
+        isOpen={isExtensionModalOpen}
+        onClose={() => setIsExtensionModalOpen(false)}
+      />
     </div>
   );
 };

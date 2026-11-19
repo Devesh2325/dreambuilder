@@ -30,6 +30,8 @@ import {
   Video,
   Wand2,
   Zap,
+  Puzzle,
+  Download,
 } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
 import { getTemplate, TEMPLATES } from '../../templates';
@@ -147,6 +149,10 @@ export const LandingPage: React.FC = () => {
             <a href="#pillars" className="hover:text-white transition-colors">Key Features</a>
             <a href="#templates" className="hover:text-white transition-colors">Templates</a>
             <a href="#compare" className="hover:text-white transition-colors">Why FlowPilot</a>
+            <a href="/downloads/flowpilot-extension.zip" download="flowpilot-extension.zip" className="hover:text-indigo-400 transition-colors flex items-center gap-1 text-indigo-300">
+              <Puzzle className="w-3.5 h-3.5" />
+              <span>Extension</span>
+            </a>
             <a href="#faqs" className="hover:text-white transition-colors">FAQs</a>
             <Link to={ROUTES.docs} className="hover:text-white transition-colors">Docs</Link>
           </nav>
@@ -226,6 +232,10 @@ export const LandingPage: React.FC = () => {
               <span className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 100% Shadow DOM Isolation
+              </span>
+              <span className="flex items-center gap-2">
+                <Puzzle className="w-4 h-4 text-purple-400" />
+                Chrome Extension Visual Builder
               </span>
               <span className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-amber-400" />

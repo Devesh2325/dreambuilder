@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, Trash2, Upload } from 'lucide-react';
+import { Check, Copy, Download, Puzzle, Trash2, Upload } from 'lucide-react';
 import { AssetRecord } from '../../data/services';
 import { ColorField, FontSelect } from '../../studio/fields';
 import { UserRole } from '../../types/auth';
@@ -11,6 +11,7 @@ import { useServices, useSession } from '../session';
 import { FlowPilotBanner } from '../shared/FlowPilotBanner';
 import { BusyIcon, BusyLabel, cardClass, CardsSkeleton, dangerButton, ErrorNote, errorMessage, inputClass, LoadingNote, PageHeader, primaryButton, secondaryButton } from '../shared/ui';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { ChromeExtensionModal } from '../tours/ChromeExtensionModal';
 import { useWorkspace } from '../workspace';
 
 // ---- Assets -----------------------------------------------------------------
@@ -381,6 +382,7 @@ export const SettingsPage: React.FC = () => {
   const [name, setName] = useState('');
   const [newWorkspace, setNewWorkspace] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
 
   useEffect(() => {
     setName(workspace?.name ?? '');
@@ -436,6 +438,42 @@ export const SettingsPage: React.FC = () => {
           </section>
         )}
 
+        <section aria-labelledby="extension-title" className={`${cardClass} p-6 space-y-3`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                <Puzzle className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 id="extension-title" className="font-semibold text-sm">FlowPilot Chrome Extension</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Zero-code visual tour builder & on-page runner</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              v1.2.0 Ready
+            </span>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            Record interactive product tours by pointing and clicking directly on any website elements, and run tours live on your platform without embedding script snippets.
+          </p>
+          <div className="pt-2 flex flex-wrap items-center gap-2">
+            <a
+              href="/downloads/flowpilot-extension.zip"
+              download="flowpilot-extension.zip"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" /> Download Extension (.zip)
+            </a>
+            <button
+              type="button"
+              onClick={() => setIsExtensionModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+            >
+              Setup Guide & Instructions
+            </button>
+          </div>
+        </section>
+
         <form className={`${cardClass} p-6 space-y-3`} onSubmit={(event) => {
           event.preventDefault();
           create.mutate();
@@ -448,6 +486,11 @@ export const SettingsPage: React.FC = () => {
           <button type="submit" className={secondaryButton} disabled={create.isPending}><BusyLabel busy={create.isPending} busyText="Creating...">Create workspace</BusyLabel></button>
         </form>
       </div>
+
+      <ChromeExtensionModal
+        isOpen={isExtensionModalOpen}
+        onClose={() => setIsExtensionModalOpen(false)}
+      />
     </>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Check, CircleHelp, Eye, FolderKanban, LifeBuoy, Rocket, Send, Sparkles, X } from 'lucide-react';
+import { ArrowRight, Check, CircleHelp, Download, Eye, FolderKanban, LifeBuoy, Puzzle, Rocket, Send, Sparkles, X } from 'lucide-react';
 import { MODULE_LIST, MODULES } from '../../core/modules';
 import { UsageBar, useCurrentPlan } from '../account/PlansPage';
 import { ROUTES } from '../routes';
@@ -13,6 +13,7 @@ import { cardClass, DashboardSkeleton, ErrorNote, secondaryButton, StatTile } fr
 import { StatusBadge } from '../projects/ProjectsPage';
 import { CreateButton } from '../templates/CreateButton';
 import { AppTour, useAppTour } from '../tours/AppTour';
+import { ChromeExtensionModal } from '../tours/ChromeExtensionModal';
 import { CompanyOnboardingModal } from '../workspace/CompanyOnboardingModal';
 import { useWorkspace } from '../workspace';
 
@@ -92,6 +93,7 @@ export const DashboardPage: React.FC = () => {
   const plan = useCurrentPlan();
   // Read on every render, because the workspace isn't known yet on the first one.
   const [justDismissed, setJustDismissed] = useState(false);
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
   const isDismissed = justDismissed || readDismissed(organizationId);
 
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => {
@@ -140,6 +142,16 @@ export const DashboardPage: React.FC = () => {
       description: 'Share your link, or add the script to your own site.',
       done: views > 0,
       action: <Link to={ROUTES.doc('install')} className={linkAction}>How to install <ArrowRight className="w-4 h-4" aria-hidden="true" /></Link>,
+    },
+    {
+      title: 'Install Visual Tour Extension',
+      description: 'Record interactive walkthroughs by clicking on your live web app.',
+      done: all.some((p) => p.type === 'tour'),
+      action: (
+        <button type="button" onClick={() => setIsExtensionModalOpen(true)} className={`${linkAction} cursor-pointer`}>
+          Install guide <ArrowRight className="w-4 h-4" aria-hidden="true" />
+        </button>
+      ),
     },
   ];
   const isComplete = steps.every((step) => step.done);
@@ -218,6 +230,44 @@ export const DashboardPage: React.FC = () => {
 
       {list.isSuccess && (
         <>
+          {/* Chrome Extension Visual Tour Builder & Live Player Banner */}
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-950/90 via-slate-900 to-indigo-900/80 border border-indigo-500/40 p-5 text-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5 max-w-xl">
+                <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                  <Puzzle className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-base text-white">Visual Tour Builder (Chrome Extension)</h2>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      Zero Code Needed
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-indigo-200/90 leading-relaxed">
+                    Create on-page walkthroughs and test tours live on any web app by clicking elements — exactly like Userpilot & Whatfix, without adding code snippets first.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <a
+                  href="/downloads/flowpilot-extension.zip"
+                  download="flowpilot-extension.zip"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow transition-all cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download Extension (.zip)
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsExtensionModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors cursor-pointer"
+                >
+                  How it works
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section aria-labelledby="build-title" data-tour="build">
             <h2 id="build-title" className="font-semibold mb-3">What do you want to build?</h2>
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -295,6 +345,11 @@ export const DashboardPage: React.FC = () => {
           }
           setIsOnboardingOpen(false);
         }}
+      />
+
+      <ChromeExtensionModal
+        isOpen={isExtensionModalOpen}
+        onClose={() => setIsExtensionModalOpen(false)}
       />
     </div>
   );
