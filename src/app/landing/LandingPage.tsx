@@ -32,6 +32,8 @@ import {
   Zap,
   Puzzle,
   Download,
+  Menu,
+  X,
 } from 'lucide-react';
 import { MODULE_LIST } from '../../core/modules';
 import { getTemplate, TEMPLATES } from '../../templates';
@@ -74,6 +76,7 @@ export const LandingPage: React.FC = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [customHeadline, setCustomHeadline] = useState('Build Anything Without Code.');
   const [sandboxColor, setSandboxColor] = useState('#4f46e5');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const previous = document.title;
@@ -127,53 +130,179 @@ export const LandingPage: React.FC = () => {
       `}</style>
 
       {/* Top Floating Glassmorphism Navbar */}
-      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-white/10 transition-all">
-        <div className="max-w-7xl mx-auto h-16 px-6 flex items-center justify-between gap-6">
-          <Link to={ROUTES.landing} className="flex items-center gap-2.5 group">
+      <header className="sticky top-0 z-50 bg-slate-950/85 backdrop-blur-xl border-b border-white/10 transition-all shadow-lg shadow-black/20">
+        <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <Link
+            to={ROUTES.landing}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-center gap-2.5 group shrink-0"
+            title={`${config.company.name} Home`}
+          >
             <span
               aria-hidden="true"
               className="w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white font-extrabold text-base shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform"
             >
               F
             </span>
-            <span className="font-extrabold text-xl tracking-tight text-white group-hover:text-indigo-400 transition-colors">
+            <span className="font-extrabold text-xl tracking-tight text-white group-hover:text-indigo-400 transition-colors whitespace-nowrap">
               {config.company.name}
             </span>
           </Link>
 
-          <nav aria-label="Landing page" className="hidden lg:flex items-center gap-7 text-xs font-bold uppercase tracking-wider text-slate-300">
-            <a href="#sandbox" className="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+          {/* Desktop Navigation Links */}
+          <nav aria-label="Landing page" className="hidden lg:flex items-center gap-1 xl:gap-2 text-sm font-medium text-slate-300">
+            <a
+              href="#sandbox"
+              className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all flex items-center gap-1.5 whitespace-nowrap text-amber-300 hover:text-amber-200"
+            >
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Try Live Studio
+              <span>Live Studio</span>
             </a>
-            <a href="#pillars" className="hover:text-white transition-colors">Key Features</a>
-            <a href="#templates" className="hover:text-white transition-colors">Templates</a>
-            <a href="#compare" className="hover:text-white transition-colors">Why FlowPilot</a>
-            <a href="/downloads/flowpilot-extension.zip" download="flowpilot-extension.zip" className="hover:text-indigo-400 transition-colors flex items-center gap-1 text-indigo-300">
-              <Puzzle className="w-3.5 h-3.5" />
+            <a href="#pillars" className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all whitespace-nowrap">
+              Features
+            </a>
+            <a href="#templates" className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all whitespace-nowrap">
+              Templates
+            </a>
+            <a href="#compare" className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all whitespace-nowrap">
+              Why FlowPilot
+            </a>
+            <a
+              href="/downloads/flowpilot-extension.zip"
+              download="flowpilot-extension.zip"
+              title="Download Chrome Extension (Zero-Code Tour Builder)"
+              className="px-3 py-1.5 rounded-lg text-indigo-300 hover:text-white hover:bg-indigo-500/15 border border-indigo-500/25 transition-all flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Puzzle className="w-3.5 h-3.5 text-indigo-400" />
               <span>Extension</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-200 uppercase tracking-wider">New</span>
             </a>
-            <a href="#faqs" className="hover:text-white transition-colors">FAQs</a>
-            <Link to={ROUTES.docs} className="hover:text-white transition-colors">Docs</Link>
+            <Link to={ROUTES.docs} className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all whitespace-nowrap">
+              Docs
+            </Link>
+            <a href="#faqs" className="px-3 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition-all whitespace-nowrap">
+              FAQs
+            </a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          {/* Right Action Controls */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <GoogleTranslateSelector variant="pill" className="hidden sm:inline-block" />
+
             <Link
               to={ROUTES.login}
-              className="px-3.5 py-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+              className="px-3.5 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition-all whitespace-nowrap"
             >
               Sign In
             </Link>
+
             <Link
               to={ROUTES.signUp}
-              className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md shadow-indigo-600/30 transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl shadow-md shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-[1.02] active:scale-[0.98] transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0"
             >
               <span>Get Started Free</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
+
+            {/* Mobile / Tablet Menu Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((o) => !o)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle navigation menu"
+              className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors focus:outline-hidden"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile / Tablet Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-slate-950/95 border-b border-white/10 px-6 py-5 backdrop-blur-2xl animate-in slide-in-from-top-2 duration-200">
+            <nav className="flex flex-col gap-2">
+              <a
+                href="#sandbox"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl font-medium text-amber-300 hover:text-white hover:bg-white/5 flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Live Studio (Try Without Sign-In)</span>
+              </a>
+              <a
+                href="#pillars"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl font-medium text-slate-200 hover:text-white hover:bg-white/5"
+              >
+                Features
+              </a>
+              <a
+                href="#templates"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl font-medium text-slate-200 hover:text-white hover:bg-white/5"
+              >
+                Templates
+              </a>
+              <a
+                href="#compare"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl font-medium text-slate-200 hover:text-white hover:bg-white/5"
+              >
+                Why FlowPilot
+              </a>
+              <a
+                href="/downloads/flowpilot-extension.zip"
+                download="flowpilot-extension.zip"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl font-medium text-indigo-300 hover:text-white hover:bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <Puzzle className="w-4 h-4 text-indigo-400" />
+                  <span>Chrome Extension Package</span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500 text-white uppercase tracking-wider">Download</span>
+              </a>
+              <Link
+                to={ROUTES.docs}
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl font-medium text-slate-200 hover:text-white hover:bg-white/5"
+              >
+                Documentation
+              </Link>
+              <a
+                href="#faqs"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl font-medium text-slate-200 hover:text-white hover:bg-white/5"
+              >
+                FAQs
+              </a>
+
+              <div className="pt-4 mt-2 border-t border-white/10 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-medium">Language:</span>
+                  <GoogleTranslateSelector variant="pill" />
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <Link
+                    to={ROUTES.login}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="py-2.5 text-center text-sm font-semibold rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to={ROUTES.signUp}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="py-2.5 text-center text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30"
+                  >
+                    Get Started Free
+                  </Link>
+                </div>
+              </div>
+            </nav>
+          </div>
+        )}
       </header>
 
       <main>

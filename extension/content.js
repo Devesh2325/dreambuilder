@@ -874,15 +874,6 @@
         if (badge) badge.textContent = `✨ Step #${steps.length + 1}: ${newDesc.kind}`;
       }
     });
-        const newDesc = describeElement(targetEl);
-        const newRect = targetEl.getBoundingClientRect();
-        highlightBox.style.top = `${newRect.top}px`;
-        highlightBox.style.left = `${newRect.left}px`;
-        highlightBox.style.width = `${newRect.width}px`;
-        highlightBox.style.height = `${newRect.height}px`;
-        tagBadge.innerHTML = `<span>${newDesc.label}</span><span class="fp-quality-pill">${newDesc.quality}</span>`;
-      }
-    });
 
     // Save and continue picking next step immediately
     const saveStep = (andFinish = false) => {
